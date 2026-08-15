@@ -1,0 +1,691 @@
+using System;
+using System.Linq;
+using System.Text.Json;
+using SpellWork.DBC.Structures;
+using SpellWork.Spell;
+using Xunit;
+
+namespace SpellWork.Core.Tests
+{
+    public class SpellInfoJsonSerializerTests : IClassFixture<ClientDataFixture>
+    {
+        private readonly ClientDataFixture _fixture;
+
+        public SpellInfoJsonSerializerTests(ClientDataFixture fixture) => _fixture = fixture;
+
+        // Section-name validation (Serialize's `sections` filter loop,
+        // SpellInfoJsonSerializer.cs:80-91) runs before any field is read off
+        // `spell` -- SpellInfo's constructor only assigns SpellName/Spell, and
+        // every property BuildEffects/BuildMisc/etc. reach is null-conditional
+        // on entries this minimal instance never sets. So the validation path
+        // needs no DBC load at all; building the smallest possible SpellInfo
+        // here (rather than gating on client data) is what lets these tests
+        // actually execute -- and catch a regression -- on a machine with no
+        // SPELLWORK_DBC_PATH set, unlike a SkippableFact that quietly skips.
+        private static SpellInfo MinimalSpell() =>
+            new SpellInfo(new SpellNameEntry { ID = 1, Name = "Test" }, null);
+
+        [SkippableFact]
+        public void Serialize_emits_id_name_and_decoded_attributes()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+
+            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals());
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+
+            Assert.Equal(133, root.GetProperty("id").GetInt32());
+            Assert.Equal("Fireball", root.GetProperty("name").GetString());
+            Assert.True(root.TryGetProperty("effects", out var effects));
+            Assert.True(effects.GetArrayLength() > 0);
+        }
+
+        [SkippableFact]
+        public void Serialize_pairs_raw_flag_values_with_decoded_names()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+
+            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals());
+            using var document = JsonDocument.Parse(json);
+
+            var attributes = document.RootElement.GetProperty("attributes")
+                .EnumerateArray().ToList();
+
+            // Fireball sets exactly four attribute bits, one in each of four
+            // different groups. Pinning the count and the decoded names is what
+            // makes this test able to fail: a foreach over the array asserts
+            // nothing at all if the serialiser emits an empty one, and
+            // "the property exists" cannot catch a wrong bit-to-name mapping.
+            Assert.Equal(4, attributes.Count);
+
+            Assert.All(attributes, a =>
+            {
+                Assert.True(a.TryGetProperty("raw", out _));
+                Assert.True(a.TryGetProperty("name", out _));
+            });
+
+            var names = attributes.Select(a => a.GetProperty("name").GetString()).ToList();
+            Assert.Contains("SPELL_ATTR0_NOT_SHAPESHIFT", names);
+            Assert.Contains("SPELL_ATTR4_AREA_TARGET_CHAIN", names);
+            Assert.Contains("SPELL_ATTR6_CANT_TARGET_CROWD_CONTROLLED", names);
+
+            // SpellAtributeEx13 is declared `internal`, so this one also proves
+            // the serialiser reaches the non-public attribute enums.
+            Assert.Contains("SPELL_ATTR13_UNK0", names);
+        }
+
+        [SkippableFact]
+        public void Serialize_honours_the_sections_filter()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+
+            var json = SpellInfoJsonSerializer.Serialize(
+                DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals(), new[] { "misc" });
+
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+
+            // Both halves are needed. Asserting only that `effects` is gone
+            // passes for a serialiser that returns {"id":…,"name":…} and drops
+            // everything else for every filter.
+            Assert.False(root.TryGetProperty("effects", out _));
+            Assert.False(root.TryGetProperty("attributes", out _));
+            Assert.True(root.TryGetProperty("misc", out _));
+            Assert.Equal(133, root.GetProperty("id").GetInt32());
+            Assert.Equal("Fireball", root.GetProperty("name").GetString());
+        }
+
+        // Fix round 1, item 5, bullet 1: note (b) had zero assertions. Golden
+        // spell-2661.txt:34 reads "BasePoints = 0.88 to 1.13"; asserting the
+        // computed range (rather than just "the property exists") is what
+        // makes this test fail if BuildEffects goes back to reading the raw
+        // EffectBasePoints field.
+        [SkippableFact]
+        public void Serialize_computes_basePoints_rather_than_reading_the_raw_field()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+
+            var spell = DBC.DBC.SpellInfoStore[2661];
+            var json = SpellInfoJsonSerializer.Serialize(spell, RenderContext.FromGlobals());
+            using var document = JsonDocument.Parse(json);
+
+            var effect = document.RootElement.GetProperty("effects")
+                .EnumerateArray().Single(e => e.GetProperty("index").GetInt32() == 0);
+
+            Assert.Equal(0.875, effect.GetProperty("basePointsMin").GetDouble(), 3);
+            Assert.Equal(1.125, effect.GetProperty("basePointsMax").GetDouble(), 3);
+
+            // Spell 2661's own effect 0 happens to round-trip unchanged (raw
+            // EffectBasePoints == 1, Coefficient == 0, ExpectedStat type ==
+            // None, so CalculateBaseEffectValue just rounds the raw value).
+            // Spell 606 ("Mind Rot") effect 0 is a real, verified case where
+            // ExpectedStat evaluation is in play (Coefficient == 0 but the
+            // effect *does* have an ExpectedStatType), so basePoints is
+            // computed from level/content-tuning data rather than being the
+            // raw EffectBasePoints -- raw is 5.714286, computed is 5714.
+            var mindRot = DBC.DBC.SpellInfoStore[606];
+            var mindRotJson = SpellInfoJsonSerializer.Serialize(mindRot, RenderContext.FromGlobals());
+            using var mindRotDocument = JsonDocument.Parse(mindRotJson);
+            var mindRotEffect = mindRotDocument.RootElement.GetProperty("effects")
+                .EnumerateArray().Single(e => e.GetProperty("index").GetInt32() == 0);
+
+            var mindRotRaw = mindRot.Effects.Single(e => e.EffectIndex == 0).EffectBasePoints;
+            var mindRotComputed = mindRotEffect.GetProperty("basePoints").GetDouble();
+            Assert.NotEqual(mindRotRaw, mindRotComputed, 1);
+        }
+
+        // Fix round 1, item 1 (the Critical): Fireball's SCHOOL_DAMAGE effect
+        // carries no coefficient value of its own -- CalculateBaseEffectValue
+        // returns 0 for it -- so all of its damage scaling lives in the
+        // "+ spellPower * 0.59" term golden spell-133.txt:88 renders
+        // alongside that 0. This is the assertion that would have caught the
+        // Critical: it fails on a serialiser that emits basePoints and
+        // nothing else about magnitude.
+        [SkippableFact]
+        public void Serialize_carries_the_spell_power_coefficient_dropped_by_the_critical()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+
+            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals());
+            using var document = JsonDocument.Parse(json);
+
+            var effect = document.RootElement.GetProperty("effects")
+                .EnumerateArray().Single(e => e.GetProperty("index").GetInt32() == 0);
+
+            Assert.Equal(0, effect.GetProperty("basePoints").GetDouble(), 3);
+            Assert.Equal(0.59, effect.GetProperty("spellPowerCoefficient").GetDouble(), 3);
+        }
+
+        // Fix round 1, item 5, bullet 3: golden spell-1459.txt:46 reads
+        // "Radius (Id 12) 100.00 (Min: 0.00 Max: 100.00)". Asserting the
+        // resolved values (not just that a "radius" key exists) is what
+        // would catch BuildRadius regressing to emitting the bare index.
+        [SkippableFact]
+        public void Serialize_resolves_the_radius_index_to_its_store_values()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+
+            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[1459], RenderContext.FromGlobals());
+            using var document = JsonDocument.Parse(json);
+
+            var effect = document.RootElement.GetProperty("effects")
+                .EnumerateArray().Single(e => e.GetProperty("index").GetInt32() == 0);
+
+            var radius = effect.GetProperty("radius");
+            Assert.Equal(12, radius.GetProperty("id").GetInt32());
+            Assert.Equal(100.00, radius.GetProperty("radius").GetDouble(), 3);
+            Assert.Equal(0.00, radius.GetProperty("radiusMin").GetDouble(), 3);
+            Assert.Equal(100.00, radius.GetProperty("maxRadius").GetDouble(), 3);
+        }
+
+        // Fix round 1, item 5, bullet 4: spell 7038 (Forsaken Ability:
+        // Damage) has one SpellEffect row at index 0 per difficulty
+        // (0, 2, 4) -- found by scanning the loaded SpellInfoStore for a
+        // spell whose Effects contains two rows sharing an EffectIndex, per
+        // the report's mutation-testing notes. difficultyId is the only
+        // field that tells these three rows apart; deleting it from
+        // BuildEffects would leave three JSON objects indistinguishable from
+        // duplicates of the same row.
+        [SkippableFact]
+        public void Serialize_uses_difficultyId_to_distinguish_rows_sharing_an_index()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+
+            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[7038], RenderContext.FromGlobals());
+            using var document = JsonDocument.Parse(json);
+
+            var indexZeroRows = document.RootElement.GetProperty("effects")
+                .EnumerateArray()
+                .Where(e => e.GetProperty("index").GetInt32() == 0)
+                .ToList();
+
+            var difficultyIds = indexZeroRows.Select(e => e.GetProperty("difficultyId").GetInt32())
+                .Distinct().ToList();
+
+            Assert.Equal(3, indexZeroRows.Count);
+            Assert.Equal(3, difficultyIds.Count);
+            Assert.Contains(0, difficultyIds);
+            Assert.Contains(2, difficultyIds);
+            Assert.Contains(4, difficultyIds);
+        }
+
+        // Fix round 1, item 4: an unrecognised section name used to return a
+        // near-empty document instead of telling the caller it asked for
+        // something that does not exist.
+        //
+        // Task 2 review, fix round 1: this used to assert "items" throws.
+        // Task 2 correctly added "items" to ValidSections (the brief requires
+        // it -- Task 5 populates it), which made that premise false: on any
+        // machine with client data this failed with "No exception was
+        // thrown", and the SkippableFact gate hid the failure here. Ungated:
+        // validation needs no DBC load (see MinimalSpell), so this now
+        // actually runs here instead of skipping.
+        //
+        // Task 7: the same premise went stale a second time. Fix round 1
+        // replaced "items" with "visual" on the reasoning that "visual" was
+        // "guaranteed to stay unrecognised" because the visual-chain tooling
+        // belonged to a later plan; that plan is this one, and "visual" is now
+        // implemented. The lesson is that a reserved-but-unimplemented section
+        // name is exactly the wrong thing to assert rejection against -- every
+        // one of them is a section someone intends to build. This now uses a
+        // name that is not reserved, not planned, and not a word this schema
+        // would ever adopt.
+        [Fact]
+        public void Serialize_throws_on_an_unrecognised_section_name()
+        {
+            var ex = Assert.Throws<ArgumentException>(
+                () => SpellInfoJsonSerializer.Serialize(MinimalSpell(), new RenderContext(1, 1, null), new[] { "notasection" }));
+
+            Assert.Contains("notasection", ex.Message);
+        }
+
+        // Fix round 1, item 4: a mis-cased section name (as a model might
+        // send) must reach the same filter as its canonical spelling, not
+        // silently fall through to "no section recognised".
+        [SkippableFact]
+        public void Serialize_accepts_a_mis_cased_section_name()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+
+            var json = SpellInfoJsonSerializer.Serialize(
+                DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals(), new[] { "Effects" });
+
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+
+            Assert.True(root.TryGetProperty("effects", out var effects));
+            Assert.True(effects.GetArrayLength() > 0);
+
+            // The echoed sections list lets a caller tell "filtered out" from
+            // "genuinely empty"; it should report the canonical name even
+            // though the caller asked using a different case.
+            var sections = root.GetProperty("sections").EnumerateArray()
+                .Select(s => s.GetString()).ToList();
+            Assert.Equal(new[] { "effects" }, sections);
+        }
+
+        // Fix round 2, item 1: Enum.GetName only matches a single declared
+        // member exactly, so a [Flags] enum's combined value used to fall
+        // through to the fallback and stringify the boxed integer --
+        // "targetCreatureType": {"raw": 8385, "name": "8385"} -- where the
+        // GUI's own ToString() decomposes it. Verified directly against the
+        // loaded store (not just taken from the re-review): spell 118 has
+        // exactly one TargetRestrictions row, TargetCreatureType == 8385,
+        // which is BEAST (1) | HUMANOID (64) | CRITTER (128) | WILD_PET
+        // (8192) -- those four names are asserted individually, not just a
+        // count, so a test that happened to emit four wrong names would not
+        // pass.
+        [SkippableFact]
+        public void Serialize_decomposes_a_combined_flags_value_into_named_bits()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+
+            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[118], RenderContext.FromGlobals());
+            using var document = JsonDocument.Parse(json);
+
+            var target = document.RootElement.GetProperty("targets")
+                .EnumerateArray().Single();
+            var creatureType = target.GetProperty("targetCreatureType");
+
+            Assert.Equal(8385, creatureType.GetProperty("raw").GetInt32());
+
+            var names = creatureType.GetProperty("flags").EnumerateArray()
+                .Select(f => f.GetProperty("name").GetString()).ToList();
+
+            Assert.Equal(4, names.Count);
+            Assert.Contains("BEAST", names);
+            Assert.Contains("HUMANOID", names);
+            Assert.Contains("CRITTER", names);
+            Assert.Contains("WILD_PET", names);
+
+            // A single-bit value must still yield exactly one entry, so the
+            // helper cannot regress into always emitting every bit position
+            // 0-31 regardless of whether it is set. Spell 133's schoolMask is
+            // 4 (SPELL_SCHOOL_MASK_FIRE alone), verified directly against the
+            // store.
+            var fireballJson = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals());
+            using var fireballDocument = JsonDocument.Parse(fireballJson);
+            var schoolMask = fireballDocument.RootElement.GetProperty("misc").GetProperty("schoolMask");
+
+            Assert.Equal(4, schoolMask.GetProperty("raw").GetInt32());
+            var schoolFlags = schoolMask.GetProperty("flags").EnumerateArray().ToList();
+            Assert.Single(schoolFlags);
+            Assert.Equal("SPELL_SCHOOL_MASK_FIRE", schoolFlags[0].GetProperty("name").GetString());
+        }
+
+        // Task 8 review, "Task 2": a set bit with no declared enum member
+        // used to come back from this JSON path as a bare decimal string in
+        // the name position (Enum.GetName returns null for it, and
+        // GetEnumName's fallback stringified the boxed integer) -- the exact
+        // failure SpellWork.Mcp/Tools/DecoderTools.cs's decode_flags exists
+        // to prevent. BuildFlagList is the shared per-bit primitive behind
+        // every flag-decomposition call site in SpellInfoJsonSerializer
+        // (procFlags/procFlagsEx directly, schoolMask/preventionType/targets/
+        // targetCreatureType/interrupt flags via BuildFlagsList), so pinning
+        // it here covers all of them without needing a loaded spell: it is
+        // `internal` (SpellWork.Core.Tests has InternalsVisibleTo) purely so
+        // this test can call it directly, exactly as MinimalSpell() below
+        // lets the section-validation tests run without client data.
+        //
+        // SpellSchoolMask is real, already-declared production data (not a
+        // synthetic enum): bits 0-6 are declared, bit 30 is not -- the same
+        // combination SpellWork.Mcp.Tests.DecoderToolsTests.
+        // DecodeFlags_ReportsUnmatchedBits uses on the MCP side, so the two
+        // tools are pinned against the same case.
+        [Fact]
+        public void BuildFlagList_UnmatchedBit_IsNeverReportedAsAName()
+        {
+            var flags = SpellInfoJsonSerializer.BuildFlagList(
+                typeof(SpellSchoolMask), 4u | (1u << 30), out var unmatchedBits);
+
+            var matched = Assert.Single(flags) as System.Collections.Generic.Dictionary<string, object>;
+            Assert.NotNull(matched);
+            Assert.Equal("SPELL_SCHOOL_MASK_FIRE", matched["name"]);
+
+            var unmatchedBit = Assert.Single(unmatchedBits);
+            Assert.Equal(30, unmatchedBit);
+
+            // The specific regression: no matched entry's "name" is ever a
+            // string that parses as a plain number.
+            Assert.All(flags, f =>
+            {
+                var name = ((System.Collections.Generic.Dictionary<string, object>)f)["name"] as string;
+                Assert.False(long.TryParse(name, out _));
+            });
+        }
+
+        // Final review fixes, item 3: ProcInfo's ProcFlagsEx loop never resets
+        // its bit counter from the ProcFlags loop, so it can index
+        // SpellEnums.ProcFlagDesc[i + 32] past the array's 64 entries. Spell
+        // 275140 is the reviewer's reproduction; confirmed against the live
+        // store below before the fix (see the mutation-test note in
+        // task-9-report.md) rather than trusted blind. This asserts only that
+        // reading ProcInfo does not throw -- the counter itself is a known,
+        // deliberately-unfixed defect (13 spells render the wrong flag text
+        // because of it) and this test must not encode or assert that wrong
+        // text.
+        [SkippableFact]
+        public void ProcInfo_does_not_throw_when_the_counter_runs_past_ProcFlagDesc()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+
+            var spell = DBC.DBC.SpellInfoStore[275140];
+            var ex = Record.Exception(() => spell.ProcInfo);
+
+            Assert.Null(ex);
+        }
+
+        // Final review fixes, item 2: basePoints is computed against
+        // DBC.DBC.SelectedLevel, and the document previously said nothing
+        // about which level produced it -- spell 606 serialises basePoints
+        // 5714 at level 120 and 57 at level 20 with no way to tell which one
+        // a caller received. "context" is gated behind sections like every
+        // other optional part of the document, and its fields are emitted
+        // unconditionally-when-applicable (not through AddIfNonZero), since a
+        // level of 0 is real render context, not an absent one.
+        [SkippableFact]
+        public void Serialize_records_the_render_context_at_the_document_root()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+
+            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals());
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+
+            Assert.Equal(DBC.DBC.SelectedLevel, root.GetProperty("level").GetUInt32());
+            Assert.Equal(DBC.DBC.SelectedItemLevel, root.GetProperty("itemLevel").GetUInt32());
+
+            // mapDifficulty is the one context field that can be genuinely
+            // absent (nothing selected) rather than merely zero, so its
+            // presence tracks DBC.DBC.SelectedMapDifficulty directly instead
+            // of being asserted unconditionally.
+            if (DBC.DBC.SelectedMapDifficulty != null)
+            {
+                var mapDifficulty = root.GetProperty("mapDifficulty");
+                Assert.Equal(DBC.DBC.SelectedMapDifficulty.ID, mapDifficulty.GetProperty("id").GetUInt32());
+                Assert.Equal(DBC.DBC.SelectedMapDifficulty.ContentTuningID, mapDifficulty.GetProperty("contentTuningId").GetInt32());
+            }
+            else
+            {
+                Assert.False(root.TryGetProperty("mapDifficulty", out _));
+            }
+        }
+
+        // "context" must be filterable like every other section: a caller
+        // asking only for ["effects"] should not be forced to carry level/
+        // itemLevel/mapDifficulty, and a caller explicitly asking for
+        // ["context"] should get them without needing anything else.
+        [SkippableFact]
+        public void Serialize_omits_the_render_context_when_not_requested()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+
+            var json = SpellInfoJsonSerializer.Serialize(
+                DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals(), new[] { "effects" });
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+
+            Assert.False(root.TryGetProperty("level", out _));
+            Assert.False(root.TryGetProperty("itemLevel", out _));
+            Assert.False(root.TryGetProperty("mapDifficulty", out _));
+
+            var contextJson = SpellInfoJsonSerializer.Serialize(
+                DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals(), new[] { "context" });
+            using var contextDocument = JsonDocument.Parse(contextJson);
+            Assert.True(contextDocument.RootElement.TryGetProperty("level", out _));
+        }
+
+        // Fireball (133) is a Mage spell: SpellFamilyName 3 (SPELLFAMILY_MAGE)
+        // with a non-empty class mask. search_spells(family:) filters on this
+        // and had nothing to read before.
+        [SkippableFact]
+        public void Serialize_EmitsSpellFamilyNameAndClassMask()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var json = SpellInfoJsonSerializer.Serialize(
+                DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals());
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            Assert.Equal(3, root.GetProperty("spellFamilyName").GetProperty("raw").GetInt32());
+            Assert.Equal("SPELLFAMILY_MAGE", root.GetProperty("spellFamilyName").GetProperty("name").GetString());
+            Assert.Equal(4, root.GetProperty("spellClassMask").GetArrayLength());
+        }
+
+        // Fireball's effect 0 triggers nothing, but spell 20154 (Seal of
+        // Righteousness) has an effect with a non-zero EffectTriggerSpell.
+        // get_spell_triggers reads this key. Assert against whatever spell in
+        // the store actually has one rather than hard-coding a guess: find it,
+        // then assert the key is present and resolves to a real spell name.
+        [SkippableFact]
+        public void Serialize_EmitsEffectTriggerSpell()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var spell = DBC.DBC.SpellInfoStore.Values.First(s =>
+                s.Effects.Any(e => e != null && e.EffectTriggerSpell != 0
+                                   && DBC.DBC.SpellInfoStore.ContainsKey(e.EffectTriggerSpell)));
+
+            var json = SpellInfoJsonSerializer.Serialize(spell, RenderContext.FromGlobals());
+            using var doc = JsonDocument.Parse(json);
+
+            var triggered = doc.RootElement.GetProperty("effects").EnumerateArray()
+                .First(e => e.TryGetProperty("triggerSpell", out _))
+                .GetProperty("triggerSpell");
+
+            Assert.True(triggered.GetProperty("id").GetInt32() != 0);
+            Assert.False(string.IsNullOrEmpty(triggered.GetProperty("name").GetString()));
+        }
+
+        // The eight new/reserved sections must each be filterable, and an
+        // unknown one must still be rejected. This is the contract
+        // get_spell's `sections` argument depends on.
+        //
+        // Task 2 review, fix round 1: this was gated behind
+        // _fixture.SkipIfNoClientData() but every assertion here is "did this
+        // throw or not" -- section-name validation runs before any spell
+        // field is touched (SpellInfoJsonSerializer.cs:80-91), so it needs no
+        // loaded spell at all. Gating it behind client data was what let the
+        // "items"/"visual" regression above ship silently: this test would
+        // have caught it, but skipped instead. Ungated via MinimalSpell so it
+        // actually executes -- and can actually fail -- on a machine with no
+        // SPELLWORK_DBC_PATH set.
+        //
+        // Task 7: "visual" moved from the rejected side to the accepted side
+        // -- it is now implemented, not merely reserved. The rejection half of
+        // this test still has to assert something, so it now uses a name that
+        // is genuinely not a section and never will be; asserting the throw
+        // against a name that later gets implemented is what made this line
+        // need editing in the first place.
+        [Fact]
+        public void Serialize_AcceptsNewSections_AndStillRejectsUnknown()
+        {
+            var spell = MinimalSpell();
+            var context = new RenderContext(1, 1, null);
+
+            foreach (var section in new[] { "cooldowns", "levels", "interrupts", "shapeshift", "equippedItems", "items", "triggers", "visual" })
+                SpellInfoJsonSerializer.Serialize(spell, context, new[] { section });
+
+            Assert.Throws<ArgumentException>(() =>
+                SpellInfoJsonSerializer.Serialize(spell, context, new[] { "notasection" }));
+        }
+
+        [SkippableFact]
+        public void Serialize_TriggersSection_ReportsBothDirections()
+        {
+            _fixture.SkipIfNoClientData();
+
+            // Pick a spell that is known to both trigger and be triggered:
+            // find one whose id appears in SpellTriggerStore as a key and
+            // which also has a non-zero EffectTriggerSpell.
+            var spell = DBC.DBC.SpellInfoStore.Values.First(s =>
+                DBC.DBC.SpellTriggerStore.ContainsKey(s.ID)
+                && s.Effects.Any(e => e != null && e.EffectTriggerSpell != 0));
+
+            var json = SpellInfoJsonSerializer.Serialize(
+                spell, RenderContext.FromGlobals(), new[] { "triggers" });
+            using var doc = JsonDocument.Parse(json);
+            var triggers = doc.RootElement.GetProperty("triggers");
+
+            Assert.True(triggers.GetProperty("triggers").GetArrayLength() > 0);
+            Assert.True(triggers.GetProperty("triggeredBy").GetArrayLength() > 0);
+        }
+
+        [SkippableFact]
+        public void Serialize_ItemsSection_ListsItemsGrantingTheSpell()
+        {
+            _fixture.SkipIfNoClientData();
+
+            // Also require ParentItemID to resolve against ItemSparse: on
+            // this dataset ~7% of ItemEffect rows point at a ParentItemID
+            // ItemSparse does not have (AppendItemInfo prints "Non-existing
+            // Item-sparse.db2 entry N" for those), and BuildItems correctly
+            // skips them rather than emitting a placeholder -- see its
+            // comment. Picking a row blind to that would occasionally land
+            // on a spell whose only ItemEffect rows are the unresolvable
+            // kind, making "items" legitimately empty and this assertion
+            // flaky depending on enumeration order rather than testing the
+            // section itself.
+            var effect = DBC.DBC.ItemEffect.Values.First(e => e.SpellID != 0
+                && DBC.DBC.SpellInfoStore.ContainsKey(e.SpellID)
+                && DBC.DBC.ItemSparse.ContainsKey(e.ParentItemID));
+            var spell = DBC.DBC.SpellInfoStore[effect.SpellID];
+
+            var json = SpellInfoJsonSerializer.Serialize(
+                spell, RenderContext.FromGlobals(), new[] { "items" });
+            using var doc = JsonDocument.Parse(json);
+
+            Assert.True(doc.RootElement.GetProperty("items").GetArrayLength() > 0);
+        }
+
+        [SkippableFact]
+        public void Serialize_VisualSection_IsAValidSectionAndCarriesData()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var spell = DBC.DBC.SpellInfoStore[133];
+            using var doc = JsonDocument.Parse(
+                SpellInfoJsonSerializer.Serialize(spell, RenderContext.FromGlobals(), new[] { "visual" }));
+
+            Assert.True(doc.RootElement.TryGetProperty("visual", out var visual),
+                "The visual section validated but produced no key.");
+            Assert.NotEqual(0, visual.GetProperty("variants").GetArrayLength());
+        }
+
+        // Guards the trap this codebase already hit once: a section that
+        // validates, echoes back in `sections`, and silently drops its key
+        // reads as "the spell genuinely has none".
+        //
+        // Deliberately a plain Fact over MinimalSpell, not the brief's
+        // SkippableFact over spell 133. The brief's draft gated on
+        // SkipIfNoClientData() *and* on Skip.If(DBC.DBC.SpellVisual != null),
+        // which between them skip in both configurations -- SpellVisual is a
+        // registered store, so it is non-null exactly when client data is
+        // present -- leaving a test that never executes and therefore proves
+        // nothing. The invariant asserted instead holds in every state:
+        // request the section, get the key. The storeUnloaded claim is then
+        // checked by branching on the store at runtime, which is what makes
+        // *both* configurations of this suite exercise a real assertion:
+        // with client data the loaded branch runs, without it the unloaded
+        // branch runs. Either branch fails if BuildVisual is ever changed to
+        // add its key conditionally.
+        [Fact]
+        public void Serialize_VisualSection_WhenStoreUnloaded_DoesNotClaimTheSpellHasNoVisual()
+        {
+            using var doc = JsonDocument.Parse(SpellInfoJsonSerializer.Serialize(
+                MinimalSpell(), new RenderContext(1, 1, null), new[] { "visual" }));
+
+            Assert.True(doc.RootElement.TryGetProperty("visual", out var visual),
+                "The visual section validated but produced no key.");
+
+            // The same gate BuildVisual uses, asked the same way -- not a
+            // second hand-rolled null check. That is the point of the gate
+            // living in Core: this test would have gone on passing while the
+            // two hosts disagreed, because it was asserting against its own
+            // copy of the condition rather than the one in use.
+            if (SpellVisualChainResolver.MissingStores().Count > 0)
+            {
+                Assert.True(visual.GetProperty("storeUnloaded").GetBoolean(),
+                    "SpellVisual is not loaded, so the section must say so rather than report an empty chain.");
+                Assert.False(visual.TryGetProperty("variants", out _),
+                    "An unloaded store must not present as a spell with zero variants.");
+            }
+            else
+            {
+                Assert.False(visual.TryGetProperty("storeUnloaded", out _),
+                    "SpellVisual is loaded, so storeUnloaded must not be claimed.");
+                Assert.True(visual.TryGetProperty("variants", out _),
+                    "A loaded store must always report the variants list, empty or not.");
+            }
+        }
+
+        [SkippableFact]
+        public void Serialize_VisualSection_FiltersToTheContextDifficulty()
+        {
+            _fixture.SkipIfNoClientData();
+
+            // The whole document is a rendering at a context -- basePoints is
+            // computed against it and the "context" section echoes it -- so the
+            // visual section has to be too, or get_spell's json and text
+            // formats report different visual sets for identical arguments.
+            var spell = DBC.DBC.SpellInfoStore[133];
+            var mapDifficulty = DBC.DBC.MapDifficulty.Values.First(m => m.DifficultyID != 0);
+
+            using var atZero = JsonDocument.Parse(SpellInfoJsonSerializer.Serialize(
+                spell, new RenderContext(1, 1, null), new[] { "visual" }));
+            using var elsewhere = JsonDocument.Parse(SpellInfoJsonSerializer.Serialize(
+                spell, new RenderContext(1, 1, mapDifficulty), new[] { "visual" }));
+
+            // Fireball has exactly one SpellXSpellVisual row, at difficulty 0.
+            var zero = atZero.RootElement.GetProperty("visual");
+            Assert.Equal(0, zero.GetProperty("difficulty").GetInt32());
+            Assert.NotEqual(0, zero.GetProperty("variants").GetArrayLength());
+
+            var other = elsewhere.RootElement.GetProperty("visual");
+            Assert.Equal(mapDifficulty.DifficultyID, other.GetProperty("difficulty").GetInt32());
+            Assert.Equal(0, other.GetProperty("variants").GetArrayLength());
+        }
+
+        [SkippableFact]
+        public void Serialize_VisualSection_FilteredToNothing_DoesNotClaimTheSpellHasNoVisual()
+        {
+            _fixture.SkipIfNoClientData();
+
+            // The regression filtering could introduce: an empty variants list
+            // that reads as a fact about the spell when it is really a fact
+            // about the difficulty that was asked for. Same failure mode as
+            // storeUnloaded, reached by a different route.
+            var spell = DBC.DBC.SpellInfoStore[133];
+            var mapDifficulty = DBC.DBC.MapDifficulty.Values.First(m => m.DifficultyID != 0);
+
+            using var doc = JsonDocument.Parse(SpellInfoJsonSerializer.Serialize(
+                spell, new RenderContext(1, 1, mapDifficulty), new[] { "visual" }));
+
+            var visual = doc.RootElement.GetProperty("visual");
+            Assert.Equal(0, visual.GetProperty("variants").GetArrayLength());
+
+            var elsewhere = visual.GetProperty("variantsAtOtherDifficulties");
+            Assert.Equal(1, elsewhere.GetArrayLength());
+            Assert.Equal(0, elsewhere[0].GetInt32());
+        }
+
+        [SkippableFact]
+        public void Serialize_VisualSection_SpellWithNoVisualsAnywhere_OmitsVariantsAtOtherDifficulties()
+        {
+            _fixture.SkipIfNoClientData();
+
+            // The other half of the distinction above: absent key means the
+            // spell genuinely has no SpellXSpellVisual rows at all. Spell 15594
+            // is the golden-file id measured to have none.
+            var spell = DBC.DBC.SpellInfoStore[15594];
+
+            using var doc = JsonDocument.Parse(SpellInfoJsonSerializer.Serialize(
+                spell, new RenderContext(1, 1, null), new[] { "visual" }));
+
+            var visual = doc.RootElement.GetProperty("visual");
+            Assert.Equal(0, visual.GetProperty("variants").GetArrayLength());
+            Assert.False(visual.TryGetProperty("variantsAtOtherDifficulties", out _));
+        }
+    }
+}

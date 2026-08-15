@@ -1,0 +1,110 @@
+ID - 589 Shadow Word: Pain
+=================================================
+A word of darkness that causes $s1 Shadow damage instantly, and an additional $o2 Shadow damage over $d.$?a185916[
+
+|cFFFFFFFFGenerates ${$m3/100} Insanity.|r][]
+ToolTip: Suffering $w2 Shadow damage every $t2 sec.
+Category = 0, SpellIconFileDataID = 136207, ActiveIconFileDataID = 0, SpellVisualID = 67460
+Family SPELLFAMILY_PRIEST (6), flag [0] 0x00008000 [1] 0x00000000 [2] 0x00000100 [3] 0x00000000
+Modified by Infinite Wisdom Shadow Word: Pain Bonus (26172)
+Modified by Increased Shadow Word: Pain Duration (38413)
+Modified by Item - Priest T10 Shadow 2P Bonus (70800)
+Modified by Mastery: Madness (77486)
+Modified by Mastery: Madness (77486)
+Modified by Item - Priest T13 Shadow 4P Bonus (Shadow Word: Pain) (105844)
+Modified by Item - Priest T13 Shadow 4P Bonus (Shadow Word: Pain) (105844)
+Modified by Item - Priest T14 Shadow 2P Bonus (123114)
+Modified by Item - Priest T14 Shadow 4P Bonus (123115)
+Modified by Twist of Fate (123254)
+Modified by Twist of Fate (123254)
+Modified by Holy Priest (137031)
+Modified by Holy Priest (137031)
+Modified by Discipline Priest (137032)
+Modified by Discipline Priest (137032)
+Modified by Shadow Priest (137033)
+Modified by Shadow Priest (137033)
+Modified by Shadow Priest (137033)
+Modified by Shadow Priest (137033)
+Modified by Surrender to Madness (193223)
+Modified by To the Pain (193644)
+Modified by To the Pain (193644)
+Modified by Voidform (194249)
+Modified by Voidform (194249)
+Modified by Voidform (194249)
+Modified by The Edge of Dark and Light (197715)
+Modified by The Edge of Dark and Light (197715)
+Modified by Schism (214621)
+Modified by Shadowform (232698)
+Modified by Shadowform (232698)
+Modified by Norgannon's Foresight (236430)
+Modified by Voidform (250844)
+Modified by Voidform (250844)
+Modified by Twist of Fate (265258)
+Modified by Twist of Fate (265258)
+Modified by Torment of Torments (269555)
+Modified by Torment of Torments (269555)
+Modified by Death Throes (278659)
+Modified by Sins of the Many (280398)
+Modified by Sins of the Many (280398)
+Modified by Testing - DO NOT USE - Luis (282965)
+Modified by Testing - DO NOT USE - Luis (282965)
+Modified by Testing - DO NOT USE - Luis (282965)
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_SHADOW (32)
+DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
+PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
+=================================================
+Attributes: 0x00050000 (SPELL_ATTR0_NOT_SHAPESHIFT, SPELL_ATTR0_DONT_AFFECT_SHEATH_STATE)
+AttributesEx2: 0x00080000 (SPELL_ATTR2_NOT_NEED_SHAPESHIFT)
+AttributesEx4: 0x00100000 (SPELL_ATTR4_NOT_CHECK_SELFCAST_POWER)
+AttributesEx5: 0x00002000 (SPELL_ATTR5_HASTE_AFFECT_DURATION)
+AttributesEx6: 0x00800000 (SPELL_ATTR6_UNK23)
+AttributesEx8: 0x00001200 (SPELL_ATTR8_DONT_RESET_PERIODIC_TIMER, SPELL_ATTR8_AURA_SEND_AMOUNT)
+AttributesEx13: 0x00100081 (SPELL_ATTR13_UNK0, SPELL_ATTR13_UNK7, SPELL_ATTR13_UNK20)
+=================================================
+Stances: FORM_SHADOWFORM
+Spell Level = 3, base 3, max 0, max passive aura level 0
+
+Category = 0
+DispelType = 1 (DISPEL_MAGIC)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 5) "Long Range":
+    MinRangeNegative = 0, MinRangePositive = 0
+    MaxRangeNegative = 40, MaxRangePositive = 40
+Cast Time: (ID 1): 0
+RecoveryTime: 0 ms, CategoryRecoveryTime: 0 ms
+StartRecoveryCategory = 133, StartRecoveryTime = 1500.00 ms
+Duration 16000, 0, 16000
+Power POWER_MANA, 1.8%
+Interrupt Flags: 0x00000008 (SPELL_INTERRUPT_FLAG_INTERRUPT)
+AuraInterrupt Flags: 0x00000000 (0), 0x00000000 (0)
+ChannelInterrupt Flags: 0x00000000 (0), 0x00000000 (0)
+Chance = 100, charges - 0
+=================================================
+Effect 0: Id 2 (SPELL_EFFECT_SCHOOL_DAMAGE)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 0.00 + spellPower * 0.165
+Targets (6, 0) (TARGET_UNIT_TARGET_ENEMY, NO_TARGET)
+
+Effect 1: Id 6 (SPELL_EFFECT_APPLY_AURA)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 0.00 + spellPower * 0.124
+Targets (6, 0) (TARGET_UNIT_TARGET_ENEMY, NO_TARGET)
+Aura Id 3 (SPELL_AURA_PERIODIC_DAMAGE), value = 0, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 2000
+
+Effect 2: Id 30 (SPELL_EFFECT_ENERGIZE)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 400.00
+Targets (1, 0) (TARGET_UNIT_CASTER, NO_TARGET)
+EffectMiscValueA = 13
+
+=================================================
+Spell visual:
+   Visual 67460 (difficulty 0, priority 0, probability 1)
+      Kit 73206 (via event)
+         Effect type 6: 29038
+         Effect type 5: 89777
+         Effect type 2: 354460
+      Kit 85073 (via event)
+         Effect type 2: 349058
+         Effect type 5: 89836

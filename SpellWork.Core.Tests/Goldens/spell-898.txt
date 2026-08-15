@@ -1,0 +1,38 @@
+ID - 898 Create Fervor Potion
+=================================================
+Creates a Potion of Fervor.
+Category = 0, SpellIconFileDataID = 136243, ActiveIconFileDataID = 0, SpellVisualID = 215
+Family SPELLFAMILY_GENERIC (0), flag [0] 0x00000000 [1] 0x00000000 [2] 0x00000000 [3] 0x00000000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_NORMAL (1)
+DamageClass = 0 (SPELL_DAMAGE_CLASS_NONE)
+PreventionType = 0 (SPELL_PREVENTION_TYPE_NONE)
+=================================================
+
+Reagents:  878 x1
+Spell Level = 1, base 0, max 0, max passive aura level 0
+
+Category = 0
+DispelType = 0 (DISPEL_NONE)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 1) "Self Only":
+    MinRangeNegative = 0, MinRangePositive = 0
+    MaxRangeNegative = 0, MaxRangePositive = 0
+Cast Time: (ID 14): 3000
+Chance = 0, charges - 0
+=================================================
+Effect 0: Id 24 (SPELL_EFFECT_CREATE_ITEM)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 1.00
+Targets (1, 0) (TARGET_UNIT_CASTER, NO_TARGET)
+EffectItemType = 1450
+
+=================================================
+Spell visual:
+   Visual 215 (difficulty 0, priority 0, probability 1)
+      Kit 358 (via event)
+         Effect type 6: 190
+         Effect type 5: 6425
+      Kit 1964 (via event)
+         Effect type 6: 452
+         Effect type 5: 6714

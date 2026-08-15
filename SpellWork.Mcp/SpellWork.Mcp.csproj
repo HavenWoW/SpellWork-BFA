@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <RootNamespace>SpellWork.Mcp</RootNamespace>
+    <AssemblyName>SpellWork.Mcp</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The brief's draft pinned a 0.3.0 preview build; running the NuGet
+         add-package flow against the live feed on 2026-08-02 resolved the
+         current stable 2.0.0 instead, so that is what is referenced here. -->
+    <PackageReference Include="ModelContextProtocol" Version="2.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Same arrangement SpellWork.Core already uses for SpellWork.Core.Tests
+         (Properties/AssemblyInfo.cs): the missing-table classification in
+         DatabaseTools is internal because nothing outside this assembly should
+         call it, but it is the one branch of get_spell_db_overrides that
+         cannot be reached from a tool call without a live MySQL server. -->
+    <InternalsVisibleTo Include="SpellWork.Mcp.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SpellWork.Core\SpellWork.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Same reason as SpellWork.Core.Tests: Storage<T> is declared in
+         DBFileReaderLib, which Core references by HintPath rather than as a
+         package, so it does not flow transitively (CS0012 otherwise). -->
+    <Reference Include="DBFileReaderLib">
+      <HintPath>..\packages\DBFileReaderLib.1.0.0.0\lib\DBFileReaderLib.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

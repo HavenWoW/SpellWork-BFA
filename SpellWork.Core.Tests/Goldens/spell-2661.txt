@@ -1,0 +1,43 @@
+ID - 2661 Copper Chain Belt
+=================================================
+
+Category = 0, SpellIconFileDataID = 136192, ActiveIconFileDataID = 0, SpellVisualID = 395
+Family SPELLFAMILY_GENERIC (0), flag [0] 0x00000000 [1] 0x00000000 [2] 0x00000000 [3] 0x00000000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_NORMAL (1)
+DamageClass = 0 (SPELL_DAMAGE_CLASS_NONE)
+PreventionType = 0 (SPELL_PREVENTION_TYPE_NONE)
+=================================================
+Attributes: 0x00010030 (SPELL_ATTR0_ABILITY, SPELL_ATTR0_TRADESPELL, SPELL_ATTR0_NOT_SHAPESHIFT)
+AttributesEx1: 0x00000400 (SPELL_ATTR1_NO_THREAT)
+=================================================
+Skill (Id 164) "Blacksmithing"
+    MinSkillLineRank 55, SupercedesSpell = 0, MinMaxValue (75, 115), NumSkillups (1)
+Reagents:  2840 x6
+Spell Level = 0, base 0, max 0, max passive aura level 0
+
+Category = 0
+DispelType = 0 (DISPEL_NONE)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 1) "Self Only":
+    MinRangeNegative = 0, MinRangePositive = 0
+    MaxRangeNegative = 0, MaxRangePositive = 0
+Cast Time: (ID 34): 2000
+Interrupt Flags: 0x0000000F (SPELL_INTERRUPT_FLAG_MOVEMENT, SPELL_INTERRUPT_FLAG_PUSH_BACK, SPELL_INTERRUPT_FLAG_UNK3, SPELL_INTERRUPT_FLAG_INTERRUPT)
+AuraInterrupt Flags: 0x00000000 (0), 0x00000000 (0)
+ChannelInterrupt Flags: 0x00000000 (0), 0x00000000 (0)
+Requires Spell Focus 1
+Chance = 0, charges - 0
+=================================================
+Effect 0: Id 24 (SPELL_EFFECT_CREATE_ITEM)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 0.88 to 1.13
+Targets (1, 0) (TARGET_UNIT_CASTER, NO_TARGET)
+EffectItemType = 2851
+
+=================================================
+Spell visual:
+   Visual 395 (difficulty 0, priority 0, probability 1)
+      Kit 545 (via event)
+         Effect type 6: 273
+         Effect type 2: 277950

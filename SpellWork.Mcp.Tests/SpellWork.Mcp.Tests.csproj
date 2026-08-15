@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="Xunit.SkippableFact" Version="1.4.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SpellWork.Mcp\SpellWork.Mcp.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Same reason as SpellWork.Mcp and SpellWork.Core.Tests:
+         DecoderToolsTests reads SpellWork.DBC.DBC.MapDifficulty.Keys
+         directly, whose declared type (Storage<T>) is defined in
+         DBFileReaderLib. SpellWork.Core references it by HintPath rather
+         than as a package, so it does not flow transitively; reference it
+         directly here too so the type is resolvable (CS0012 otherwise). -->
+    <Reference Include="DBFileReaderLib">
+      <HintPath>..\packages\DBFileReaderLib.1.0.0.0\lib\DBFileReaderLib.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

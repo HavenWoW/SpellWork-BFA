@@ -1,0 +1,113 @@
+ID - 133 Fireball
+=================================================
+Throws a fiery ball that causes $s1 Fire damage.
+Category = 0, SpellIconFileDataID = 135812, ActiveIconFileDataID = 0, SpellVisualID = 69095
+Family SPELLFAMILY_MAGE (3), flag [0] 0x00000009 [1] 0x00000000 [2] 0x00000008 [3] 0x00000000
+Modified by Arcane Power (12042)
+Modified by Arcane Power (12042)
+Modified by Icy Veins (12472)
+Modified by Fireball, Improved DoT (21230)
+Modified by Friendly Nukes (21879)
+Modified by Netherwind Focus (22008)
+Modified by Pushback Resistance (37438)
+Modified by Cooldown Reduction (37439)
+Modified by Improved Fireball, Frostbolt, and Arcane Missiles (38397)
+Modified by Reduced Spam Nuke Cast Time (44302)
+Modified by Mana Gem Trinket (60145)
+Modified by Crit Strike Damage Percent (60146)
+Modified by Improved Mana Gems (61062)
+Modified by Item - Mage T8 4P Bonus (64869)
+Modified by Item - Mage T9 4P Bonus (Fireball, Frostbolt, Frostfire Bolt, and Arcane Blast) (67185)
+Modified by Item - Mage T10 4P Bonus (70748)
+Modified by Item - Mage T11 4P Bonus (90291)
+Modified by Ice Floes (108839)
+Modified by Quickened Mind (113682)
+Modified by Rune of Power (116014)
+Modified by Rune of Power (116014)
+Modified by Incanter's Flow (116267)
+Modified by Incanter's Flow (116267)
+Modified by Fire Mage (137019)
+Modified by Fire Mage (137019)
+Modified by Frost Mage (137020)
+Modified by Frost Mage (137020)
+Modified by Arcane Mage (137021)
+Modified by Arcane Mage (137021)
+Modified by Item - Mage T15 2P Bonus (138316)
+Modified by Enhanced Pyrotechnics (157644)
+Modified by Ignition (165979)
+Modified by Ignition (165979)
+Modified by Firestarter (171170)
+Modified by Combustion (190319)
+Modified by Fire at Will (194224)
+Modified by Great Balls of Fire (194313)
+Modified by Tinder (203275)
+Modified by Tinder (203275)
+Modified by Tinder (203278)
+Modified by Tinder (203278)
+Modified by Flamecannon (203285)
+Modified by Bone Chilling (205766)
+Modified by Bone Chilling (205766)
+Modified by Erosion (210134)
+Modified by Frigid Barrier (233667)
+Modified by Norgannon's Foresight (236380)
+Modified by Deadly Presence (242247)
+Modified by Deadly Presence (242247)
+Modified by Crackling Energy (246224)
+Modified by Crackling Energy (246224)
+Modified by Duplicative Incineration (278538)
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_FIRE (4)
+DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
+PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
+=================================================
+Attributes: 0x00010000 (SPELL_ATTR0_NOT_SHAPESHIFT)
+AttributesEx4: 0x00040000 (SPELL_ATTR4_AREA_TARGET_CHAIN)
+AttributesEx6: 0x00000100 (SPELL_ATTR6_CANT_TARGET_CROWD_CONTROLLED)
+AttributesEx13: 0x00000001 (SPELL_ATTR13_UNK0)
+=================================================
+Spell Level = 10, base 10, max 0, max passive aura level 0
+
+Category = 0
+DispelType = 0 (DISPEL_NONE)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 5) "Long Range":
+    MinRangeNegative = 0, MinRangePositive = 0
+    MaxRangeNegative = 40, MaxRangePositive = 40
+Speed 45.00
+Cast Time: (ID 259): 2250
+RecoveryTime: 0 ms, CategoryRecoveryTime: 0 ms
+StartRecoveryCategory = 133, StartRecoveryTime = 1500.00 ms
+Power POWER_MANA, 2%
+Interrupt Flags: 0x0000000F (SPELL_INTERRUPT_FLAG_MOVEMENT, SPELL_INTERRUPT_FLAG_PUSH_BACK, SPELL_INTERRUPT_FLAG_UNK3, SPELL_INTERRUPT_FLAG_INTERRUPT)
+AuraInterrupt Flags: 0x00000000 (0), 0x00000000 (0)
+ChannelInterrupt Flags: 0x00000000 (0), 0x00000000 (0)
+Chance = 101, charges - 0
+=================================================
+Effect 0: Id 2 (SPELL_EFFECT_SCHOOL_DAMAGE)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 0.00 + spellPower * 0.59
+Targets (6, 0) (TARGET_UNIT_TARGET_ENEMY, NO_TARGET)
+Attributes 00000080 (128)
+
+=================================================
+Items using this spell:
+   Non-existing Item-sparse.db2 entry 996
+   Non-existing Item-sparse.db2 entry 1258
+   Non-existing Item-sparse.db2 entry 8688
+   Non-existing Item-sparse.db2 entry 24420
+=================================================
+Spell visual:
+   Visual 69095 (difficulty 0, priority 0, probability 1)
+      SpellVisualMissile 10539, motion 3932 "Mage - Fire - Fireball"
+      Kit 86424 (via event)
+         Effect type 6: 34246
+         Effect type 5: 86833
+         Effect type 2: 351170
+         Effect type 2: 351171
+      Kit 86425 (via event)
+         Effect type 6: 34247
+         Effect type 5: 86835
+         Effect type 2: 351172
+      Kit 86426 (via event)
+         Effect type 5: 86836
+         Effect type 2: 351173

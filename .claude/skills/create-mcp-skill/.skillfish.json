@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "create-mcp-skill",
+  "owner": "cygnusfear",
+  "repo": "claude-stuff",
+  "path": "skills/create-mcp-skill",
+  "branch": "main",
+  "sha": "331d85264a6c16762aca848e800f3b7ef84d066f",
+  "source": "manual"
+}

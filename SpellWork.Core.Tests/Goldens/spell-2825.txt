@@ -1,0 +1,71 @@
+ID - 2825 Bloodlust
+=================================================
+Increases Haste by $s1% for all party and raid members for $d.
+
+Allies receiving this effect will become Sated and unable to benefit from Bloodlust or Time Warp again for $57724d.
+ToolTip: Haste increased by $s1%.
+Category = 0, SpellIconFileDataID = 136012, ActiveIconFileDataID = 0, SpellVisualID = 89680
+Family SPELLFAMILY_SHAMAN (11), flag [0] 0x00000000 [1] 0x00000040 [2] 0x00000000 [3] 0x00000000
+Modified by Shamanism (193876)
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_NATURE (8)
+DamageClass = 0 (SPELL_DAMAGE_CLASS_NONE)
+PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
+=================================================
+Attributes: 0x00050000 (SPELL_ATTR0_NOT_SHAPESHIFT, SPELL_ATTR0_DONT_AFFECT_SHEATH_STATE)
+AttributesEx1: 0x00020000 (SPELL_ATTR1_UNAUTOCASTABLE_BY_PET)
+AttributesEx2: 0x0000000C (SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS, SPELL_ATTR2_UNK3)
+AttributesEx4: 0x00010000 (SPELL_ATTR4_NOT_USABLE_IN_ARENA_OR_RATED_BG)
+AttributesEx5: 0x00000100 (SPELL_ATTR5_UNK8)
+AttributesEx6: 0x04000000 (SPELL_ATTR6_UNK26)
+AttributesEx7: 0x00000100 (SPELL_ATTR7_HORDE_ONLY)
+AttributesEx9: 0x00000200 (SPELL_ATTR9_NOT_USABLE_IN_ARENA)
+AttributesEx10: 0x00002000 (SPELL_ATTR10_UNK13)
+AttributesEx13: 0x00000001 (SPELL_ATTR13_UNK0)
+=================================================
+Skill (Id 924) "Shaman"
+    MinSkillLineRank 1, SupercedesSpell = 0, MinMaxValue (0, 0), NumSkillups (0)Spell Level = 50, base 50, max 0, max passive aura level 0
+
+Category = 0
+DispelType = 1 (DISPEL_MAGIC)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 1) "Self Only":
+    MinRangeNegative = 0, MinRangePositive = 0
+    MaxRangeNegative = 0, MaxRangePositive = 0
+Cast Time: (ID 1): 0
+RecoveryTime: 300000 ms, CategoryRecoveryTime: 0 ms
+StartRecoveryCategory = 0, StartRecoveryTime = 0.00 ms
+Duration 40000, 0, 40000
+Power POWER_MANA, 21.5%
+Interrupt Flags: 0x00000000 (0)
+AuraInterrupt Flags: 0x00000000 (0), 0x00000200 (AURA_INTERRUPT_FLAG_NOT_SHEATHED)
+ChannelInterrupt Flags: 0x00000000 (0), 0x00000000 (0)
+Chance = 0, charges - 0
+=================================================
+Effect 0: Id 6 (SPELL_EFFECT_APPLY_AURA)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 30.00 + spellPower * 0.25
+Targets (56, 0) (TARGET_UNIT_CASTER_AREA_RAID, NO_TARGET)
+Aura Id 193 (SPELL_AURA_MELEE_SLOW), value = 30, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 0
+Radius (Id 28) 50000.00 (Min: 0.00 Max: 50000.00)
+
+Effect 1: Id 6 (SPELL_EFFECT_APPLY_AURA)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 30.00
+Targets (56, 0) (TARGET_UNIT_CASTER_AREA_RAID, NO_TARGET)
+Aura Id 61 (SPELL_AURA_MOD_SCALE), value = 30, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 0
+Radius (Id 28) 50000.00 (Min: 0.00 Max: 50000.00)
+
+=================================================
+Spell visual:
+   Visual 89680 (difficulty 0, priority 0, probability 1)
+      Kit 44701 (via event)
+         Effect type 6: 16358
+         Effect type 5: 1484
+      Kit 117012 (via event)
+         Effect type 5: 138561
+         Effect type 2: 394696
+         Effect type 5: 10030
+      Kit 44703 (via event)
+         Effect type 2: 303505
+         Effect type 2: 303506

@@ -1,0 +1,45 @@
+ID - 15594 Force of Will
+=================================================
+When struck you have a chance to reduce all damage taken by $15595s1 for $15595d.
+Category = 0, SpellIconFileDataID = 136243, ActiveIconFileDataID = 0, SpellVisualID = 0
+Family SPELLFAMILY_GENERIC (0), flag [0] 0x00000000 [1] 0x00000000 [2] 0x00000000 [3] 0x00000000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_NORMAL (1)
+DamageClass = 0 (SPELL_DAMAGE_CLASS_NONE)
+PreventionType = 0 (SPELL_PREVENTION_TYPE_NONE)
+=================================================
+Attributes: 0x00000040 (SPELL_ATTR0_PASSIVE)
+AttributesEx11: 0x00000004 (SPELL_ATTR11_SCALES_WITH_ITEM_LEVEL)
+=================================================
+Spell Level = 0, base 0, max 0, max passive aura level 0
+
+Category = 0
+DispelType = 0 (DISPEL_NONE)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 1) "Self Only":
+    MinRangeNegative = 0, MinRangePositive = 0
+    MaxRangeNegative = 0, MaxRangePositive = 0
+Cast Time: (ID 1): 0
+PPM flag 0x01 BaseRate 1.5
+Proc flag 0x000A22A8, chance: 101%, charges: 0, cooldown: 0
+=================================================
+  03 Taken damage from melee strike hit
+  05 Taken damage by Spell that use melee weapon
+  07 Taken damage from ranged attack
+  09 Taken damage by Spell that use ranged weapon
+  13 Taken negative spell hit
+  17 Taken magic spell damage
+  19 Taken periodic damage
+=================================================
+Effect 0: Id 6 (SPELL_EFFECT_APPLY_AURA)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 1.00 + spellPower * 1
+Targets (1, 0) (TARGET_UNIT_CASTER, NO_TARGET)
+Aura Id 42 (SPELL_AURA_PROC_TRIGGER_SPELL), value = 1, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 0
+   Trigger spell (15595) Force of Will. Chance = 101
+   Description: $@spelldesc15594
+   ToolTip: Damage taken reduced by $s1.
+
+=================================================
+Items using this spell:
+   11810: Force of Will 

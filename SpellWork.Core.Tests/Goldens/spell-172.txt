@@ -1,0 +1,84 @@
+ID - 172 Corruption
+=================================================
+Corrupts the target, causing $146739o1 Shadow damage over $146739d.
+Category = 0, SpellIconFileDataID = 136118, ActiveIconFileDataID = 0, SpellVisualID = 33438
+Family SPELLFAMILY_WARLOCK (5), flag [0] 0x00000002 [1] 0x00000000 [2] 0x00000000 [3] 0x00000000
+Modified by Improved Corruption & Immolate (24486)
+Modified by Doomcaller Immolate Bonus (26116)
+Modified by Plagueheart (28746)
+Modified by Corruption (28829)
+Modified by Improved Corruption and Immolate (37380)
+Modified by Improved Corruption and Immolate (Updated) (61992)
+Modified by Improved Corruption and Immolate (Updated) (61992)
+Modified by Item - Warlock T9 4P Bonus (Immolate, Corruption, and Unstable Affliction) (67231)
+Modified by Item - Warlock T10 2P Bonus (70839)
+Modified by Mastery: Potent Afflictions (77215)
+Modified by Mastery: Potent Afflictions (77215)
+Modified by Item - Warlock T11 4P Bonus (89935)
+Modified by Item - Warlock T13 4P Bonus (Soulburn) (105787)
+Modified by Item - Warlock T14 2P Bonus (123136)
+Modified by Item - Warlock T14 2P Bonus (123136)
+Modified by Item - Warlock T14 2P Bonus (123136)
+Modified by Epidemic (184922)
+Modified by Epidemic (184922)
+Modified by Absolute Corruption (196103)
+Modified by Hideous Corruption (199112)
+Modified by Hideous Corruption (199112)
+Modified by Perdition (199158)
+Modified by Wrath of Consumption (199646)
+Modified by Amplify Afflictions (200290)
+Modified by Sacrolash's Dark Strike (207952)
+Modified by Norgannon's Foresight (236431)
+Modified by Winnowing (238072)
+Modified by Tormented Agony (252938)
+Modified by Creeping Death (264000)
+Modified by Creeping Death (264000)
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_SHADOW (32)
+DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
+PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
+=================================================
+AttributesEx4: 0x00100000 (SPELL_ATTR4_NOT_CHECK_SELFCAST_POWER)
+AttributesEx5: 0x00002000 (SPELL_ATTR5_HASTE_AFFECT_DURATION)
+AttributesEx6: 0x00800000 (SPELL_ATTR6_UNK23)
+AttributesEx8: 0x00001200 (SPELL_ATTR8_DONT_RESET_PERIODIC_TIMER, SPELL_ATTR8_AURA_SEND_AMOUNT)
+AttributesEx13: 0x00000001 (SPELL_ATTR13_UNK0)
+=================================================
+Spell Level = 3, base 3, max 0, max passive aura level 0
+
+Category = 0
+DispelType = 1 (DISPEL_MAGIC)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 5) "Long Range":
+    MinRangeNegative = 0, MinRangePositive = 0
+    MaxRangeNegative = 40, MaxRangePositive = 40
+Cast Time: (ID 1): 0
+RecoveryTime: 0 ms, CategoryRecoveryTime: 0 ms
+StartRecoveryCategory = 133, StartRecoveryTime = 1500.00 ms
+Power POWER_MANA, 1%
+Interrupt Flags: 0x0000000F (SPELL_INTERRUPT_FLAG_MOVEMENT, SPELL_INTERRUPT_FLAG_PUSH_BACK, SPELL_INTERRUPT_FLAG_UNK3, SPELL_INTERRUPT_FLAG_INTERRUPT)
+AuraInterrupt Flags: 0x00000000 (0), 0x00000000 (0)
+ChannelInterrupt Flags: 0x00000000 (0), 0x00000000 (0)
+  Ex Caster Aura Spell (103958) ?????
+Chance = 0, charges - 0
+=================================================
+Effect 0: Id 64 (SPELL_EFFECT_TRIGGER_SPELL)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 0.00
+Targets (6, 0) (TARGET_UNIT_TARGET_ENEMY, NO_TARGET)
+   Trigger spell (146739) Corruption. Chance = 0
+   Description: $@spelldesc172
+   ToolTip: Suffering $w1 Shadow damage every $t1 sec.
+
+Effect 1: Id 3 (SPELL_EFFECT_DUMMY)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 4.00
+Targets (0, 0) (NO_TARGET, NO_TARGET)
+
+=================================================
+Spell visual:
+   Visual 33438 (difficulty 0, priority 0, probability 1)
+      Kit 101766 (via event)
+         Effect type 6: 362371
+         Effect type 5: 113383
+         Effect type 2: 373652

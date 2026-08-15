@@ -1,0 +1,36 @@
+ID - 65 Haste (Level 120)
+=================================================
+Increases your melee haste by $s1 for $d.
+Category = 0, SpellIconFileDataID = 136047, ActiveIconFileDataID = 0, SpellVisualID = 6
+Family SPELLFAMILY_GENERIC (0), flag [0] 0x00000000 [1] 0x00000000 [2] 0x00000000 [3] 0x00000000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_NATURE (8)
+DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
+PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
+=================================================
+Spell Level = 0, base 0, max 0, max passive aura level 0
+
+Category = 0
+DispelType = 1 (DISPEL_MAGIC)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 1) "Self Only":
+    MinRangeNegative = 0, MinRangePositive = 0
+    MaxRangeNegative = 0, MaxRangePositive = 0
+Cast Time: (ID 1): 0
+Duration 30000, 0, 30000
+Chance = 0, charges - 0
+=================================================
+Effect 0: Id 6 (SPELL_EFFECT_APPLY_AURA)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 13.00
+Targets (1, 0) (TARGET_UNIT_CASTER, NO_TARGET)
+Aura Id 189 (SPELL_AURA_MOD_RATING), value = 0, misc = 917504 (CR_HASTE_MELEE, CR_HASTE_RANGED, CR_HASTE_SPELL), miscB = 0, amplitude = 1, periodic = 0
+
+=================================================
+Spell visual:
+   Visual 6 (difficulty 0, priority 0, probability 1)
+      Kit 395 (via event)
+         Effect type 5: 3339
+         Effect type 2: 277823
+      Kit 697 (via event)
+         Effect type 2: 17120
