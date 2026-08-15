@@ -20,6 +20,11 @@ jobs:
     # net48 targeting pack. Only the Core/Mcp projects are SDK-style.
     runs-on: windows-latest
 
+    # Needed by the tag-triggered release step; without it the default
+    # GITHUB_TOKEN is read-only and creating the release 403s.
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v5
 
@@ -77,3 +82,16 @@ jobs:
         with:
           files: dist/*.zip
           generate_release_notes: true
+          body: |
+            ### Downloads
+
+            | Archive | What it is | Needs |
+            | --- | --- | --- |
+            | `SpellWork.zip` | The WinForms desktop app (`SpellWork.exe`) | .NET Framework 4.8 |
+            | `SpellWork.Mcp.zip` | The read-only MCP server for AI agents | .NET 9 runtime |
+
+            Client data is not included and is not redistributable — extract
+            `dbc` and `gt` yourself with TrinityCore's extractors and point
+            SpellWork at them. This build parses **8.3.7 (35662)** data.
+
+            MCP registration and configuration: [docs/mcp-server.md](https://github.com/HavenWoW/SpellWork/blob/main/docs/mcp-server.md)
