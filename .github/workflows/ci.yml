@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  CONFIGURATION: Release
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+
+jobs:
+  build:
+    # windows-latest is required, not a preference: SpellWork.csproj is a
+    # .NET Framework 4.8 WinForms project, so it needs full MSBuild and the
+    # net48 targeting pack. Only the Core/Mcp projects are SDK-style.
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add MSBuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: msbuild SpellWork.sln -t:Restore -v:m -nologo
+
+      - name: Build
+        run: msbuild SpellWork.sln -p:Configuration=$env:CONFIGURATION -v:m -nologo -m
+
+      # --no-build so the tests run against exactly the binaries produced
+      # above rather than triggering a second, SDK-only rebuild.
+      - name: Test
+        run: dotnet test SpellWork.sln -c $env:CONFIGURATION --no-build --nologo --logger "trx;LogFileName=results.trx"
+
+      # Tests that need real client DBC/DB2 data skip themselves when no data
+      # is present, which is always the case on CI -- client data is not
+      # redistributable and is not in this repo. Keeping the trx means the
+      # pass/skip split stays inspectable instead of collapsing to "green".
+      - name: Publish test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
+          if-no-files-found: warn
+
+      - name: Package SpellWork
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path SpellWork\bin\$env:CONFIGURATION\* -DestinationPath dist\SpellWork.zip -Force
+
+      - name: Package SpellWork.Mcp
+        run: |
+          dotnet publish SpellWork.Mcp\SpellWork.Mcp.csproj -c $env:CONFIGURATION -o mcp-publish --nologo
+          Compress-Archive -Path mcp-publish\* -DestinationPath dist\SpellWork.Mcp.zip -Force
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SpellWork
+          path: dist/*.zip
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true

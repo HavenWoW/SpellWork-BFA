@@ -1,66 +1,123 @@
-SpellWork
-=========
+# SpellWork
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/36e4ae29c00947cbace18b5003141bb1)](https://www.codacy.com/app/TrinityCore/SpellWork?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=TrinityCore/SpellWork&amp;utm_campaign=Badge_Grade)
+[![CI](https://github.com/HavenWoW/SpellWork/actions/workflows/ci.yml/badge.svg)](https://github.com/HavenWoW/SpellWork/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-<a href="https://scan.coverity.com/projects/trinitycore-spellwork">
-  <img alt="Coverity Scan Build Status"
-       src="https://scan.coverity.com/projects/12196/badge.svg"/>
-</a>
+<!-- Coverity: uncomment once the project is registered at scan.coverity.com
+     and replace NNNNN with the numeric project id from its dashboard URL.
+[![Coverity Scan](https://scan.coverity.com/projects/NNNNN/badge.svg)](https://scan.coverity.com/projects/havenwow-spellwork)
+-->
 
-SpellWork is a tool to browse and display information about World of Wacraft spells.
-It is implemented in .NET and it runs on Windows and Linux (with Mono).
-
-Instructions: Run `SpellWork.exe` and select the DBC folder extracted from the client (e.g. by running TrinityCore's `map_extractor`).
+SpellWork browses and displays information about World of Warcraft spells: the
+decoded spell record, its effects, auras, targeting, scaling, proc conditions
+and visual chain, read straight from client DB2 data and — optionally — a
+TrinityCore world database.
 
 ![Screenshot](screenshot.png)
 
-MCP server
-----------
+## Client support
+
+This repository tracks the **8.x** line. It parses **8.3.7 (build 35662)**
+client data and reports itself as `SpellWork 8.3.0 (34220)`.
+
+DB2 structures are version-specific: pointing it at data from another
+expansion will fail layout verification rather than silently misread fields.
+For other client versions, see the branches on
+[upstream TrinityCore/SpellWork](https://github.com/TrinityCore/SpellWork).
+
+## What's in here
+
+| Project | Target | Purpose |
+| --- | --- | --- |
+| `SpellWork` | net48 | WinForms desktop UI |
+| `SpellWork.Core` | netstandard2.0 | DB2/GameTable loading, world DB access, the spell model, rendering and visual-chain resolution |
+| `SpellWork.Mcp` | net9.0 | Read-only [Model Context Protocol](docs/mcp-server.md) server exposing the same data to an AI agent |
+| `SpellWork.Core.Tests`, `SpellWork.Mcp.Tests` | net9.0 | xUnit suites, including golden-output rendering and DB2 layout verification |
+
+The rendering logic lives in `Core`, not in the UI, so the desktop app, the MCP
+server and the golden tests all produce the same spell text from the same code.
+
+## Getting the app
+
+Download `SpellWork.zip` from the [latest release](https://github.com/HavenWoW/SpellWork/releases),
+or grab the artifact from the most recent
+[CI run](https://github.com/HavenWoW/SpellWork/actions/workflows/ci.yml).
+
+### Client data
+
+Client data is **not** redistributable and is not included here. Extract it
+yourself with TrinityCore's extractors and point SpellWork at the result:
+
+- **DBC path** — `<emulator-build-dir>/ClientData/dbc` (contains a locale
+  subdirectory such as `enUS`)
+- **GameTables path** — `<emulator-build-dir>/ClientData/gt`
+
+Run `SpellWork.exe` and set both under **Settings**. A world database
+connection is optional; without it, the DB-backed views report as unavailable
+and everything else still works.
+
+## Building from source
+
+Requires Visual Studio 2022 (or the Build Tools) with the **.NET Framework 4.8
+targeting pack** for the WinForms project, plus the **.NET 9 SDK** for `Core`,
+`Mcp` and the tests.
+
+```
+msbuild SpellWork.sln -t:Restore
+msbuild SpellWork.sln -p:Configuration=Release
+dotnet test SpellWork.sln -c Release --no-build
+```
+
+`dotnet build` alone is not enough: `SpellWork.csproj` is a legacy-format net48
+WinForms project and needs full MSBuild.
+
+Tests that require real client data skip themselves when none is present, so a
+clean checkout reports a large skip count rather than failures. Only the
+data-independent tests — SQL guarding, flag decoding, JSON shape, layout
+constants, MCP tool contracts — run everywhere.
+
+`DBFileReaderLib.dll` is vendored under `packages/` because it is not published
+on NuGet and every project references it by `HintPath`. It is tracked
+deliberately, past the `**/packages/*` ignore rule.
+
+## MCP server
 
 `SpellWork.Mcp` exposes this data to an AI agent over the Model Context
-Protocol, read-only. See [docs/mcp-server.md](docs/mcp-server.md) for build,
-registration and configuration.
+Protocol, read-only, as fourteen tools. See
+**[docs/mcp-server.md](docs/mcp-server.md)** for build, registration and
+configuration.
 
-Nightly Builds & Downloads
---------------------------
+> **Security:** `query_world_db` executes SQL composed by the agent. The server
+> rejects anything that is not a single `SELECT`, but that parser is a guard,
+> not a guarantee — connect as a MySQL user with only `SELECT` granted.
 
-- [**1.12.1 / 1.12.2** (branch 0.6)](https://ci.appveyor.com/api/projects/DDuarte/spellwork-cs/artifacts/SpellWork/SpellWork.zip?job=Configuration:%20Release&branch=0.6)
-[![Build status](https://ci.appveyor.com/api/projects/status/bdkqqtu62sc21lw5/branch/0.6?svg=true)](https://ci.appveyor.com/project/DDuarte/spellwork-cs/branch/0.6)
+## Static analysis
 
-- [**2.4.3 (8606)** (branch 0.12)](https://ci.appveyor.com/api/projects/DDuarte/spellwork-cs/artifacts/SpellWork/SpellWork.zip?job=Configuration:%20Release&branch=0.12)
-[![Build status](https://ci.appveyor.com/api/projects/status/bdkqqtu62sc21lw5/branch/0.12?svg=true)](https://ci.appveyor.com/project/DDuarte/spellwork-cs/branch/0.12)
+`.github/workflows/coverity.yml` runs a Coverity Scan build weekly and on
+demand. It stays dormant until `COVERITY_SCAN_TOKEN` and `COVERITY_SCAN_EMAIL`
+are present as repository secrets. To activate it:
 
-- [**3.3.5a (12340)** (branch master)](https://ci.appveyor.com/api/projects/DDuarte/spellwork-cs/artifacts/SpellWork/SpellWork.zip?job=Configuration:%20Release&branch=master)
-[![Build status](https://ci.appveyor.com/api/projects/status/bdkqqtu62sc21lw5/branch/master?svg=true)](https://ci.appveyor.com/project/DDuarte/spellwork-cs/branch/master)
+1. Register `HavenWoW/SpellWork` at [scan.coverity.com](https://scan.coverity.com/users/sign_in).
+2. Add the project token and your notification email as repository secrets.
+3. Uncomment the Coverity badge at the top of this file and substitute the
+   numeric project id.
 
-- [**4.0.3 (13117)** (branch 400)](https://ci.appveyor.com/api/projects/DDuarte/spellwork-cs/artifacts/SpellWork/SpellWork.zip?job=Configuration:%20Release&branch=400)
-[![Build status](https://ci.appveyor.com/api/projects/status/bdkqqtu62sc21lw5/branch/400?svg=true)](https://ci.appveyor.com/project/DDuarte/spellwork-cs/branch/400)
+Submissions are rate-limited by Coverity, which is why the workflow is not on
+every push.
 
-- [**4.3.4 (15595)** (branch 4.3.4)](https://ci.appveyor.com/api/projects/DDuarte/spellwork-cs/artifacts/SpellWork/SpellWork.zip?job=Configuration:%20Release&branch=4.3.4)
-[![Build status](https://ci.appveyor.com/api/projects/status/bdkqqtu62sc21lw5/branch/4.3.4?svg=true)](https://ci.appveyor.com/project/DDuarte/spellwork-cs/branch/4.3.4)
+## History
 
-- [**5.4.8 (18414)** (branch 5.4.8)](https://ci.appveyor.com/api/projects/DDuarte/spellwork-cs/artifacts/SpellWork/SpellWork.zip?job=Configuration:%20Release&branch=5.4.8)
-[![Build status](https://ci.appveyor.com/api/projects/status/bdkqqtu62sc21lw5/branch/5.4.8?svg=true)](https://ci.appveyor.com/project/DDuarte/spellwork-cs/branch/5.4.8)
+SpellWork is a tool originally created by Chestr (also known as DiSlord); the
+C# rebuild is [TrinityCore/SpellWork](https://github.com/TrinityCore/SpellWork),
+which this repository is derived from.
 
-- [**6.2.3 (20726)** (branch 6.x)](https://ci.appveyor.com/api/projects/DDuarte/spellwork-cs/artifacts/SpellWork/SpellWork.zip?job=Configuration:%20Release&branch=6.x)
-[![Build status](https://ci.appveyor.com/api/projects/status/bdkqqtu62sc21lw5/branch/6.x?svg=true)](https://ci.appveyor.com/project/DDuarte/spellwork-cs/branch/6.x)
+Thanks to:
 
-- [**7.2.5 (24330)** (branch 7.x)](https://ci.appveyor.com/api/projects/DDuarte/spellwork-cs/artifacts/SpellWork/SpellWork.zip?job=Configuration:%20Release&branch=7.x)
-[![Build status](https://ci.appveyor.com/api/projects/status/bdkqqtu62sc21lw5/branch/7.x?svg=true)](https://ci.appveyor.com/project/DDuarte/spellwork-cs/branch/7.x)
+- Chestr — for the idea and the released source of the original spell_work
+- TOM_RUS — for code samples
+- Shauren — for updating it for TrinityCore
 
-- [**8.3.0 (34220)** (branch 8.x)](https://ci.appveyor.com/api/projects/DDuarte/spellwork-cs/artifacts/SpellWork/SpellWork.zip?job=Configuration:%20Release&branch=8.x)
-[![Build status](https://ci.appveyor.com/api/projects/status/bdkqqtu62sc21lw5/branch/8.x?svg=true)](https://ci.appveyor.com/project/DDuarte/spellwork-cs/branch/8.x)
+## License
 
-History
--------
-
-SpellWork is a tool originally created by Chestr (also known as DiSlord).
-
-This project is a try to rebuild the application using C#.
-
-Thanks goes to:
-
-- Chestr (for the idea and released source of original spell_work)
-- TOM_RUS (for code samples)
-- Shauren (updating for TrinityCore)
+[MIT](LICENSE). Copyright (c) 2011-2017 TrinityCore; unattributed 2010-2012
+Chestr, LordJZ, Konctantin.

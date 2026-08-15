@@ -155,6 +155,12 @@ publish/
 **/packages/*
 # except build/, which is used as an MSBuild target.
 !**/packages/build/
+# ...and except DBFileReaderLib, which is not on NuGet: every project in the
+# solution references it by HintPath into packages/, so a clone without it
+# cannot build. Upstream keeps it tracked the same way (force-added past this
+# rule); the explicit negation makes that intent survive a fresh checkout.
+!packages/DBFileReaderLib.1.0.0.0/
+!packages/DBFileReaderLib.1.0.0.0/**
 # Uncomment if necessary however generally it will be regenerated when needed
 #!**/packages/repositories.config
 # NuGet v3's project.json files produces more ignoreable files

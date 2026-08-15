@@ -1,0 +1,97 @@
+name: Coverity Scan
+
+# Coverity Scan rate-limits submissions (a project this size gets a handful of
+# builds per day, 28 per week), so this deliberately does NOT run on every
+# push. Weekly plus on-demand keeps us well inside the quota.
+on:
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+env:
+  CONFIGURATION: Release
+  COVERITY_PROJECT: HavenWoW%2FSpellWork
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+
+jobs:
+  coverity:
+    runs-on: windows-latest
+    # Without the token the download step 401s and the whole job fails on every
+    # schedule tick, mailing the repo owner a failure a week for nothing. Skip
+    # cleanly until the secret exists.
+    if: github.repository == 'HavenWoW/SpellWork'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for Coverity token
+        id: guard
+        shell: pwsh
+        env:
+          COVERITY_SCAN_TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:COVERITY_SCAN_TOKEN)) {
+            Write-Host "::warning::COVERITY_SCAN_TOKEN is not set - skipping. Register the project at https://scan.coverity.com and add the token as a repository secret."
+            "configured=false" >> $env:GITHUB_OUTPUT
+          } else {
+            "configured=true" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Add MSBuild to PATH
+        if: steps.guard.outputs.configured == 'true'
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Set up .NET
+        if: steps.guard.outputs.configured == 'true'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Download Coverity Build Tool
+        if: steps.guard.outputs.configured == 'true'
+        shell: pwsh
+        env:
+          COVERITY_SCAN_TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
+        run: |
+          $uri = "https://scan.coverity.com/download/csharp/win64?token=$env:COVERITY_SCAN_TOKEN&project=$env:COVERITY_PROJECT"
+          Invoke-WebRequest -Uri $uri -OutFile coverity_tool.zip -MaximumRedirection 5
+          Expand-Archive -Path coverity_tool.zip -DestinationPath coverity_tool -Force
+          # The archive unpacks to a versioned directory (cov-analysis-win64-*),
+          # so resolve it rather than hard-coding a version that will drift.
+          $bin = (Get-ChildItem coverity_tool -Directory | Select-Object -First 1).FullName + "\bin"
+          "$bin" >> $env:GITHUB_PATH
+
+      - name: Restore
+        if: steps.guard.outputs.configured == 'true'
+        run: msbuild SpellWork.sln -t:Restore -v:m -nologo
+
+      # cov-build must wrap a full rebuild: it instruments the compiler as it
+      # runs, so anything already up to date is simply not captured.
+      - name: Build under cov-build
+        if: steps.guard.outputs.configured == 'true'
+        run: cov-build --dir cov-int msbuild SpellWork.sln -t:Rebuild -p:Configuration=$env:CONFIGURATION -v:m -nologo
+
+      - name: Check emit
+        if: steps.guard.outputs.configured == 'true'
+        shell: pwsh
+        run: |
+          Get-Content cov-int\build-log.txt -Tail 20
+          if (-not (Test-Path cov-int\emit)) { throw "cov-build captured nothing - check the build-log above." }
+
+      - name: Submit to Coverity Scan
+        if: steps.guard.outputs.configured == 'true'
+        shell: pwsh
+        env:
+          COVERITY_SCAN_TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
+          COVERITY_SCAN_EMAIL: ${{ secrets.COVERITY_SCAN_EMAIL }}
+        run: |
+          Compress-Archive -Path cov-int -DestinationPath spellwork.zip -Force
+          $form = @{
+            token         = $env:COVERITY_SCAN_TOKEN
+            email         = $env:COVERITY_SCAN_EMAIL
+            file          = Get-Item spellwork.zip
+            version       = "${{ github.sha }}"
+            description   = "GitHub Actions ${{ github.ref_name }} ${{ github.run_id }}"
+          }
+          Invoke-WebRequest -Uri "https://scan.coverity.com/builds?project=$env:COVERITY_PROJECT" -Method Post -Form $form -TimeoutSec 900
