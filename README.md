@@ -1,12 +1,8 @@
 # SpellWork
 
 [![CI](https://github.com/HavenWoW/SpellWork/actions/workflows/ci.yml/badge.svg)](https://github.com/HavenWoW/SpellWork/actions/workflows/ci.yml)
+[![Coverity Scan](https://img.shields.io/coverity/scan/33228.svg)](https://scan.coverity.com/projects/spellwork)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
-<!-- Coverity: uncomment once the project is registered at scan.coverity.com
-     and replace NNNNN with the numeric project id from its dashboard URL.
-[![Coverity Scan](https://scan.coverity.com/projects/NNNNN/badge.svg)](https://scan.coverity.com/projects/havenwow-spellwork)
--->
 
 SpellWork browses and displays information about World of Warcraft spells: the
 decoded spell record, its effects, auras, targeting, scaling, proc conditions
@@ -93,17 +89,15 @@ configuration.
 
 ## Static analysis
 
-`.github/workflows/coverity.yml` runs a Coverity Scan build weekly and on
-demand. It stays dormant until `COVERITY_SCAN_TOKEN` and `COVERITY_SCAN_EMAIL`
-are present as repository secrets. To activate it:
+[Coverity Scan project 33228](https://scan.coverity.com/projects/spellwork)
+analyses this codebase. `.github/workflows/coverity.yml` builds under
+`cov-build` and submits, weekly and on demand — not per push, because Coverity
+rate-limits submissions.
 
-1. Register `HavenWoW/SpellWork` at [scan.coverity.com](https://scan.coverity.com/users/sign_in).
-2. Add the project token and your notification email as repository secrets.
-3. Uncomment the Coverity badge at the top of this file and substitute the
-   numeric project id.
-
-Submissions are rate-limited by Coverity, which is why the workflow is not on
-every push.
+The workflow skips itself unless `COVERITY_SCAN_TOKEN` and
+`COVERITY_SCAN_EMAIL` exist as repository secrets. Both come from the project's
+Coverity dashboard (*Project Settings* for the token, *Submit Build* for the
+exact `project=` value the upload expects).
 
 ## History
 

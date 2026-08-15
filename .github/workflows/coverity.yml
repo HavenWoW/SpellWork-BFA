@@ -10,7 +10,11 @@ on:
 
 env:
   CONFIGURATION: Release
-  COVERITY_PROJECT: HavenWoW%2FSpellWork
+  # Scan project 33228, slug "spellwork" -- so the registered name is
+  # "SpellWork", not "HavenWoW/SpellWork" (which would slug to
+  # havenwow-spellwork). If an upload is rejected as an unknown project, take
+  # the literal project= value from the dashboard's Submit Build page.
+  COVERITY_PROJECT: SpellWork
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_NOLOGO: 1
 
@@ -23,7 +27,7 @@ jobs:
     if: github.repository == 'HavenWoW/SpellWork'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check for Coverity token
         id: guard
@@ -44,7 +48,7 @@ jobs:
 
       - name: Set up .NET
         if: steps.guard.outputs.configured == 'true'
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
 
