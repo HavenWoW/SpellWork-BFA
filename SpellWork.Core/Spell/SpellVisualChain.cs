@@ -35,8 +35,13 @@ namespace SpellWork.Spell
         public IReadOnlyList<KitSlotRef> KitSlots { get; set; }
         public IReadOnlyList<SpellVisualMissileInfo> Missiles { get; set; }
 
-        /// <summary>From <c>SpellVisual.MissileMotion</c>; null when that column is 0.</summary>
-        public SpellMissileMotionInfo MissileMotion { get; set; }
+        /// <summary>
+        /// SpellVisual column 14 (WoWDBDefs "MissileMotion"), raw. Its meaning
+        /// is unverified -- almost none of its values are SpellMissileMotion
+        /// ids -- so it is reported as-is, never resolved and never listed in
+        /// UnresolvedReferences. 0 when the column is 0.
+        /// </summary>
+        public int Unk14MissileMotion { get; set; }
     }
 
     public sealed class KitSlotRef
@@ -81,11 +86,5 @@ namespace SpellWork.Spell
         public string Name { get; set; }
         public int MotionID { get; set; }
         public string MotionName { get; set; }
-    }
-
-    public sealed class SpellMissileMotionInfo
-    {
-        public int ID { get; set; }
-        public string Name { get; set; }
     }
 }

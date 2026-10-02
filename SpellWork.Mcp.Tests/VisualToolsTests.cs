@@ -43,6 +43,8 @@ namespace SpellWork.Mcp.Tests
             Assert.Equal(0, variant.GetProperty("slot").GetInt32());
             Assert.Equal(67, variant.GetProperty("spellVisualId").GetInt32());
             Assert.True(variant.GetProperty("visualResolved").GetBoolean());
+            Assert.False(variant.TryGetProperty("unk14MissileMotion", out _), "omitted when the column is 0");
+            Assert.False(variant.TryGetProperty("missileMotion", out _));
             Assert.Contains(variant.GetProperty("kitSlots").EnumerateArray(),
                 k => k.GetProperty("slot").GetString() == "PrecastKit" && k.GetProperty("kitId").GetInt32() == 30);
             Assert.Equal(@"Spells\Fireball_Missile_Low.mdx",

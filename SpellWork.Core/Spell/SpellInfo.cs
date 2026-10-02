@@ -784,8 +784,8 @@ namespace SpellWork.Spell
                             attach.Name ?? "#" + attach.EffectNameID + " unresolved");
                 }
 
-                if (variant.MissileMotion != null)
-                    rtb.AppendFormatLine("  MissileMotion #{0}: {1}", variant.MissileMotion.ID, variant.MissileMotion.Name ?? "unresolved");
+                if (variant.Unk14MissileMotion != 0)
+                    rtb.AppendFormatLine("  Unk14MissileMotion: {0} (unverified column, raw value)", variant.Unk14MissileMotion);
 
                 foreach (var missile in variant.Missiles)
                 {

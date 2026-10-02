@@ -154,14 +154,10 @@ namespace SpellWork.Spell
                 }
                 variant.KitSlots = kitSlots;
 
-                if (visual.MissileMotion != 0)
-                {
-                    variant.MissileMotion = new SpellMissileMotionInfo
-                    {
-                        ID = visual.MissileMotion,
-                        Name = MotionName(index, visual.MissileMotion, $"SpellVisual#{visualId}.MissileMotion", unresolved),
-                    };
-                }
+                // Raw and unresolved by design: column 14's meaning is
+                // unverified (see SpellVisualEntry.Unk14MissileMotion), so it is
+                // neither followed nor listed as an unresolved reference.
+                variant.Unk14MissileMotion = visual.Unk14MissileMotion;
 
                 if (visual.SpellVisualMissileSetID != 0)
                 {

@@ -167,7 +167,7 @@ SpellVisual
  ├─ kits: PrecastKit, CastKit, ImpactKit, StateKit, StateDoneKit, ChannelKit,
  │        CasterImpactKit, TargetImpactKit, MissileTargetingKit,
  │        InstantAreaKit, ImpactAreaKit, PersistentAreaKit   ──► SpellVisualKit
- ├─ MissileMotion ──► SpellMissileMotion
+ ├─ column 14 (WoWDBDefs "MissileMotion") ── raw value only, not followed (see below)
  └─ SpellVisualMissileSetID ──► SpellVisualMissile rows (by set id)
         ├─ SpellVisualEffectNameID ──► SpellVisualEffectName
         └─ SpellMissileMotionID   ──► SpellMissileMotion
@@ -184,6 +184,13 @@ SpellVisualKit
 above reference it. It stays modelled for `get_db2_row`/`query_db2`. The tool
 documentation says this, the same way `main` documents `SpellMissile` as
 unreachable.
+
+SpellVisual column 14 is named `MissileMotion` in WoWDBDefs, but on the
+reference data 384 of its 388 non-zero values miss SpellMissileMotion, and all
+388 fall inside SpellVisualKit's (dense) id range. Its meaning is unconfirmed,
+so the structure names it `Unk14MissileMotion` and the chain reports it per
+variant as a raw id (`unk14MissileMotion`, omitted when 0; a text line labelled
+unverified). It is never resolved and never appears in `unresolvedReferences`.
 
 Kits are deduplicated across variants and slots. Each kit lists the slots
 that reference it. `main`'s envelope stays: `variants`, `kits`,

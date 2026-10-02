@@ -54,14 +54,12 @@ namespace SpellWork.Spell
                     ["motionId"] = m.MotionID,
                     ["motionName"] = m.MotionName,
                 }).ToList(),
-                ["missileMotion"] = variant.MissileMotion == null
-                    ? null
-                    : new Dictionary<string, object>
-                    {
-                        ["id"] = variant.MissileMotion.ID,
-                        ["name"] = variant.MissileMotion.Name,
-                    },
             };
+
+            // SpellVisual column 14, raw and unverified; omitted when 0.
+            if (variant.Unk14MissileMotion != 0)
+                dict["unk14MissileMotion"] = variant.Unk14MissileMotion;
+
             return dict;
         }
 

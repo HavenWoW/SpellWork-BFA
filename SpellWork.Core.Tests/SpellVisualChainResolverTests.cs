@@ -143,12 +143,13 @@ namespace SpellWork.Core.Tests
         public void MissilesAndMotionsResolveOrAreReported()
         {
             var index = InMemoryIndex(
-                new[] { new SpellVisualEntry { ID = 1, SpellVisualMissileSetID = 4, MissileMotion = 77 } },
+                new[] { new SpellVisualEntry { ID = 1, SpellVisualMissileSetID = 4, Unk14MissileMotion = 77 } },
                 new SpellVisualKitEntry[0],
                 missiles: new[]
                 {
                     new SpellVisualMissileEntry { ID = 21, SpellVisualMissileSetID = 4, SpellVisualEffectNameID = 7, SpellMissileMotionID = 2 },
                     new SpellVisualMissileEntry { ID = 20, SpellVisualMissileSetID = 4, SpellVisualEffectNameID = 7 },
+                    new SpellVisualMissileEntry { ID = 22, SpellVisualMissileSetID = 4, SpellMissileMotionID = 9 },
                 },
                 effectNames: new[] { new SpellVisualEffectNameEntry { ID = 7, Name = "bolt.mdx" } },
                 motions: new[] { new SpellMissileMotionEntry { ID = 2, Name = "Spiral" } });
@@ -156,12 +157,31 @@ namespace SpellWork.Core.Tests
             var chain = SpellVisualChainResolver.Resolve(index, 5, new[] { 1, 0 }, 500);
 
             var v = Assert.Single(chain.Variants);
-            Assert.Equal(new[] { 20, 21 }, v.Missiles.Select(m => m.ID));
+            Assert.Equal(new[] { 20, 21, 22 }, v.Missiles.Select(m => m.ID));
             Assert.Equal("Spiral", v.Missiles[1].MotionName);
             Assert.Equal("bolt.mdx", v.Missiles[0].Name);
-            Assert.Equal(77, v.MissileMotion.ID);
-            Assert.Null(v.MissileMotion.Name);
-            Assert.Equal(new[] { "SpellMissileMotion#77 (from SpellVisual#1.MissileMotion)" }, chain.UnresolvedReferences);
+            // Column 14 is reported raw: never resolved, never listed as unresolved.
+            Assert.Equal(77, v.Unk14MissileMotion);
+            Assert.Equal(new[] { "SpellMissileMotion#9 (from SpellVisualMissile#22.SpellMissileMotionID)" }, chain.UnresolvedReferences);
+        }
+
+        [Fact]
+        public void Unk14MissileMotionIsEmittedRawOnlyWhenNonZero()
+        {
+            var withColumn = SpellVisualChainJson.Describe(new SpellVisualVariant
+            {
+                Slot = 0, SpellVisualID = 1, VisualResolved = true, Unk14MissileMotion = 77,
+                KitSlots = new List<KitSlotRef>(), Missiles = new List<SpellVisualMissileInfo>(),
+            });
+            var without = SpellVisualChainJson.Describe(new SpellVisualVariant
+            {
+                Slot = 0, SpellVisualID = 1, VisualResolved = true,
+                KitSlots = new List<KitSlotRef>(), Missiles = new List<SpellVisualMissileInfo>(),
+            });
+
+            Assert.Equal(77, withColumn["unk14MissileMotion"]);
+            Assert.False(without.ContainsKey("unk14MissileMotion"));
+            Assert.False(withColumn.ContainsKey("missileMotion"));
         }
 
         [Fact]

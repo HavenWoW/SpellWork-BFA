@@ -25,7 +25,7 @@ namespace SpellWork.Mcp.Tools
             "slot 0 or 1. Each variant lists its SpellVisual kit columns (kitSlots: PrecastKit, CastKit, ImpactKit, StateKit, " +
             "StateDoneKit, ChannelKit, CasterImpactKit, TargetImpactKit, MissileTargetingKit, InstantAreaKit, ImpactAreaKit, " +
             "PersistentAreaKit), its SpellVisualMissile rows (by SpellVisualMissileSetID, with SpellVisualEffectName model path " +
-            "and SpellMissileMotion) and its SpellVisual.MissileMotion. kits is deduplicated across variants and slots; " +
+            "and SpellMissileMotion) and, when non-zero, unk14MissileMotion: SpellVisual column 14 as a raw value (WoWDBDefs calls it MissileMotion, but almost none of its values are SpellMissileMotion ids; meaning unverified, never resolved). kits is deduplicated across variants and slots; " +
             "reachedVia names every visual/slot/column that reached a kit. Each kit lists its non-zero effect columns " +
             "(Head..World, Special0..2) resolved to SpellVisualEffectName, and its SpellVisualKitModelAttach rows. " +
             "SpellVisualKitAreaModel is not part of the chain (it has no parent-kit column in 5.4.8); SpellMissile is keyed by " +

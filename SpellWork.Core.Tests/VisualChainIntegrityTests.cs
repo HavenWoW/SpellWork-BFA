@@ -87,12 +87,10 @@ namespace SpellWork.Core.Tests
                             expected.Add($"SpellVisualKit#{kitId} (from SpellVisual#{vid}.{kitSlot})");
                     }
 
-                    if (v.MissileMotion != 0)
-                    {
-                        referencesChecked++;
-                        if (!MotionKnown(v.MissileMotion))
-                            expected.Add($"SpellMissileMotion#{v.MissileMotion} (from SpellVisual#{vid}.MissileMotion)");
-                    }
+                    // Column 14 (Unk14MissileMotion) is reported raw and is not a
+                    // reference the chain follows, so it must never be listed.
+                    Assert.Equal(v.Unk14MissileMotion,
+                        chain.Variants.First(x => x.Slot == slot).Unk14MissileMotion);
 
                     if (v.SpellVisualMissileSetID != 0)
                     {
@@ -164,6 +162,11 @@ namespace SpellWork.Core.Tests
             if (byStore.Count == 0)
                 _output.WriteLine("unresolved: none");
 
+            // On the reference data every gated-store reference resolves; only
+            // the ungated SpellMissileMotion (from SpellVisualMissile rows) may
+            // have listings, and the set-equality above proves each is genuine.
+            var gated = new[] { "SpellVisual", "SpellVisualKit", "SpellVisualMissile", "SpellVisualEffectName", "SpellVisualKitModelAttach" };
+            Assert.Empty(byStore.Keys.Intersect(gated));
             Assert.Equal(DBC.DBC.SpellInfoStore.Count, walked);
             Assert.True(walked > 90000, $"only {walked} spells walked");
         }

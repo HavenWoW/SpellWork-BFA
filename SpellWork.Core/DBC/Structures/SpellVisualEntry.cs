@@ -19,7 +19,13 @@ namespace SpellWork.DBC.Structures
         public int CasterImpactKit;
         public int TargetImpactKit;
         public int MissileAttachment;
-        public int MissileMotion;
+        // Column 14, named MissileMotion in WoWDBDefs. Unverified: on the
+        // reference data 388 rows are non-zero, 384 of those miss
+        // SpellMissileMotion (538 rows, max id 3238), and all 388 fall inside
+        // SpellVisualKit's id range (which is dense, so that proves little).
+        // Meaning unconfirmed; the visual chain reports it raw and never
+        // resolves it (spec §6).
+        public int Unk14MissileMotion;
         public int MissileTargetingKit;
         public int InstantAreaKit;
         public int ImpactAreaKit;
