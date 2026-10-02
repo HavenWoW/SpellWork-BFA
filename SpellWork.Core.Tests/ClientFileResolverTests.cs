@@ -19,6 +19,32 @@ namespace SpellWork.Core.Tests
         }
 
         [Fact]
+        public void ReadBuild_Wdb2Header_YieldsBuildAtOffset24_AndWdbcYieldsNull()
+        {
+            var wdb2 = new byte[48];
+            System.Text.Encoding.ASCII.GetBytes("WDB2").CopyTo(wdb2, 0);
+            System.BitConverter.GetBytes(18273u).CopyTo(wdb2, 24);
+            var wdb2Path = Path.Combine(_root, "h.db2");
+            File.WriteAllBytes(wdb2Path, wdb2);
+            Assert.Equal(18273, ClientFileResolver.ReadBuild(wdb2Path));
+
+            var wdbc = new byte[48];
+            System.Text.Encoding.ASCII.GetBytes("WDBC").CopyTo(wdbc, 0);
+            System.BitConverter.GetBytes(18273u).CopyTo(wdbc, 24);
+            var wdbcPath = Path.Combine(_root, "h.dbc");
+            File.WriteAllBytes(wdbcPath, wdbc);
+            Assert.Null(ClientFileResolver.ReadBuild(wdbcPath));
+
+            var shortPath = Path.Combine(_root, "short.db2");
+            File.WriteAllBytes(shortPath, new byte[] { 0x57, 0x44, 0x42, 0x32 });
+            Assert.Null(ClientFileResolver.ReadBuild(shortPath));
+
+            var resolved = ClientFileResolver.Resolve("h", new SpellWorkConfig { DbcPath = _root });
+            Assert.Equal("db2", resolved.Extension);
+            Assert.Equal(18273, resolved.Build);
+        }
+
+        [Fact]
         public void Db2WinsOverDbcInSameDirectory()
         {
             Touch("dbc", "SpellVisual.dbc");

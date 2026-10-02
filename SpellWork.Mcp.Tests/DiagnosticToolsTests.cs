@@ -22,7 +22,11 @@ namespace SpellWork.Mcp.Tests
             var result = doc.RootElement.GetProperty("result");
 
             Assert.Equal(18414, result.GetProperty("clientBuild").GetInt32());
-            Assert.EndsWith("SpellVisual.db2", result.GetProperty("openedFiles").GetProperty("SpellVisual").GetString());
+            var openedFiles = result.GetProperty("openedFiles");
+            Assert.EndsWith("SpellVisual.db2", openedFiles.GetProperty("SpellVisual").GetProperty("path").GetString());
+            Assert.Equal("db2", openedFiles.GetProperty("SpellVisual").GetProperty("extension").GetString());
+            Assert.Equal(18273, openedFiles.GetProperty("SpellVisual").GetProperty("build").GetInt32());
+            Assert.Equal(JsonValueKind.Null, openedFiles.GetProperty("Spell").GetProperty("build").ValueKind);
             Assert.True(result.GetProperty("localeFallback").ValueKind is JsonValueKind.True or JsonValueKind.False);
             Assert.Equal(0, result.GetProperty("layoutMismatches").GetArrayLength());
             Assert.False(result.TryGetProperty("hotfixCache", out _));

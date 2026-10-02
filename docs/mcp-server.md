@@ -73,7 +73,7 @@ Nothing in this server writes to client files or to MySQL, by design.
 
 | Tool | What it does |
 | --- | --- |
-| `server_info` | Configured paths, locale, `clientBuild` (18414), `localeFallback`, `openedFiles` (the exact file each store was read from), `layoutMismatches` (expected and actual field count and record size), store counts, load duration, MySQL reachability |
+| `server_info` | Configured paths, locale, `clientBuild` (18414), `localeFallback`, `openedFiles` (per store: `path`, `extension` and the WDB2 header `build`, null for `.dbc`), `layoutMismatches` (expected and actual field count and record size), store counts, load duration, MySQL reachability |
 | `get_spell` | The full decoded view of one spell, as JSON or rendered text |
 | `search_spells` | Find spells by name, family, aura/effect/target type, attribute or school |
 | `get_spell_triggers` | What a spell triggers and what triggers it |
@@ -190,7 +190,7 @@ and `query_db2`; other files return `store_not_modelled`.
   `list_db2` (`shadowed`) or `server_info` (`openedFiles`) to see which file a
   store came from.
 - **Header build 18273.** The `.db2` files carry header build 18273, not 18414.
-  The loader does not check it; layouts are verified by field count and record
+  `server_info` reports each file's header build (`openedFiles.<store>.build`). The loader does not reject it; layouts are verified by field count and record
   size instead, reported under `layoutMismatches`.
 - **Custom spells are overrides only.** Spells the repack adds in its world
   database (`spell_dbc`, `spelleffect_dbc`, `spellmisc_dbc`) do not exist in the

@@ -34,7 +34,7 @@ namespace SpellWork.Mcp.Tools
                 ["localeFallback"] = SpellWork.DBC.DBC.LocaleFallback,
                 ["openedFiles"] = SpellWork.DBC.DBC.OpenedFiles
                     .OrderBy(pair => pair.Key, System.StringComparer.Ordinal)
-                    .ToDictionary(pair => pair.Key, pair => pair.Value.Path),
+                    .ToDictionary(pair => pair.Key, pair => (object)new Dictionary<string, object> { ["path"] = pair.Value.Path, ["extension"] = pair.Value.Extension, ["build"] = pair.Value.Build }),
                 ["locale"] = config.Locale,
                 ["clientDataLoaded"] = data.Loaded,
                 ["loadDurationMs"] = (int)data.LoadDuration.TotalMilliseconds,
