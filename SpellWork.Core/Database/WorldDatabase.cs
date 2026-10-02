@@ -39,6 +39,35 @@ namespace SpellWork.Database
             return string.Empty;
         }
 
+        /// <summary>spell_proc_event.phase is a MySQL SET
+        /// ('PROC_PHASE_HIT','PROC_PHASE_CAST','PROC_PHASE_AFTER_CAST'), which
+        /// the driver returns as a comma-separated string; the bitmask is the
+        /// 1-based member position (HIT=1, CAST=2, AFTER_CAST=4). Numeric
+        /// values (e.g. from phase+0) pass through.</summary>
+        public static uint ReadPhase(object value)
+        {
+            if (value == null || value == DBNull.Value)
+                return 0;
+            if (value is string s)
+            {
+                uint mask = 0;
+                foreach (var part in s.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    switch (part.Trim())
+                    {
+                        case "PROC_PHASE_HIT": mask |= 1; break;
+                        case "PROC_PHASE_CAST": mask |= 2; break;
+                        case "PROC_PHASE_AFTER_CAST": mask |= 4; break;
+                        default:
+                            if (uint.TryParse(part.Trim(), out var n)) mask |= n;
+                            break;
+                    }
+                }
+                return mask;
+            }
+            return Convert.ToUInt32(value);
+        }
+
         public List<SpellProcEventEntry> SelectProc(string query)
         {
             var result = new List<SpellProcEventEntry>();
@@ -68,7 +97,7 @@ namespace SpellWork.Database
                             },
                             ProcFlags           = reader.GetUInt32(7),
                             ProcEx              = reader.GetUInt32(8),
-                            Phase               = reader.GetUInt32(9),
+                            Phase               = ReadPhase(reader.GetValue(9)),
                             PpmRate             = reader.GetFloat(10),
                             CustomChance        = reader.GetFloat(11),
                             Cooldown            = reader.GetUInt32(12)

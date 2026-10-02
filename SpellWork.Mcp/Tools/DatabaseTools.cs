@@ -45,6 +45,19 @@ namespace SpellWork.Mcp.Tools
 
         internal const string SpellMiscTable = "spellmisc_dbc";
 
+        /// <summary>The SpellMisc ids to match: the client's MiscID (when
+        /// client data knows the spell) united with the spell_dbc.SpellMiscId
+        /// values, deduplicated, zero excluded, ascending.</summary>
+        internal static List<int> ComputeMiscIds(int? clientMiscId, IEnumerable<int> spellDbcMiscIds)
+        {
+            var set = new SortedSet<int>();
+            if (clientMiscId.HasValue && clientMiscId.Value != 0)
+                set.Add(clientMiscId.Value);
+            foreach (var m in spellDbcMiscIds)
+                if (m != 0) set.Add(m);
+            return set.ToList();
+        }
+
         private readonly SpellDataService _data;
 
         public DatabaseTools(SpellDataService data) => _data = data;
@@ -155,31 +168,32 @@ namespace SpellWork.Mcp.Tools
             // spellmisc_dbc is keyed by SpellMisc id. The ids to look up are
             // the client's (DBC Spell.MiscID, when client data is loaded) plus
             // the repack's own (spell_dbc.SpellMiscId for this spell).
-            var miscIds = new SortedSet<int>();
             try { await _data.GetAsync(); } catch (Exception) { /* client data is optional here */ }
-            if (DBC.DBC.Spell != null && DBC.DBC.Spell.TryGetValue(id, out var clientSpell) && clientSpell.MiscID != 0)
-                miscIds.Add(clientSpell.MiscID);
+            int? clientMiscId = null;
+            if (DBC.DBC.Spell != null && DBC.DBC.Spell.TryGetValue(id, out var clientSpell))
+                clientMiscId = clientSpell.MiscID;
 
+            var spellDbcMiscIds = new List<int>();
             if (tables.TryGetValue("spell_dbc", out var spellDbcRows))
             {
                 foreach (var row in (List<object>)spellDbcRows)
                 {
                     if (row is Dictionary<string, object> r && r.TryGetValue("SpellMiscId", out var m) && m != null)
-                    {
-                        var miscId = Convert.ToInt32(m);
-                        if (miscId != 0) miscIds.Add(miscId);
-                    }
+                        spellDbcMiscIds.Add(Convert.ToInt32(m));
                 }
             }
 
+            var miscIds = ComputeMiscIds(clientMiscId, spellDbcMiscIds);
+
             try
             {
-                string sql;
-                var args = new List<(string, object)>();
-                string matchedBy;
+                // spellmisc_dbc.Id is a SpellMisc id, never a spell id, so with
+                // no misc id there is nothing to match: empty rows, no query.
+                var rows = new List<object>();
                 if (miscIds.Count > 0)
                 {
                     // Placeholders are generated (@m0, @m1, ...); values are bound.
+                    var args = new List<(string, object)>();
                     var names = new List<string>();
                     foreach (var miscId in miscIds)
                     {
@@ -187,24 +201,19 @@ namespace SpellWork.Mcp.Tools
                         names.Add(name);
                         args.Add((name, miscId));
                     }
-                    sql = $"SELECT * FROM `{SpellMiscTable}` WHERE `Id` IN ({string.Join(", ", names)})";
-                    matchedBy = "spellMiscId";
-                }
-                else
-                {
-                    sql = $"SELECT * FROM `{SpellMiscTable}` WHERE `Id` = @id";
-                    args.Add(("@id", id));
-                    matchedBy = "spellId";
+                    var sql = $"SELECT * FROM `{SpellMiscTable}` WHERE `Id` IN ({string.Join(", ", names)})";
+                    var result = worldDatabase.SelectRows(sql, ToolResponse.MaxRows, args.ToArray());
+                    rows = result.Rows.Cast<object>().ToList();
+                    if (result.Truncated)
+                        truncated.Add(SpellMiscTable);
                 }
 
-                var result = worldDatabase.SelectRows(sql, ToolResponse.MaxRows, args.ToArray());
                 tables[SpellMiscTable] = new Dictionary<string, object>
                 {
-                    ["matchedBy"] = matchedBy,
-                    ["rows"] = result.Rows.Cast<object>().ToList(),
+                    ["matchedBy"] = "spellMiscId",
+                    ["miscIds"] = miscIds,
+                    ["rows"] = rows,
                 };
-                if (result.Truncated)
-                    truncated.Add(SpellMiscTable);
             }
             catch (Exception ex) when (IsMissingTable(ex))
             {

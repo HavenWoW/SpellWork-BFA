@@ -167,6 +167,44 @@ namespace SpellWork.Mcp.Tests
             Assert.Contains(misc.GetProperty("rows").EnumerateArray(), r => r.GetProperty("Id").GetInt32() == 200000);
         }
 
+        [Fact]
+        public void ComputeMiscIds_UnionsClientAndSpellDbc()
+        {
+            Assert.Equal(new[] { 7 }, DatabaseTools.ComputeMiscIds(7, new int[0]));
+            Assert.Equal(new[] { 200000 }, DatabaseTools.ComputeMiscIds(null, new[] { 200000 }));
+            Assert.Equal(new[] { 7, 200000 }, DatabaseTools.ComputeMiscIds(200000, new[] { 7, 200000 }));
+            Assert.Empty(DatabaseTools.ComputeMiscIds(null, new int[0]));
+            Assert.Empty(DatabaseTools.ComputeMiscIds(0, new[] { 0 }));
+        }
+
+        [SkippableFact]
+        public void SelectProc_ReadsPhaseSetColumnWithoutThrowing()
+        {
+            var host = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_HOST");
+            Skip.If(string.IsNullOrWhiteSpace(host), "SPELLWORK_TEST_MYSQL_HOST not set.");
+
+            var config = McpServerConfig.FromEnvironment(new Dictionary<string, string>
+            {
+                ["SPELLWORK_MYSQL_HOST"] = host,
+                ["SPELLWORK_MYSQL_PORT"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_PORT") ?? "3306",
+                ["SPELLWORK_MYSQL_USER"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_USER") ?? "",
+                ["SPELLWORK_MYSQL_PASS"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_PASS") ?? "",
+                ["SPELLWORK_MYSQL_WORLD_DB"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_WORLD_DB") ?? "world",
+            });
+            var db = new SpellWork.Database.WorldDatabase(config.ToSpellWorkConfig());
+            var rows = db.SelectProc("SELECT entry, SchoolMask, SpellFamilyName, SpellFamilyMask0, SpellFamilyMask1, SpellFamilyMask2, SpellFamilyMask3, procFlags, procEx, phase, ppmRate, CustomChance, Cooldown FROM spell_proc_event LIMIT 20");
+            Assert.NotEmpty(rows);
+        }
+
+        [Fact]
+        public void ReadPhase_ParsesSetStringsAndNumbers()
+        {
+            Assert.Equal(1u, SpellWork.Database.WorldDatabase.ReadPhase("PROC_PHASE_HIT"));
+            Assert.Equal(6u, SpellWork.Database.WorldDatabase.ReadPhase("PROC_PHASE_CAST,PROC_PHASE_AFTER_CAST"));
+            Assert.Equal(0u, SpellWork.Database.WorldDatabase.ReadPhase(""));
+            Assert.Equal(3u, SpellWork.Database.WorldDatabase.ReadPhase(3));
+        }
+
         [SkippableFact]
         public async Task EveryListedTableIsQueried()
         {
