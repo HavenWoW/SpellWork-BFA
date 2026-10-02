@@ -55,6 +55,7 @@ jobs:
 
       - name: Package SpellWork.Mcp
         run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
           dotnet publish SpellWork.Mcp\SpellWork.Mcp.csproj -c $env:CONFIGURATION -o mcp-publish --nologo
           Compress-Archive -Path mcp-publish\* -DestinationPath dist\SpellWork.Mcp.zip -Force
 
