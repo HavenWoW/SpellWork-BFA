@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 14.0.23107.0
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpellWork", "SpellWork\SpellWork.csproj", "{49A3559B-529A-4406-824B-F7E2831DE1B2}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpellWork.Core", "SpellWork.Core\SpellWork.Core.csproj", "{5AFE025C-5DBA-4AC2-9269-533A981F8B8B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpellWork.Core.Tests", "SpellWork.Core.Tests\SpellWork.Core.Tests.csproj", "{33FF4DD2-747D-4CB0-9C78-4A8782746571}"
@@ -23,18 +21,6 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{49A3559B-529A-4406-824B-F7E2831DE1B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{49A3559B-529A-4406-824B-F7E2831DE1B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{49A3559B-529A-4406-824B-F7E2831DE1B2}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{49A3559B-529A-4406-824B-F7E2831DE1B2}.Debug|x64.Build.0 = Debug|Any CPU
-		{49A3559B-529A-4406-824B-F7E2831DE1B2}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{49A3559B-529A-4406-824B-F7E2831DE1B2}.Debug|x86.Build.0 = Debug|Any CPU
-		{49A3559B-529A-4406-824B-F7E2831DE1B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{49A3559B-529A-4406-824B-F7E2831DE1B2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{49A3559B-529A-4406-824B-F7E2831DE1B2}.Release|x64.ActiveCfg = Release|Any CPU
-		{49A3559B-529A-4406-824B-F7E2831DE1B2}.Release|x64.Build.0 = Release|Any CPU
-		{49A3559B-529A-4406-824B-F7E2831DE1B2}.Release|x86.ActiveCfg = Release|Any CPU
-		{49A3559B-529A-4406-824B-F7E2831DE1B2}.Release|x86.Build.0 = Release|Any CPU
 		{5AFE025C-5DBA-4AC2-9269-533A981F8B8B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5AFE025C-5DBA-4AC2-9269-533A981F8B8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5AFE025C-5DBA-4AC2-9269-533A981F8B8B}.Debug|x64.ActiveCfg = Debug|Any CPU

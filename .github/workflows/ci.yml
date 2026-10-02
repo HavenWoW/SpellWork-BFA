@@ -15,9 +15,6 @@ env:
 
 jobs:
   build:
-    # windows-latest is required, not a preference: SpellWork.csproj is a
-    # .NET Framework 4.8 WinForms project, so it needs full MSBuild and the
-    # net48 targeting pack. Only the Core/Mcp projects are SDK-style.
     runs-on: windows-latest
 
     # Needed by the tag-triggered release step; without it the default
@@ -28,19 +25,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Add MSBuild to PATH
-        uses: microsoft/setup-msbuild@v3
-
       - name: Set up .NET
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.0.x'
 
       - name: Restore
-        run: msbuild SpellWork.sln -t:Restore -v:m -nologo
+        run: dotnet restore SpellWork.sln --nologo
 
       - name: Build
-        run: msbuild SpellWork.sln -p:Configuration=$env:CONFIGURATION -v:m -nologo -m
+        run: dotnet build SpellWork.sln -c $env:CONFIGURATION --no-restore --nologo
 
       # --no-build so the tests run against exactly the binaries produced
       # above rather than triggering a second, SDK-only rebuild.
@@ -59,11 +53,6 @@ jobs:
           path: '**/TestResults/*.trx'
           if-no-files-found: warn
 
-      - name: Package SpellWork
-        run: |
-          New-Item -ItemType Directory -Force dist | Out-Null
-          Compress-Archive -Path SpellWork\bin\$env:CONFIGURATION\* -DestinationPath dist\SpellWork.zip -Force
-
       - name: Package SpellWork.Mcp
         run: |
           dotnet publish SpellWork.Mcp\SpellWork.Mcp.csproj -c $env:CONFIGURATION -o mcp-publish --nologo
@@ -72,7 +61,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: SpellWork
+          name: SpellWork.Mcp-5.4.8
           path: dist/*.zip
           if-no-files-found: error
 
@@ -87,11 +76,10 @@ jobs:
 
             | Archive | What it is | Needs |
             | --- | --- | --- |
-            | `SpellWork.zip` | The WinForms desktop app (`SpellWork.exe`) | .NET Framework 4.8 |
             | `SpellWork.Mcp.zip` | The read-only MCP server for AI agents | .NET 9 runtime |
 
             Client data is not included and is not redistributable — extract
             `dbc` and `gt` yourself with TrinityCore's extractors and point
-            SpellWork at them. This build parses **8.3.7 (35662)** data.
+            SpellWork at them. This build parses **5.4.8** data.
 
             MCP registration and configuration: [docs/mcp-server.md](https://github.com/HavenWoW/SpellWork/blob/main/docs/mcp-server.md)

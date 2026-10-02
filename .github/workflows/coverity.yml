@@ -42,10 +42,6 @@ jobs:
             "configured=true" >> $env:GITHUB_OUTPUT
           }
 
-      - name: Add MSBuild to PATH
-        if: steps.guard.outputs.configured == 'true'
-        uses: microsoft/setup-msbuild@v3
-
       - name: Set up .NET
         if: steps.guard.outputs.configured == 'true'
         uses: actions/setup-dotnet@v5
@@ -68,13 +64,13 @@ jobs:
 
       - name: Restore
         if: steps.guard.outputs.configured == 'true'
-        run: msbuild SpellWork.sln -t:Restore -v:m -nologo
+        run: dotnet restore SpellWork.sln --nologo
 
       # cov-build must wrap a full rebuild: it instruments the compiler as it
       # runs, so anything already up to date is simply not captured.
       - name: Build under cov-build
         if: steps.guard.outputs.configured == 'true'
-        run: cov-build --dir cov-int msbuild SpellWork.sln -t:Rebuild -p:Configuration=$env:CONFIGURATION -v:m -nologo
+        run: cov-build --dir cov-int dotnet build SpellWork.sln -c $env:CONFIGURATION --no-incremental --nologo
 
       - name: Check emit
         if: steps.guard.outputs.configured == 'true'
