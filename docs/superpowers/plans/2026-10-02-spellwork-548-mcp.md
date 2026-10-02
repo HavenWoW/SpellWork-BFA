@@ -19,7 +19,7 @@
 - When `X.db2` and `X.dbc` both exist, load `X.db2`.
 - A `difficulty` argument is a `Difficulty.dbc` id. 0 is the base and has no Difficulty row. Valid rows: 1,2,3,4,5,6,7,8,9,11,12,14.
 - Every tool keeps `main`'s envelope (`ToolResponse`), its 500-row caps and its `truncated`/`totalMatches` semantics.
-- Reference data for local runs: `SPELLWORK_DBC_PATH=C:/MoP/MOPPREMIUM/Repack/dbc`, `SPELLWORK_DB2_PATH=C:/MoP/MOPPREMIUM/Repack/db2`, `SPELLWORK_LOCALE=enUS` (the folder doesn't exist, so the root is used). MySQL: host `127.0.0.1`, port `3306`, user `root`, password `ascent`, db `world`. Only for the developer's local runs; never commit these values.
+- Reference data for local runs: `SPELLWORK_DBC_PATH=C:/MoP/MOPPREMIUM/Repack/dbc`, `SPELLWORK_DB2_PATH=C:/MoP/MOPPREMIUM/Repack/db2`, `SPELLWORK_LOCALE=enUS` (the folder doesn't exist, so the root is used). MySQL: the repack's local server (host/port/user/password from your environment; never commit them).
 - Test commands: `dotnet test SpellWork.Core.Tests/SpellWork.Core.Tests.csproj -c Release --nologo` and `dotnet test SpellWork.Mcp.Tests/SpellWork.Mcp.Tests.csproj -c Release --nologo`. Baseline before Task 1: Core 35 passed / 80 skipped, Mcp 205 passed / 59 skipped, with no data env vars set.
 - "Run with data" below means: set the reference-data env vars above in the same shell, then run the test command.
 

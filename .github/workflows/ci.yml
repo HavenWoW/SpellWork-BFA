@@ -2,10 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
-    tags: ['v*']
+    branches: [main, 5.4.8]
+    tags: ['v548-*']
   pull_request:
-    branches: [main]
+    branches: [main, 5.4.8]
   workflow_dispatch:
 
 env:
@@ -67,7 +67,7 @@ jobs:
           if-no-files-found: error
 
       - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v548-')
         uses: softprops/action-gh-release@v3
         with:
           files: dist/*.zip
@@ -80,7 +80,6 @@ jobs:
             | `SpellWork.Mcp.zip` | The read-only MCP server for AI agents | .NET 9 runtime |
 
             Client data is not included and is not redistributable — extract
-            `dbc` and `gt` yourself with TrinityCore's extractors and point
-            SpellWork at them. This build parses **5.4.8** data.
+            the `dbc` and `db2` folders yourself and point SpellWork at them. This build parses **5.4.8** data.
 
-            MCP registration and configuration: [docs/mcp-server.md](https://github.com/HavenWoW/SpellWork/blob/main/docs/mcp-server.md)
+            MCP registration and configuration: [docs/mcp-server.md](https://github.com/HavenWoW/SpellWork/blob/5.4.8/docs/mcp-server.md)
