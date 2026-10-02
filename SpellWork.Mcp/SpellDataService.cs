@@ -112,16 +112,9 @@ namespace SpellWork.Mcp
             if (string.IsNullOrWhiteSpace(_config.DbcPath))
                 return Failure("dbc_path_missing", "SPELLWORK_DBC_PATH is not set.", "SPELLWORK_DBC_PATH");
 
-            if (string.IsNullOrWhiteSpace(_config.GtPath))
-                return Failure("gt_path_missing", "SPELLWORK_GT_PATH is not set.", "SPELLWORK_GT_PATH");
-
             if (!Directory.Exists(_config.DbcPath))
                 return Failure("dbc_path_not_found",
                     $"SPELLWORK_DBC_PATH points at '{_config.DbcPath}', which does not exist.", "SPELLWORK_DBC_PATH");
-
-            if (!Directory.Exists(_config.GtPath))
-                return Failure("gt_path_not_found",
-                    $"SPELLWORK_GT_PATH points at '{_config.GtPath}', which does not exist.", "SPELLWORK_GT_PATH");
 
             return null;
         }

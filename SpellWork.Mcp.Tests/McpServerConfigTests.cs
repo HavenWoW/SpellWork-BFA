@@ -65,13 +65,23 @@ namespace SpellWork.Mcp.Tests
         }
 
         [Fact]
+        public void ReadsDb2Path()
+        {
+            var c = McpServerConfig.FromEnvironment(new Dictionary<string, string>
+            {
+                ["SPELLWORK_DBC_PATH"] = "C:/x/dbc",
+                ["SPELLWORK_DB2_PATH"] = "C:/x/db2",
+            });
+            Assert.Equal("C:/x/db2", c.Db2Path);
+        }
+
+        [Fact]
         public void ToSpellWorkConfig_MapsEveryValue()
         {
             var config = McpServerConfig.FromEnvironment(new Dictionary<string, string>
             {
                 ["SPELLWORK_DBC_PATH"] = @"C:\data\dbc",
                 ["SPELLWORK_GT_PATH"] = @"C:\data\gt",
-                ["SPELLWORK_HOTFIX_CACHE"] = @"C:\data\DBCache.bin",
                 ["SPELLWORK_MYSQL_HOST"] = "db.local",
                 ["SPELLWORK_MYSQL_PORT"] = "3307",
                 ["SPELLWORK_MYSQL_USER"] = "reader",
@@ -84,7 +94,6 @@ namespace SpellWork.Mcp.Tests
             Assert.Equal(@"C:\data\dbc", core.DbcPath);
             Assert.Equal(@"C:\data\gt", core.GtPath);
             Assert.Equal("enUS", core.Locale);
-            Assert.Equal(@"C:\data\DBCache.bin", core.HotfixCachePath);
             Assert.Equal("db.local", core.MySqlHost);
             Assert.Equal("3307", core.MySqlPortOrPipe);
             Assert.Equal("reader", core.MySqlUser);

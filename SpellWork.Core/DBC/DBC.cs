@@ -182,17 +182,6 @@ namespace SpellWork.DBC
             // the first load already recorded.
             while (_layoutMismatches.TryTake(out _)) { }
 
-            HotfixReader hotfixReader = null;
-            try
-            {
-                hotfixReader = new HotfixReader(config.HotfixCachePath);
-            }
-            catch (Exception)
-            {
-                logger.Warn(
-                    $"Hotfix cache {config.HotfixCachePath} cannot be loaded, ignoring!");
-            }
-
             Parallel.ForEach(StorageProperties(), dbc =>
                {
                    var name = dbc.Name;
@@ -210,9 +199,6 @@ namespace SpellWork.DBC
                            _layoutMismatches.Add(mismatch);
 
                        dynamic storage = Activator.CreateInstance(dbc.PropertyType, db2Reader);
-
-                       if (hotfixReader != null)
-                           hotfixReader.ApplyHotfixes(storage, db2Reader);
 
                        dbc.SetValue(dbc.GetValue(null), storage);
                    }

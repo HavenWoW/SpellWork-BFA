@@ -14,9 +14,9 @@ namespace SpellWork.Mcp
     public sealed class McpServerConfig
     {
         public string DbcPath { get; private set; }
+        public string Db2Path { get; private set; }
         public string GtPath { get; private set; }
         public string Locale { get; private set; }
-        public string HotfixCachePath { get; private set; }
         public string MySqlHost { get; private set; }
         public string MySqlPortOrPipe { get; private set; }
         public string MySqlUser { get; private set; }
@@ -50,9 +50,9 @@ namespace SpellWork.Mcp
             return new McpServerConfig
             {
                 DbcPath = Get("SPELLWORK_DBC_PATH"),
+                Db2Path = Get("SPELLWORK_DB2_PATH"),
                 GtPath = Get("SPELLWORK_GT_PATH"),
                 Locale = Get("SPELLWORK_LOCALE") ?? "enUS",
-                HotfixCachePath = Get("SPELLWORK_HOTFIX_CACHE"),
                 MySqlHost = Get("SPELLWORK_MYSQL_HOST"),
                 MySqlPortOrPipe = Get("SPELLWORK_MYSQL_PORT") ?? "3306",
                 MySqlUser = Get("SPELLWORK_MYSQL_USER"),
@@ -64,9 +64,9 @@ namespace SpellWork.Mcp
         public SpellWorkConfig ToSpellWorkConfig() => new SpellWorkConfig
         {
             DbcPath = DbcPath,
+            Db2Path = Db2Path,
             GtPath = GtPath,
             Locale = Locale,
-            HotfixCachePath = HotfixCachePath,
             MySqlHost = MySqlHost,
             MySqlPortOrPipe = MySqlPortOrPipe,
             MySqlUser = MySqlUser,
