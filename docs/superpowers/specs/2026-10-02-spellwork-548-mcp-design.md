@@ -62,16 +62,17 @@ SpellVisualChainResolver (5.4.8 chain) ──► get_spell visual section + get_
 
 Spell tables loaded from `dbc/`: Spell, SpellMisc, SpellEffect,
 SpellEffectScaling, SpellAuraOptions, SpellAuraRestrictions,
-SpellCastingRequirements, SpellCastTimes, SpellCategories, SpellCategory,
+SpellCastingRequirements, SpellCastTimes, SpellCategories,
 SpellClassOptions, SpellCooldowns, SpellDescriptionVariables, SpellDuration,
 SpellEquippedItems, SpellInterrupts, SpellLevels, SpellPower, SpellRadius,
 SpellRange, SpellRuneCost, SpellScaling, SpellShapeshift,
-SpellTargetRestrictions, SpellTotems, SpellProcsPerMinute,
-SpellProcsPerMinuteMod.
+SpellTargetRestrictions, SpellTotems, SpellProcsPerMinute.
 
-Other tables loaded from `dbc/`: AreaGroup, AreaTable, Map, MapDifficulty,
-Difficulty, OverrideSpellData, ScreenEffect, SkillLine, SkillLineAbility,
-RandPropPoints, gtSpellScaling, SpellChainEffects.
+Other tables loaded from `dbc/`: AreaGroup, AreaTable, Difficulty,
+OverrideSpellData, ScreenEffect, SkillLine, SkillLineAbility, RandPropPoints,
+gtSpellScaling, SpellChainEffects. (Map, MapDifficulty, SpellCategory and
+SpellProcsPerMinuteMod are not modelled; nothing reads them. `list_db2` still
+lists them.)
 
 WDB2 tables (the `.db2` file wins, D5): Item, Item-sparse, SpellReagents,
 SpellMissile, SpellMissileMotion, SpellVisual, SpellVisualKit,
@@ -116,8 +117,11 @@ range, school and visuals is `SpellMiscId`.
 Per-spell indexes, built once in `BuildSpellInfoStore`:
 
 - `SpellEffect` grouped by `SpellId`, then by `Difficulty`, then by `Index`.
-- `SpellPower` and `SpellTargetRestrictions` grouped by `SpellId`, then by
-  difficulty.
+- `SpellTargetRestrictions`, `SpellAuraOptions`, `SpellCategories`,
+  `SpellCooldowns`, `SpellInterrupts`, `SpellLevels` and `SpellMisc` indexed by
+  `(SpellID, DifficultyID)` with the same base fallback as effects.
+- `SpellPower` grouped by `SpellID` and ordered by `OrderIndex`. It has no
+  difficulty column in 5.4.8.
 - `SpellEffectScaling` by `SpellEffectId`. This replaces upstream's linear scan
   per effect.
 - `SpellTriggerStore` from `SpellEffect.TriggerSpell`, across all difficulties.
