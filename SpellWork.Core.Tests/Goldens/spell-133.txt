@@ -1,0 +1,63 @@
+ID - 133 Fireball (Level 90)
+=================================================
+Hurls a fiery ball that causes $s1 Fire damage.
+Category = 0, SpellIconID = 185, ActiveIconID = 0, SpellVisualID = 67
+Family SPELLFAMILY_MAGE (3), flag [0] 0x00000001 [1] 0x00000000 [2] 0x00000008 [3] 0x00000000
+Modified by Arcane Power (12042)
+Modified by Arcane Power (12042)
+Modified by Presence of Mind (12043)
+Modified by Icy Veins (12472)
+Modified by Shatter (12982)
+Modified by Fireball, Improved DoT (21230)
+Modified by Friendly Nukes (21879)
+Modified by Netherwind Focus (22008)
+Modified by Combustion (29977)
+Modified by Pushback Resistance (37438)
+Modified by Improved Fireball, Frostbolt, and Arcane Missiles (38397)
+Modified by Reduced Spam Nuke Cast Time (44302)
+Modified by Crit Strike Damage Percent (60146)
+Modified by Item - Mage T9 4P Bonus (Fireball, Frostbolt, Frostfire Bolt, and Arcane Blast) (67185)
+Modified by Living Bomb (82886)
+Modified by Burning Soul (84254)
+Modified by Item - Mage T11 4P Bonus (90291)
+Modified by Molten Feather (98761)
+Modified by Ice Floes (108839)
+Modified by Quickened Mind (113682)
+Modified by Critical Mass (117216)
+Modified by Icy Veins (131078)
+Modified by Pyromaniac (132210)
+Modified by Timeless Rapids (147936)
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_FIRE (4)
+DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
+PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
+=================================================
+Attributes: 0x00010000 (SPELL_ATTR0_NOT_SHAPESHIFT)
+=================================================
+Spell Level = 12, base 12, max 0
+
+Category = 0
+DispelType = 0 (DISPEL_NONE)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 5) "Long Range":
+    MinRangeNegative = 0, MinRangePositive = 0
+    MaxRangeNegative = 40, MaxRangePositive = 40
+Speed 28.00
+Cast Time: (ID 259): 2250
+RecoveryTime: 0 ms, CategoryRecoveryTime: 0 ms
+StartRecoveryCategory = 133, StartRecoveryTime = 1500.00 ms
+Power POWER_MANA, 4%
+Interrupt Flags: 0x0000000F (SPELL_INTERRUPT_FLAG_MOVEMENT, SPELL_INTERRUPT_FLAG_PUSH_BACK, SPELL_INTERRUPT_FLAG_UNK3, SPELL_INTERRUPT_FLAG_INTERRUPT)
+AuraInterrupt Flags: 0x00000000 (0), 0x00000000 (0)
+ChannelInterrupt Flags: 0x00000000 (0), 0x00000000 (0)
+Chance = 0, charges - 0
+=================================================
+Effect 0: Id 2 (SPELL_EFFECT_SCHOOL_DAMAGE)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 1373.68 to 1748.32 + spellPower * 1.5
+Scaling: Coefficient 1.5, Variance 0.24, ResourceCoefficient 0
+Targets (6, 0) (TARGET_UNIT_TARGET_ENEMY, 0)
+
+=================================================
+Items using this spell:
+   996: Ring of Righteous Flame (TEST) 

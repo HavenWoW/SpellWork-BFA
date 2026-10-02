@@ -1,0 +1,48 @@
+ID - 3599 Searing Totem
+=================================================
+Summons a Fire Totem with $?s63298[$s1% of the caster's][$s1] health at the feet of the caster for $d that repeatedly attacks an enemy within $3606r1 yards for $3606s1 Fire damage.
+Triggered by spell: (2075) Searing Totem
+=================================================
+Category = 0, SpellIconID = 680, ActiveIconID = 0, SpellVisualID = 221
+Family SPELLFAMILY_SHAMAN (11), flag [0] 0x00000010 [1] 0x00000000 [2] 0x00000000 [3] 0x00000000
+Modified by Totemic Energy (28818)
+Modified by Mental Quickness (30814)
+Modified by Shamanistic Rage (30823)
+Modified by Molten Feather (98770)
+Modified by Item - Shaman T13 Restoration 2P Bonus (Mana Tide) (105764)
+Modified by Item - Shaman T13 Elemental 4P Bonus (Elemental Overload) (105816)
+Modified by Item - Shaman T13 Enhancement 4P Effect (Feral Spirits) (105873)
+Modified by Lucidity (137326)
+Modified by Timeless Rapids (147944)
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_FIRE (4)
+DamageClass = 0 (SPELL_DAMAGE_CLASS_NONE)
+PreventionType = 5 (5)
+=================================================
+Attributes: 0x00010000 (SPELL_ATTR0_NOT_SHAPESHIFT)
+AttributesEx7: 0x00000020 (SPELL_ATTR7_SUMMON_TOTEM)
+AttributesEx9: 0x00000020 (SPELL_ATTR9_SUMMON_PLAYER_TOTEM)
+=================================================
+Skill (Id 924) "Shaman"
+    ReqSkillValue 2, Forward spell = 0, MinMaxValue (0, 0)Spell Level = 16, base 16, max 0
+
+Category = 0
+DispelType = 0 (DISPEL_NONE)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 1) "Self Only":
+    MinRangeNegative = 0, MinRangePositive = 0
+    MaxRangeNegative = 0, MaxRangePositive = 0
+Cast Time: (ID 1): 0
+RecoveryTime: 0 ms, CategoryRecoveryTime: 0 ms
+StartRecoveryCategory = 133, StartRecoveryTime = 1000.00 ms
+Duration 60000, 0, 60000
+Power POWER_MANA, 5.9%
+Chance = 0, charges - 0
+=================================================
+Effect 0: Id 28 (SPELL_EFFECT_SUMMON)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 5.00
+Targets (44, 0) (TARGET_DEST_CASTER_FRONT_LEFT, 0)
+EffectMiscValueA = 2523
+EffectMiscValueB = 3211
+

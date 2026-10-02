@@ -18,7 +18,7 @@ namespace SpellWork.Spell
         public float BaseValue;
         public float Variance;
         public float ValuePerResource;
-        public float PerLevelValue;
+        public float RealPointsPerLevel;
         public float SpellPowerCoefficient;
         public bool Scaled;
     }
@@ -36,7 +36,7 @@ namespace SpellWork.Spell
             BaseValue = breakdown.BaseValue;
             Variance = breakdown.Variance;
             ValuePerResource = breakdown.ValuePerResource;
-            PerLevelValue = breakdown.PerLevelValue;
+            RealPointsPerLevel = breakdown.RealPointsPerLevel;
             SpellPowerCoefficient = breakdown.SpellPowerCoefficient;
             Scaled = breakdown.Scaled;
         }
@@ -44,7 +44,7 @@ namespace SpellWork.Spell
         public float BaseValue { get; }
         public float Variance { get; }
         public float ValuePerResource { get; }
-        public float PerLevelValue { get; }
+        public float RealPointsPerLevel { get; }
         public float SpellPowerCoefficient { get; }
         public bool Scaled { get; }
     }
@@ -391,6 +391,13 @@ namespace SpellWork.Spell
                 rtb.AppendFormatLine(Separator);
             #endregion
 
+            if (EffectDifficulties.Count > 1)
+                rtb.AppendFormatLine("Effect difficulties: {0}", string.Join(", ", EffectDifficulties));
+
+            if (RuneCost != null)
+                rtb.AppendFormatLine("Rune cost: Blood {0}, Unholy {1}, Frost {2}, Chromatic {3}, RunicPower {4}",
+                    RuneCost.Blood, RuneCost.Unholy, RuneCost.Frost, RuneCost.Chromatic, RuneCost.RunicPower);
+
             rtb.AppendFormatLine($"Category = { category }, SpellIconID = { misc?.SpellIconID ?? 0 }, ActiveIconID = { misc?.ActiveIconID ?? 0 }, SpellVisualID = { misc?.SpellVisualID[0] ?? 0 }");
 
             rtb.AppendFormatLine("Family {0} ({1}), flag [0] 0x{2:X8} [1] 0x{3:X8} [2] 0x{4:X8} [3] 0x{5:X8}",
@@ -728,7 +735,7 @@ namespace SpellWork.Spell
         {
             var level = (int)context.Level;
             if (IsScaled(effect))
-                return (float)Math.Round(SpellScalingCalculator.Value(Scaling, effect.Scaling, level, GtLookup).Base);
+                return (float)Math.Round(SpellScalingCalculator.Value(Scaling, effect.Scaling, level, GtLookup).Base, MidpointRounding.AwayFromZero);
 
             var entry = effect.Entry;
             float value = entry.EffectBasePoints + (entry.EffectDieSides == 1 ? 1 : 0);
@@ -743,7 +750,7 @@ namespace SpellWork.Spell
                 value += entry.EffectRealPointsPerLevel * (clamped - levels.SpellLevel);
             }
 
-            return (float)Math.Round(value);
+            return (float)Math.Round(value, MidpointRounding.AwayFromZero);
         }
 
         // Extracted from AppendEffectInfo so the text path and
@@ -769,8 +776,8 @@ namespace SpellWork.Spell
             else
                 breakdown.ValuePerResource = effect.EffectPointsPerResource;
 
-            if (Math.Abs(effect.EffectRealPointsPerLevel) > 1.0E-5f)
-                breakdown.PerLevelValue = effect.EffectRealPointsPerLevel;
+            if (!breakdown.Scaled && Math.Abs(effect.EffectRealPointsPerLevel) > 1.0E-5f)
+                breakdown.RealPointsPerLevel = effect.EffectRealPointsPerLevel;
 
             if (effect.EffectBonusCoefficient > 1.0E-5f)
                 breakdown.SpellPowerCoefficient = effect.EffectBonusCoefficient;
@@ -792,7 +799,7 @@ namespace SpellWork.Spell
         {
             var effect = resolved.Entry;
             rtb.SetBold();
-            rtb.AppendFormatLine($"Effect { effect.EffectIndex }: Id { effect.Effect } ({ (SpellEffects)effect.Effect })");
+            rtb.AppendFormatLine($"Effect { effect.EffectIndex }: Id { effect.Effect } ({ (SpellEffects)effect.Effect }){ (resolved.ResolvedDifficulty != 0 ? $" (difficulty { resolved.ResolvedDifficulty })" : string.Empty) }");
             rtb.SetBold();
             rtb.AppendFormatLine($"Difficulty: Id { effect.DifficultyID } ({ (Difficulty)effect.DifficultyID })");
             rtb.SetDefaultStyle();
@@ -807,8 +814,8 @@ namespace SpellWork.Spell
             else
                 rtb.AppendFormat("BasePoints = {0:F}", baseValue);
 
-            if (Math.Abs(values.PerLevelValue) > 1.0E-5f)
-                rtb.AppendFormat(" + Level * {0:F}", values.PerLevelValue);
+            if (Math.Abs(values.RealPointsPerLevel) > 1.0E-5f)
+                rtb.AppendFormat(" (includes {0:F} per level)", values.RealPointsPerLevel);
 
             rtb.AppendFormatIfNotNull(" + resource * {0:F}", values.ValuePerResource);
 
@@ -816,6 +823,10 @@ namespace SpellWork.Spell
                 rtb.AppendFormat(" + spellPower * {0}", values.SpellPowerCoefficient);
 
             rtb.AppendLine();
+
+            if (resolved.Scaling != null)
+                rtb.AppendFormatLine("Scaling: Coefficient {0}, Variance {1}, ResourceCoefficient {2}",
+                    resolved.Scaling.Coefficient, resolved.Scaling.Variance, resolved.Scaling.ResourceCoefficient);
 
             rtb.AppendFormatLine("Targets ({0}, {1}) ({2}, {3})",
                 effect.ImplicitTarget[0], effect.ImplicitTarget[1],

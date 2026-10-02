@@ -489,10 +489,11 @@ namespace SpellWork.Mcp.Tests
             using var doc = JsonDocument.Parse(json);
             var result = doc.RootElement.GetProperty("result");
 
-            // 32 since Task 5: scaled effects now carry computed basePoints plus a
-            // Min/Max range, which the two spells no longer share.
-            Assert.Equal(32, result.GetProperty("totalDifferences").GetInt32());
-            Assert.Equal(32, result.GetProperty("differences").GetArrayLength());
+            // 39 since Task 6: the 5.4.8 shape adds per-effect scaling/bonusMultiplier, a
+            // 14-word attributes array and scaling cast-time fields, which the two spells
+            // do not share (32 before).
+            Assert.Equal(39, result.GetProperty("totalDifferences").GetInt32());
+            Assert.Equal(39, result.GetProperty("differences").GetArrayLength());
         }
 
         [SkippableFact]

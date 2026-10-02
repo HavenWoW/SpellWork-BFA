@@ -1,0 +1,129 @@
+ID - 16870 Clearcasting
+=================================================
+Your next cast-time Druid class damaging or healing spell or offensive feral ability has its Mana, Rage or Energy cost reduced by $s1%. Does not affect Nourish.
+ToolTip: Your next cast-time Druid class damaging or healing spell or offensive feral ability has its Mana, Rage or Energy cost reduced by $s1%.
+Triggered by spell: (64752) Item - Druid T8 Feral 2P Bonus
+Triggered by spell: (113043) Omen of Clarity
+=================================================
+Category = 0, SpellIconID = 212, ActiveIconID = 0, SpellVisualID = 2736
+Family SPELLFAMILY_DRUID (7), flag [0] 0x00000000 [1] 0x00000000 [2] 0x00000000 [3] 0x00040000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_NATURE (8)
+DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
+PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
+=================================================
+Attributes: 0x00040000 (SPELL_ATTR0_DONT_AFFECT_SHEATH_STATE)
+AttributesEx1: 0x00000400 (SPELL_ATTR1_NO_THREAT)
+AttributesEx2: 0x00000004 (SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS)
+AttributesEx3: 0x40030000 (SPELL_ATTR3_CANT_TRIGGER_PROC, SPELL_ATTR3_NO_INITIAL_AGGRO, SPELL_ATTR3_DONT_DISPLAY_RANGE)
+AttributesEx4: 0x00008000 (SPELL_ATTR4_UNK15)
+AttributesEx6: 0x00000040 (SPELL_ATTR6_USE_SPELL_CAST_EVENT)
+AttributesEx12: 0x00000001 (SPELL_ATTR12_UNK0)
+=================================================
+Skill (Id 798) "Druid"
+    ReqSkillValue 0, Forward spell = 0, MinMaxValue (0, 0)Spell Level = 10, base 10, max 0
+
+Category = 0
+DispelType = 1 (DISPEL_MAGIC)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 6) "Vision Range":
+    MinRangeNegative = 0, MinRangePositive = 0
+    MaxRangeNegative = 100, MaxRangePositive = 100
+Cast Time: (ID 1): 0
+Duration 15000, 0, 15000
+Proc flag 0x00015550, chance: 100%, charges: 1, cooldown: 0
+=================================================
+  04 Successful attack by Spell that use melee weapon
+  06 Successful Ranged attack(and wand spell cast)
+  08 Successful Ranged attack by Spell that use ranged weapon
+  10 Successful positive spell hit
+  12 Successful negative spell cast
+  14 Successful cast positive magic spell
+  16 Successful damage from harmful magic spell cast
+=================================================
+Effect 0: Id 6 (SPELL_EFFECT_APPLY_AURA)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = -100.00
+Targets (1, 0) (TARGET_UNIT_CASTER, 0)
+Aura Id 108 (SPELL_AURA_ADD_PCT_MODIFIER), value = -100, misc = 14 (SPELLMOD_COST), miscB = 0, amplitude = 0, periodic = 0
+SpellClassMask = 0083B865 001007C0 13C40400 00000000
+	+ 779 - Swipe
+	- 1079 - Rip
+	+ 1822 - Rake
+	- 2912 - Starfire
+	+ 5176 - Wrath
+	+ 5185 - Healing Touch
+	- 5211 - Mighty Bash
+	- 5221 - Shred
+	- 6785 - Ravage
+	+ 6807 - Maul
+	- 8936 - Regrowth
+	+ 9005 - Pounce
+	+ 9007 - Pounce Bleed
+	- 21668 - Starfire
+	+ 22568 - Ferocious Bite
+	+ 22570 - Maim
+	- 24187 - Claw
+	- 24331 - Rake
+	- 24332 - Rake
+	- 27554 - Swipe
+	- 27555 - Shred
+	- 27556 - Rake
+	- 27557 - Ferocious Bite
+	- 27638 - Rake
+	- 31041 - Mangle
+	- 31289 - Claw
+	+ 33745 - Lacerate
+	- 33831 - Force of Nature
+	+ 33876 - Mangle
+	+ 33878 - Mangle
+	- 35243 - Starfire
+	- 36332 - Rake
+	- 37124 - Starfall
+	- 38935 - Starfire
+	- 39449 - Pounce
+	- 40344 - Starfire
+	- 41349 - L4 Arcane Charge
+	- 41357 - L1 Arcane Charge
+	- 41360 - L5 Arcane Charge
+	- 51772 - Claw
+	- 53498 - Swipe
+	- 57657 - Mangle
+	- 59988 - Mangle
+	+ 62078 - Swipe
+	- 71925 - Mangle
+	- 74811 - Swipe
+	+ 77758 - Thrash
+	- 77761 - Stampeding Roar
+	- 77764 - Stampeding Roar
+	- 78674 - Starsurge
+	+ 78777 - Wild Mushroom: Detonate
+	- 79823 - Starfall
+	- 79828 - Mangle
+	- 88073 - Starfall
+	- 88747 - Wild Mushroom
+	+ 97993 - Stampeding Roar Root Clear
+	+ 102545 - Ravage!
+	+ 102546 - Pounce
+	- 102693 - Force of Nature
+	- 102703 - Force of Nature
+	- 102706 - Force of Nature
+	+ 102792 - Wild Mushroom: Bloom
+	+ 106830 - Thrash
+	- 106839 - Skull Bash
+	- 110691 - Wrath
+	- 113769 - Wrath
+	- 113801 - Bash
+	- 113830 - Taunt
+	- 114236 - Shred!
+	- 115871 - Rake
+	- 120560 - Rake
+	- 142431 - Fixate
+	- 144598 - Obsidian Cage
+	- 145205 - Wild Mushroom
+	- 147349 - Wild Mushroom
+	- 147395 - Claw
+	- 147396 - Rake
+	- 149460 - Starfall
+	- 150017 - Rake
+

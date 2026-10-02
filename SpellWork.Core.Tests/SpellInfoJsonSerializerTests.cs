@@ -41,6 +41,71 @@ namespace SpellWork.Core.Tests
         }
 
         [SkippableFact]
+        public void FireballJsonShape()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+            var json = JsonDocument.Parse(SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], new RenderContext(90, 463, 0))).RootElement;
+            Assert.Equal("Fireball", json.GetProperty("name").GetString());
+            Assert.Equal(14, json.GetProperty("attributes").GetArrayLength());
+            Assert.False(json.TryGetProperty("contentTuningId", out _));
+            Assert.True(json.TryGetProperty("schoolMask", out _));
+            Assert.True(json.TryGetProperty("effectDifficulties", out _));
+            Assert.True(json.TryGetProperty("scaling", out var scaling));
+            Assert.True(scaling.TryGetProperty("castTimeMax", out _));
+            var effect = json.GetProperty("effects")[0];
+            Assert.Equal(0, effect.GetProperty("resolvedDifficulty").GetInt32());
+            Assert.True(effect.GetProperty("scaling").GetProperty("coefficient").GetDouble() > 0);
+            Assert.False(effect.TryGetProperty("realPointsPerLevel", out _)); // scaled effect: per-level not applied
+        }
+
+        [SkippableFact]
+        public void ResolvedDifficultyIsPerEffect()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+            var json = JsonDocument.Parse(SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[43093], new RenderContext(90, 463, 2))).RootElement;
+            Assert.Equal(2, json.GetProperty("difficulty").GetInt32());
+            Assert.Equal(new[] { 0, 2, 4 }, json.GetProperty("effectDifficulties").EnumerateArray().Select(x => x.GetInt32()));
+            Assert.All(json.GetProperty("effects").EnumerateArray(), e => Assert.Equal(2, e.GetProperty("resolvedDifficulty").GetInt32()));
+        }
+
+        [SkippableFact]
+        public void Serialize_pairs_raw_flag_values_with_decoded_names()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+            var spell = DBC.DBC.SpellInfoStore[133];
+            var raw = spell.AttributesFor(0)[0];
+            Assert.NotEqual(0u, raw);
+            var bit = Enumerable.Range(0, 32).Select(i => 1u << i)
+                .First(m => (raw & m) != 0 && Enum.IsDefined(typeof(SpellAtribute), m));
+            var expectedName = Enum.GetName(typeof(SpellAtribute), bit);
+
+            var json = JsonDocument.Parse(SpellInfoJsonSerializer.Serialize(spell, new RenderContext(90, 463, 0))).RootElement;
+            var word0 = json.GetProperty("attributes").EnumerateArray().First(a => a.GetProperty("word").GetInt32() == 0);
+            Assert.Equal(raw, word0.GetProperty("value").GetUInt32());
+            Assert.Contains(word0.GetProperty("flags").EnumerateArray(), f => f.GetProperty("name").GetString() == expectedName);
+        }
+
+        // A non-scaled effect's value already includes RealPointsPerLevel * (level - SpellLevel),
+        // so the coefficient is reported as realPointsPerLevel / "(includes N per level)", never as an addend.
+        [SkippableFact]
+        public void Per_level_coefficient_is_not_presented_as_additive()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+            var spell = DBC.DBC.SpellInfoStore.Values.First(s => s.Scaling == null &&
+                s.EffectsFor(0).Any(e => e != null && Math.Abs(e.Entry.EffectRealPointsPerLevel) > 1e-5f));
+            var json = JsonDocument.Parse(SpellInfoJsonSerializer.Serialize(spell, new RenderContext(90, 463, 0))).RootElement;
+            var effects = json.GetProperty("effects").EnumerateArray().ToList();
+            Assert.Contains(effects, e => e.TryGetProperty("realPointsPerLevel", out _));
+            Assert.All(effects, e => Assert.False(e.TryGetProperty("perLevelValue", out _)));
+
+            var writer = new PlainTextSpellInfoWriter();
+            spell.Write(writer, new RenderContext(90, 463, 0));
+            var text = writer.ToString();
+            Assert.DoesNotContain("+ Level *", text);
+            Assert.Contains("per level)", text);
+        }
+
+        [SkippableFact]
         public void Serialize_honours_the_sections_filter()
         {
             Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
@@ -101,7 +166,7 @@ namespace SpellWork.Core.Tests
 
         // Spell 43093 (Grievous Throw) has SpellEffect rows at difficulties
         // 0, 2 and 4. effects holds one entry per index resolved at the
-        // context's difficulty, and difficultyId says which row it came from:
+        // context's difficulty, and resolvedDifficulty says which row it came from:
         // 2 when the spell has its own rows there, 0 when it falls back.
         [SkippableFact]
         public void Serialize_reports_the_difficulty_each_effect_row_came_from()
@@ -113,7 +178,7 @@ namespace SpellWork.Core.Tests
                 var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[43093], new RenderContext(90, 463, difficulty));
                 using var document = JsonDocument.Parse(json);
                 return document.RootElement.GetProperty("effects").EnumerateArray()
-                    .Select(e => e.GetProperty("difficultyId").GetInt32()).ToArray();
+                    .Select(e => e.GetProperty("resolvedDifficulty").GetInt32()).ToArray();
             }
 
             Assert.Equal(new[] { 2, 2 }, DifficultyIds(2));
@@ -216,7 +281,7 @@ namespace SpellWork.Core.Tests
             // store.
             var fireballJson = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals());
             using var fireballDocument = JsonDocument.Parse(fireballJson);
-            var schoolMask = fireballDocument.RootElement.GetProperty("misc").GetProperty("schoolMask");
+            var schoolMask = fireballDocument.RootElement.GetProperty("schoolMask");
 
             Assert.Equal(4, schoolMask.GetProperty("raw").GetInt32());
             var schoolFlags = schoolMask.GetProperty("flags").EnumerateArray().ToList();
@@ -436,14 +501,13 @@ namespace SpellWork.Core.Tests
                 var json = SpellInfoJsonSerializer.Serialize(spell, new RenderContext(90, 463, difficulty), new[] { "attributes" });
                 using var document = JsonDocument.Parse(json);
                 return document.RootElement.TryGetProperty("attributes", out var attributes)
-                    ? attributes.EnumerateArray().Where(a => a.GetProperty("group").GetInt32() == 0)
-                        .Select(a => a.GetProperty("raw").GetUInt32()).ToArray()
+                    ? new[] { attributes.EnumerateArray().First(a => a.GetProperty("word").GetInt32() == 0).GetProperty("value").GetUInt32() }
                     : new uint[0];
             }
 
             Assert.Equal(new uint[] { 0x100 }, Group0Bits(2));
-            Assert.Empty(Group0Bits(0));
-            Assert.Empty(Group0Bits(1)); // no row at 1: base row
+            Assert.Equal(new uint[] { 0 }, Group0Bits(0));
+            Assert.Equal(new uint[] { 0 }, Group0Bits(1)); // no row at 1: base row
 
             string Text(int difficulty)
             {

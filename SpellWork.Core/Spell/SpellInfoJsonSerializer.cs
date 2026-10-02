@@ -122,7 +122,10 @@ namespace SpellWork.Spell
             }
 
             AddIfNotEmpty(root, "description", spell.Description);
-            AddIfNotEmpty(root, "tooltip", spell.Tooltip);
+            AddIfNotEmpty(root, "nameSubtext", spell.Spell?.NameSubtext);
+            AddIfNotEmpty(root, "auraDescription", spell.Spell?.AuraDescription);
+            if (spell.EffectDifficulties.Count > 0)
+                root["effectDifficulties"] = spell.EffectDifficulties.ToList();
 
             if (Wants("misc"))
                 AddIfNotEmpty(root, "misc", BuildMisc(spell, context.Difficulty));
@@ -138,11 +141,29 @@ namespace SpellWork.Spell
                 root["spellClassMask"] = spell.SpellClassMask;
             }
 
+            if (Wants("misc"))
+            {
+                var rootSchoolMask = spell.MiscFor(context.Difficulty)?.SchoolMask ?? 0;
+                if (rootSchoolMask != 0)
+                    root["schoolMask"] = BuildRawAndFlags(rootSchoolMask, typeof(SpellSchoolMask));
+
+                var rune = spell.RuneCost;
+                if (rune != null)
+                {
+                    root["runeCost"] = new Dictionary<string, object>
+                    {
+                        ["blood"] = rune.Blood,
+                        ["unholy"] = rune.Unholy,
+                        ["frost"] = rune.Frost,
+                        ["chromatic"] = rune.Chromatic,
+                        ["runicPower"] = rune.RunicPower,
+                    };
+                }
+            }
+
             if (Wants("attributes"))
             {
-                var attributes = BuildAttributes(spell, context.Difficulty, out var attributesUnmatchedBits);
-                AddIfNotEmpty(root, "attributes", attributes);
-                AddIfNotEmpty(root, "attributesUnmatchedBits", attributesUnmatchedBits);
+                root["attributes"] = BuildAttributes(spell, context.Difficulty);
             }
 
             if (Wants("effects"))
@@ -200,9 +221,6 @@ namespace SpellWork.Spell
             var misc = new Dictionary<string, object>();
             AddIfNonZero(misc, "speed", row?.Speed ?? 0f);
 
-            var schoolMask = row?.SchoolMask ?? 0;
-            if (schoolMask != 0)
-                misc["schoolMask"] = BuildRawAndFlags(schoolMask, typeof(SpellSchoolMask));
 
             // CastingTimeIndex/RangeIndex are indices, not values -- the same
             // trap note (e) already flagged for the radius fields. Resolve
@@ -292,39 +310,25 @@ namespace SpellWork.Spell
         // alone) because attributes spans fourteen different enums sharing
         // one array; a bare bit position would be ambiguous about which
         // group's enum it failed to match against.
-        private static List<object> BuildAttributes(SpellInfo spell, int difficulty, out List<object> unmatchedBits)
+        private static List<object> BuildAttributes(SpellInfo spell, int difficulty)
         {
             // The SpellMisc row at the requested difficulty (base fallback).
+            // Always 14 words, so a consumer can index by word number.
             var groups = spell.AttributesFor(difficulty);
 
             var result = new List<object>();
-            unmatchedBits = new List<object>();
             for (var group = 0; group < groups.Length; group++)
             {
-                var raw = groups[group];
-                if (raw == 0)
-                    continue;
-
-                for (var bit = 0; bit < 32; bit++)
+                var flags = BuildFlagList(AttributeEnumTypes[group], groups[group], out var unmatched);
+                var word = new Dictionary<string, object>
                 {
-                    var mask = 1u << bit;
-                    if ((raw & mask) == 0)
-                        continue;
-
-                    var name = FindDeclaredFlagName(AttributeEnumTypes[group], mask);
-                    if (name == null)
-                    {
-                        unmatchedBits.Add(new Dictionary<string, object> { ["group"] = group, ["bit"] = bit });
-                        continue;
-                    }
-
-                    result.Add(new Dictionary<string, object>
-                    {
-                        ["group"] = group,
-                        ["raw"] = mask,
-                        ["name"] = name,
-                    });
-                }
+                    ["word"] = group,
+                    ["value"] = groups[group],
+                    ["flags"] = flags,
+                };
+                if (unmatched.Count > 0)
+                    word["unmatchedBits"] = unmatched;
+                result.Add(word);
             }
 
             return result;
@@ -332,7 +336,7 @@ namespace SpellWork.Spell
 
         // One entry per effect index, resolved at the context's difficulty:
         // the row at that difficulty if the spell has one for the index, else
-        // the base (difficulty 0) row. difficultyId says which one it was.
+        // the base (difficulty 0) row. resolvedDifficulty says which one it was.
         private static List<object> BuildEffects(SpellInfo spell, RenderContext context)
         {
             var result = new List<object>();
@@ -345,7 +349,7 @@ namespace SpellWork.Spell
                 var entry = new Dictionary<string, object>
                 {
                     ["index"] = effect.EffectIndex,
-                    ["difficultyId"] = effect.DifficultyID,
+                    ["resolvedDifficulty"] = resolved.ResolvedDifficulty,
                     ["effect"] = new Dictionary<string, object>
                     {
                         ["raw"] = effect.Effect,
@@ -364,7 +368,7 @@ namespace SpellWork.Spell
 
                 // CalculateEffectValues yields the base value plus the extra
                 // terms AppendEffectInfo renders alongside it (a per-resource
-                // value, a per-level value and a spell-power coefficient).
+                // value, a per-level coefficient (already included in basePoints) and a spell-power coefficient).
                 // Emitting the full breakdown keeps the text render and this
                 // document from disagreeing about the same effect.
                 var values = spell.CalculateEffectValues(resolved, context);
@@ -377,11 +381,22 @@ namespace SpellWork.Spell
                     entry["basePointsMax"] = baseValue + delta;
                 }
 
+                if (resolved.Scaling != null)
+                {
+                    entry["scaling"] = new Dictionary<string, object>
+                    {
+                        ["coefficient"] = resolved.Scaling.Coefficient,
+                        ["variance"] = resolved.Scaling.Variance,
+                        ["resourceCoefficient"] = resolved.Scaling.ResourceCoefficient,
+                    };
+                }
+
                 // Each omitted on exactly the condition the text path uses to
                 // suppress it -- see CalculateEffectValues, which zeroes a
                 // field out whenever AppendEffectInfo would not have printed it.
                 AddIfNonZero(entry, "valuePerResource", values.ValuePerResource);
-                AddIfNonZero(entry, "perLevelValue", values.PerLevelValue);
+                AddIfNonZero(entry, "realPointsPerLevel", values.RealPointsPerLevel);
+                AddIfNonZero(entry, "bonusMultiplier", effect.EffectBonusCoefficient);
                 AddIfNonZero(entry, "spellPowerCoefficient", values.SpellPowerCoefficient);
 
                 entry["targetA"] = new Dictionary<string, object>
@@ -617,14 +632,18 @@ namespace SpellWork.Spell
             return result;
         }
 
-        private static Dictionary<string, object> BuildScaling(SpellScalingEntry scaling)
-        {
-            var result = new Dictionary<string, object>();
-            AddIfNonZero(result, "class", scaling.Class);
-            AddIfNonZero(result, "maxScalingLevel", scaling.MaxScalingLevel);
-            AddIfNonZero(result, "scalesFromItemLevel", scaling.ScalesFromItemLevel);
-            return result;
-        }
+        private static Dictionary<string, object> BuildScaling(SpellScalingEntry scaling) =>
+            new Dictionary<string, object>
+            {
+                ["class"] = scaling.Class,
+                ["castTimeMin"] = scaling.CastTimeMin,
+                ["castTimeMax"] = scaling.CastTimeMax,
+                ["castTimeMaxLevel"] = scaling.CastTimeMaxLevel,
+                ["nerfFactor"] = scaling.NerfFactor,
+                ["nerfMaxLevel"] = scaling.NerfMaxLevel,
+                ["maxScalingLevel"] = scaling.MaxScalingLevel,
+                ["scalesFromItemLevel"] = scaling.ScalesFromItemLevel,
+            };
 
         private static Dictionary<string, object> BuildCooldowns(SpellInfo spell, int difficulty)
         {
