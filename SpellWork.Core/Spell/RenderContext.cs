@@ -1,3 +1,4 @@
+using System;
 namespace SpellWork.Spell
 {
     /// <summary>
@@ -13,7 +14,9 @@ namespace SpellWork.Spell
         /// </param>
         public RenderContext(uint level, uint itemLevel, int difficulty)
         {
-            Level = level;
+            // Spec 5.5: levels clamp to 1..MaxLevel so gtSpellScaling keys never
+            // spill into a neighbouring class row.
+            Level = Math.Min(Math.Max(level, 1u), (uint)DBC.DBC.MaxLevel);
             ItemLevel = itemLevel;
             Difficulty = difficulty;
         }

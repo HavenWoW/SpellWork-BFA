@@ -37,5 +37,12 @@ namespace SpellWork.Core.Tests
         [Fact]
         public void MissingGtRowIsZeroNotAThrow() =>
             Assert.Equal(0f, SpellScalingCalculator.Multiplier(new SpellScalingEntry { Class = 8 }, 90, key => null));
+
+        [Fact]
+        public void CastTimeMaxLevelOne_AtLevelOne_DoesNotThrow()
+        {
+            var s = new SpellScalingEntry { Class = 8, CastTimeMin = 1000, CastTimeMax = 3000, CastTimeMaxLevel = 1 };
+            Assert.Equal(300f, SpellScalingCalculator.Multiplier(s, 1, key => 300f), 3);
+        }
     }
 }

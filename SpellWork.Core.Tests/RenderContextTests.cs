@@ -46,5 +46,13 @@ namespace SpellWork.Core.Tests
                 Assert.Equal(isHigh ? expectedHigh : expectedLow, actual);
             });
         }
+
+        [Theory]
+        [InlineData(0u, 1u)]
+        [InlineData(1u, 1u)]
+        [InlineData(90u, 90u)]
+        [InlineData(150u, 90u)]
+        public void Level_ClampsTo1Through90(uint given, uint expected) =>
+            Assert.Equal(expected, new RenderContext(given, 0, 0).Level);
     }
 }

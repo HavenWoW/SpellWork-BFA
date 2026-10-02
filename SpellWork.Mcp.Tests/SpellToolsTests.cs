@@ -521,5 +521,20 @@ namespace SpellWork.Mcp.Tests
 
             Assert.NotEqual(await BaseAt(10), await BaseAt(90));
         }
+
+        [SkippableFact]
+        public async Task GetSpell_ClampsLevelAbove90()
+        {
+            _fixture.SkipIfNoClientData();
+
+            async Task<string> EffectsAt(uint level)
+            {
+                var json = await _fixture.SpellTools.GetSpell(133, level: level);
+                using var doc = JsonDocument.Parse(json);
+                return doc.RootElement.GetProperty("result").GetProperty("effects").ToString();
+            }
+
+            Assert.Equal(await EffectsAt(90), await EffectsAt(150));
+        }
     }
 }
