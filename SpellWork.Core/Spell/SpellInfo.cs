@@ -98,15 +98,28 @@ namespace SpellWork.Spell
         public SpellLevelsEntry Levels => LevelsFor(0);
         public SpellTargetRestrictionsEntry TargetRestrictions => TargetRestrictionsFor(0);
 
-        public SpellProcsPerMinuteEntry ProcsPerMinute
+        public SpellProcsPerMinuteEntry ProcsPerMinute => ProcsPerMinuteFor(0);
+
+        // Rows reached through a difficulty-resolved row: the SpellMisc row at a
+        // difficulty can name its own duration and range, and the SpellAuraOptions
+        // row its own procs-per-minute entry.
+        public SpellDurationEntry DurationFor(int d)
         {
-            get
-            {
-                var id = AuraOptions?.SpellProcsPerMinuteID ?? 0;
-                return id != 0 && DBC.DBC.SpellProcsPerMinute != null &&
-                       DBC.DBC.SpellProcsPerMinute.TryGetValue(id, out var ppm) ? ppm : null;
-            }
+            var misc = MiscFor(d);
+            return misc == null ? null : Lookup(DBC.DBC.SpellDuration, misc.DurationIndex);
         }
+
+        public SpellRangeEntry RangeFor(int d)
+        {
+            var misc = MiscFor(d);
+            return misc == null ? null : Lookup(DBC.DBC.SpellRange, misc.RangeIndex);
+        }
+
+        public SpellProcsPerMinuteEntry ProcsPerMinuteFor(int d) =>
+            Lookup(DBC.DBC.SpellProcsPerMinute, AuraOptionsFor(d)?.SpellProcsPerMinuteID ?? 0);
+
+        /// <summary>The 14 attribute words of <see cref="MiscFor"/>(d).</summary>
+        public uint[] AttributesFor(int d) => MiscFor(d)?.Attributes ?? new uint[14];
         #endregion
 
         #region Effects
@@ -266,23 +279,22 @@ namespace SpellWork.Spell
         public int InterruptFlags => Interrupts?.InterruptFlags ?? 0;
         #endregion
 
-        public string ProcInfo
-        {
-            get
-            {
-                var i = 0;
-                var sb = new StringBuilder();
-                var proc = ProcFlags;
-                while (proc != 0)
-                {
-                    if ((proc & 1) != 0)
-                        sb.AppendFormatLine("  {0}", SpellEnums.ProcFlagDesc[i]);
-                    ++i;
-                    proc >>= 1;
-                }
+        public string ProcInfo => DescribeProcFlags(ProcFlags);
 
-                return sb.ToString();
+        internal static string DescribeProcFlags(uint procFlags)
+        {
+            var i = 0;
+            var sb = new StringBuilder();
+            var proc = procFlags;
+            while (proc != 0)
+            {
+                if ((proc & 1) != 0)
+                    sb.AppendFormatLine("  {0}", SpellEnums.ProcFlagDesc[i]);
+                ++i;
+                proc >>= 1;
             }
+
+            return sb.ToString();
         }
 
         private const string Separator = "=================================================";
@@ -315,6 +327,26 @@ namespace SpellWork.Spell
 
         public void Write(ISpellInfoWriter rtb, RenderContext context)
         {
+            // Every difficulty-keyed table is read at the context's difficulty
+            // (falling back to the base row), never through the difficulty-0
+            // convenience properties.
+            var difficulty = context.Difficulty;
+            var misc = MiscFor(difficulty);
+            var attributes = AttributesFor(difficulty);
+            var categories = CategoriesFor(difficulty);
+            var auraOptions = AuraOptionsFor(difficulty);
+            var cooldowns = CooldownsFor(difficulty);
+            var levels = LevelsFor(difficulty);
+            var interrupts = InterruptsFor(difficulty);
+            var durationEntry = DurationFor(difficulty);
+            var range = RangeFor(difficulty);
+            var procsPerMinute = ProcsPerMinuteFor(difficulty);
+            var schoolMask = misc?.SchoolMask ?? 0;
+            var category = categories?.Category ?? 0;
+            var procFlags = (uint)(auraOptions?.ProcTypeMask ?? 0);
+            var procChance = auraOptions?.ProcChance ?? 0;
+            var procCharges = auraOptions?.ProcCharges ?? 0;
+
             rtb.Clear();
 
             rtb.SetBold();
@@ -356,7 +388,7 @@ namespace SpellWork.Spell
                 rtb.AppendFormatLine(Separator);
             #endregion
 
-            rtb.AppendFormatLine($"Category = { Category }, SpellIconID = { SpellIconID }, ActiveIconID = { ActiveIconID }, SpellVisualID = { SpellVisualID }");
+            rtb.AppendFormatLine($"Category = { category }, SpellIconID = { misc?.SpellIconID ?? 0 }, ActiveIconID = { misc?.ActiveIconID ?? 0 }, SpellVisualID = { misc?.SpellVisualID[0] ?? 0 }");
 
             rtb.AppendFormatLine("Family {0} ({1}), flag [0] 0x{2:X8} [1] 0x{3:X8} [2] 0x{4:X8} [3] 0x{5:X8}",
                     (SpellFamilyNames)SpellFamilyName, SpellFamilyName,
@@ -381,42 +413,44 @@ namespace SpellWork.Spell
 
             rtb.AppendLine();
 
-            rtb.AppendFormatLine("SpellSchoolMask = {0} ({1})", (SpellSchoolMask)SchoolMask, SchoolMask);
-            rtb.AppendFormatLine("DamageClass = {0} ({1})", DamageClass, (SpellDmgClass)DamageClass);
-            rtb.AppendFormatLine("PreventionType = {0} ({1})", PreventionType, (SpellPreventionType)PreventionType);
+            var damageClass = categories?.DefenseType ?? 0;
+            var preventionType = categories?.PreventionType ?? 0;
+            rtb.AppendFormatLine("SpellSchoolMask = {0} ({1})", (SpellSchoolMask)schoolMask, schoolMask);
+            rtb.AppendFormatLine("DamageClass = {0} ({1})", damageClass, (SpellDmgClass)damageClass);
+            rtb.AppendFormatLine("PreventionType = {0} ({1})", preventionType, (SpellPreventionType)preventionType);
 
             #region Attributes
-            if (Misc != null && !Misc.Attributes.All(a => a == 0))
+            if (misc != null && !attributes.All(a => a == 0))
                 rtb.AppendLine(Separator);
 
-            if (Attributes[0] != 0)
-                rtb.AppendFormatLine("Attributes: 0x{0:X8} ({1})", Attributes[0], (SpellAtribute)Attributes[0]);
-            if (AttributesEx != 0)
-                rtb.AppendFormatLine("AttributesEx1: 0x{0:X8} ({1})", AttributesEx, (SpellAtributeEx)AttributesEx);
-            if (AttributesEx2 != 0)
-                rtb.AppendFormatLine("AttributesEx2: 0x{0:X8} ({1})", AttributesEx2, (SpellAtributeEx2)AttributesEx2);
-            if (AttributesEx3 != 0)
-                rtb.AppendFormatLine("AttributesEx3: 0x{0:X8} ({1})", AttributesEx3, (SpellAtributeEx3)AttributesEx3);
-            if (AttributesEx4 != 0)
-                rtb.AppendFormatLine("AttributesEx4: 0x{0:X8} ({1})", AttributesEx4, (SpellAtributeEx4)AttributesEx4);
-            if (AttributesEx5 != 0)
-                rtb.AppendFormatLine("AttributesEx5: 0x{0:X8} ({1})", AttributesEx5, (SpellAtributeEx5)AttributesEx5);
-            if (AttributesEx6 != 0)
-                rtb.AppendFormatLine("AttributesEx6: 0x{0:X8} ({1})", AttributesEx6, (SpellAtributeEx6)AttributesEx6);
-            if (AttributesEx7 != 0)
-                rtb.AppendFormatLine("AttributesEx7: 0x{0:X8} ({1})", AttributesEx7, (SpellAtributeEx7)AttributesEx7);
-            if (AttributesEx8 != 0)
-                rtb.AppendFormatLine("AttributesEx8: 0x{0:X8} ({1})", AttributesEx8, (SpellAtributeEx8)AttributesEx8);
-            if (AttributesEx9 != 0)
-                rtb.AppendFormatLine("AttributesEx9: 0x{0:X8} ({1})", AttributesEx9, (SpellAtributeEx9)AttributesEx9);
-            if (AttributesEx10 != 0)
-                rtb.AppendFormatLine("AttributesEx10: 0x{0:X8} ({1})", AttributesEx10, (SpellAtributeEx10)AttributesEx10);
-            if (AttributesEx11 != 0)
-                rtb.AppendFormatLine("AttributesEx11: 0x{0:X8} ({1})", AttributesEx11, (SpellAtributeEx11)AttributesEx11);
-            if (AttributesEx12 != 0)
-                rtb.AppendFormatLine("AttributesEx12: 0x{0:X8} ({1})", AttributesEx12, (SpellAtributeEx12)AttributesEx12);
-            if (AttributesEx13 != 0)
-                rtb.AppendFormatLine("AttributesEx13: 0x{0:X8} ({1})", AttributesEx13, (SpellAtributeEx13)AttributesEx13);
+            if (attributes[0] != 0)
+                rtb.AppendFormatLine("Attributes: 0x{0:X8} ({1})", attributes[0], (SpellAtribute)attributes[0]);
+            if (attributes[1] != 0)
+                rtb.AppendFormatLine("AttributesEx1: 0x{0:X8} ({1})", attributes[1], (SpellAtributeEx)attributes[1]);
+            if (attributes[2] != 0)
+                rtb.AppendFormatLine("AttributesEx2: 0x{0:X8} ({1})", attributes[2], (SpellAtributeEx2)attributes[2]);
+            if (attributes[3] != 0)
+                rtb.AppendFormatLine("AttributesEx3: 0x{0:X8} ({1})", attributes[3], (SpellAtributeEx3)attributes[3]);
+            if (attributes[4] != 0)
+                rtb.AppendFormatLine("AttributesEx4: 0x{0:X8} ({1})", attributes[4], (SpellAtributeEx4)attributes[4]);
+            if (attributes[5] != 0)
+                rtb.AppendFormatLine("AttributesEx5: 0x{0:X8} ({1})", attributes[5], (SpellAtributeEx5)attributes[5]);
+            if (attributes[6] != 0)
+                rtb.AppendFormatLine("AttributesEx6: 0x{0:X8} ({1})", attributes[6], (SpellAtributeEx6)attributes[6]);
+            if (attributes[7] != 0)
+                rtb.AppendFormatLine("AttributesEx7: 0x{0:X8} ({1})", attributes[7], (SpellAtributeEx7)attributes[7]);
+            if (attributes[8] != 0)
+                rtb.AppendFormatLine("AttributesEx8: 0x{0:X8} ({1})", attributes[8], (SpellAtributeEx8)attributes[8]);
+            if (attributes[9] != 0)
+                rtb.AppendFormatLine("AttributesEx9: 0x{0:X8} ({1})", attributes[9], (SpellAtributeEx9)attributes[9]);
+            if (attributes[10] != 0)
+                rtb.AppendFormatLine("AttributesEx10: 0x{0:X8} ({1})", attributes[10], (SpellAtributeEx10)attributes[10]);
+            if (attributes[11] != 0)
+                rtb.AppendFormatLine("AttributesEx11: 0x{0:X8} ({1})", attributes[11], (SpellAtributeEx11)attributes[11]);
+            if (attributes[12] != 0)
+                rtb.AppendFormatLine("AttributesEx12: 0x{0:X8} ({1})", attributes[12], (SpellAtributeEx12)attributes[12]);
+            if (attributes[13] != 0)
+                rtb.AppendFormatLine("AttributesEx13: 0x{0:X8} ({1})", attributes[13], (SpellAtributeEx13)attributes[13]);
 
             rtb.AppendLine(Separator);
             #endregion
@@ -482,7 +516,7 @@ namespace SpellWork.Spell
             }
 
             rtb.AppendFormatLine("Spell Level = {0}, base {1}, max {2}",
-                SpellLevel, BaseLevel, MaxLevel);
+                levels?.SpellLevel ?? 0, levels?.BaseLevel ?? 0, levels?.MaxLevel ?? 0);
 
             if (EquippedItemClass != 0)
             {
@@ -509,47 +543,53 @@ namespace SpellWork.Spell
             }
 
             rtb.AppendLine();
-            rtb.AppendFormatLine("Category = {0}", Category);
-            rtb.AppendFormatLine("DispelType = {0} ({1})", Dispel, (DispelType)Dispel);
-            rtb.AppendFormatLine("Mechanic = {0} ({1})", Mechanic, (Mechanics)Mechanic);
+            var dispel = categories?.DispelType ?? 0;
+            var mechanic = categories?.Mechanic ?? 0;
+            rtb.AppendFormatLine("Category = {0}", category);
+            rtb.AppendFormatLine("DispelType = {0} ({1})", dispel, (DispelType)dispel);
+            rtb.AppendFormatLine("Mechanic = {0} ({1})", mechanic, (Mechanics)mechanic);
 
-            if (Range != null)
+            if (range != null)
             {
-                rtb.AppendFormatLine("SpellRange: (Id {0}) \"{1}\":", RangeIndex, Range.Name);
-                rtb.AppendFormatLine("    MinRangeNegative = {0}, MinRangePositive = {1}", Range.MinRangeNegative, Range.MinRangePositive);
-                rtb.AppendFormatLine("    MaxRangeNegative = {0}, MaxRangePositive = {1}", Range.MaxRangeNegative, Range.MaxRangePositive);
+                rtb.AppendFormatLine("SpellRange: (Id {0}) \"{1}\":", misc.RangeIndex, range.Name);
+                rtb.AppendFormatLine("    MinRangeNegative = {0}, MinRangePositive = {1}", range.MinRangeNegative, range.MinRangePositive);
+                rtb.AppendFormatLine("    MaxRangeNegative = {0}, MaxRangePositive = {1}", range.MaxRangeNegative, range.MaxRangePositive);
             }
 
-            if (Misc != null)
-                rtb.AppendFormatLineIfNotNull("Speed {0:F}", Speed);
+            if (misc != null)
+                rtb.AppendFormatLineIfNotNull("Speed {0:F}", misc.Speed);
 
-            rtb.AppendFormatLineIfNotNull("Stackable up to {0}", CumulativeAura);
+            rtb.AppendFormatLineIfNotNull("Stackable up to {0}", auraOptions?.CumulativeAura ?? 0);
 
-            if (CastingTimeIndex != 0 && DBC.DBC.SpellCastTimes != null &&
-                DBC.DBC.SpellCastTimes.TryGetValue(CastingTimeIndex, out var castTimeEntry))
+            var castingTimeIndex = misc?.CastingTimeIndex ?? 0;
+            if (castingTimeIndex != 0 && DBC.DBC.SpellCastTimes != null &&
+                DBC.DBC.SpellCastTimes.TryGetValue(castingTimeIndex, out var castTimeEntry))
             {
                 var level = (int)context.Level;
                 if (Scaling != null && Scaling.MaxScalingLevel != 0 && level > Scaling.MaxScalingLevel)
                     level = Scaling.MaxScalingLevel;
 
-                if (Levels != null && Levels.BaseLevel != 0)
-                    level -= Levels.BaseLevel;
+                if (levels != null && levels.BaseLevel != 0)
+                    level -= levels.BaseLevel;
 
                 var castTime = castTimeEntry.CastTime + castTimeEntry.CastTimePerLevel * level;
                 if (castTime < castTimeEntry.MinCastTime)
                     castTime = castTimeEntry.MinCastTime;
 
-                rtb.AppendFormatLine("Cast Time: (ID {0}): {1}", CastingTimeIndex, castTime);
+                rtb.AppendFormatLine("Cast Time: (ID {0}): {1}", castingTimeIndex, castTime);
             }
 
-            if (RecoveryTime != 0 || CategoryRecoveryTime != 0 || StartRecoveryCategory != 0)
+            var recoveryTime = cooldowns?.RecoveryTime ?? 0;
+            var categoryRecoveryTime = cooldowns?.CategoryRecoveryTime ?? 0;
+            var startRecoveryCategory = categories?.StartRecoveryCategory ?? 0;
+            if (recoveryTime != 0 || categoryRecoveryTime != 0 || startRecoveryCategory != 0)
             {
-                rtb.AppendFormatLine("RecoveryTime: {0} ms, CategoryRecoveryTime: {1} ms", RecoveryTime, CategoryRecoveryTime);
-                rtb.AppendFormatLine("StartRecoveryCategory = {0}, StartRecoveryTime = {1:F} ms", StartRecoveryCategory, StartRecoveryTime);
+                rtb.AppendFormatLine("RecoveryTime: {0} ms, CategoryRecoveryTime: {1} ms", recoveryTime, categoryRecoveryTime);
+                rtb.AppendFormatLine("StartRecoveryCategory = {0}, StartRecoveryTime = {1:F} ms", startRecoveryCategory, cooldowns?.StartRecoveryTime ?? 0);
             }
 
-            if (DurationEntry != null)
-                rtb.AppendFormatLine("Duration {0}, {1}, {2}", Duration, DurationPerLevel, MaxDuration);
+            if (durationEntry != null)
+                rtb.AppendFormatLine("Duration {0}, {1}, {2}", durationEntry.Duration, durationEntry.Unknown2, durationEntry.MaxDuration);
 
             foreach (var spellPower in Powers)
             {
@@ -562,11 +602,11 @@ namespace SpellWork.Spell
                 rtb.AppendLine();
             }
 
-            if (Interrupts != null)
+            if (interrupts != null)
             {
-                rtb.AppendFormatLine("Interrupt Flags: 0x{0:X8} ({1})", Interrupts.InterruptFlags, (SpellInterruptFlags)Interrupts.InterruptFlags);
-                rtb.AppendFormatLine("AuraInterrupt Flags: 0x{0:X8} ({1}), 0x{2:X8} ({3})", Interrupts.AuraInterruptFlags[0], (SpellAuraInterruptFlags)Interrupts.AuraInterruptFlags[0], Interrupts.AuraInterruptFlags[1], (SpellAuraInterruptFlags)Interrupts.AuraInterruptFlags[1]);
-                rtb.AppendFormatLine("ChannelInterrupt Flags: 0x{0:X8} ({1}), 0x{2:X8} ({3})", Interrupts.ChannelInterruptFlags[0], (SpellChannelInterruptFlags)Interrupts.ChannelInterruptFlags[0], Interrupts.ChannelInterruptFlags[1], (SpellChannelInterruptFlags)Interrupts.ChannelInterruptFlags[1]);
+                rtb.AppendFormatLine("Interrupt Flags: 0x{0:X8} ({1})", interrupts.InterruptFlags, (SpellInterruptFlags)interrupts.InterruptFlags);
+                rtb.AppendFormatLine("AuraInterrupt Flags: 0x{0:X8} ({1}), 0x{2:X8} ({3})", interrupts.AuraInterruptFlags[0], (SpellAuraInterruptFlags)interrupts.AuraInterruptFlags[0], interrupts.AuraInterruptFlags[1], (SpellAuraInterruptFlags)interrupts.AuraInterruptFlags[1]);
+                rtb.AppendFormatLine("ChannelInterrupt Flags: 0x{0:X8} ({1}), 0x{2:X8} ({3})", interrupts.ChannelInterruptFlags[0], (SpellChannelInterruptFlags)interrupts.ChannelInterruptFlags[0], interrupts.ChannelInterruptFlags[1], (SpellChannelInterruptFlags)interrupts.ChannelInterruptFlags[1]);
             }
 
             if (CasterAuraState != 0)
@@ -648,24 +688,25 @@ namespace SpellWork.Spell
 
             rtb.AppendFormatLineIfNotNull("Requires Spell Focus {0}", RequiresSpellFocus);
 
-            if (Math.Abs(BaseProcRate) > 1.0E-5f)
+            var baseProcRate = procsPerMinute?.BaseProcRate ?? 0;
+            if (Math.Abs(baseProcRate) > 1.0E-5f)
             {
                 rtb.SetBold();
-                rtb.AppendFormatLine("PPM flag 0x{0:X2} BaseRate {1}", ProcsPerMinuteFlags, BaseProcRate);
+                rtb.AppendFormatLine("PPM flag 0x{0:X2} BaseRate {1}", procsPerMinute.Flags, baseProcRate);
                 rtb.SetDefaultStyle();
             }
 
-            if (ProcFlags != 0)
+            if (procFlags != 0)
             {
                 rtb.SetBold();
                 rtb.AppendFormatLine("Proc flag 0x{0:X8}, chance: {1}%, charges: {2}, cooldown: {3}",
-                    ProcFlags, ProcChance, ProcCharges, ProcCooldown);
+                    procFlags, procChance, procCharges, auraOptions?.ProcCategoryRecovery ?? 0);
                 rtb.SetDefaultStyle();
                 rtb.AppendFormatLine(Separator);
-                rtb.AppendText(ProcInfo);
+                rtb.AppendText(DescribeProcFlags(procFlags));
             }
             else
-                rtb.AppendFormatLine("Chance = {0}, charges - {1}", ProcChance, ProcCharges);
+                rtb.AppendFormatLine("Chance = {0}, charges - {1}", procChance, procCharges);
 
             rtb.AppendLine(Separator);
             foreach (var effect in EffectsFor(context.Difficulty))
@@ -793,7 +834,7 @@ namespace SpellWork.Spell
                 {
                     var triggerSpell = DBC.DBC.SpellInfoStore[trigger];
                     rtb.SetStyle(TextColor.Blue, TextStyle.Bold);
-                    rtb.AppendFormatLine("   Trigger spell ({0}) {1}. Chance = {2}", trigger, triggerSpell.Name, ProcChance);
+                    rtb.AppendFormatLine("   Trigger spell ({0}) {1}. Chance = {2}", trigger, triggerSpell.Name, AuraOptionsFor(context.Difficulty)?.ProcChance ?? 0);
                     rtb.AppendFormatLineIfNotNull("   Description: {0}", triggerSpell.Spell.Description);
                     rtb.AppendFormatLineIfNotNull("   ToolTip: {0}", triggerSpell.Spell.AuraDescription);
                     rtb.SetDefaultStyle();
@@ -806,7 +847,7 @@ namespace SpellWork.Spell
                     }
                 }
                 else
-                    rtb.AppendFormatLine("Trigger spell ({0}) Not found, Chance = {1}", trigger, ProcChance);
+                    rtb.AppendFormatLine("Trigger spell ({0}) Not found, Chance = {1}", trigger, AuraOptionsFor(context.Difficulty)?.ProcChance ?? 0);
             }
 
             rtb.AppendFormatLineIfNotNull("EffectChainTargets = {0}", effect.EffectChainTargets);

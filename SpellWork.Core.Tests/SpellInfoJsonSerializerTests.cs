@@ -417,5 +417,43 @@ namespace SpellWork.Core.Tests
 
             Assert.Contains(doc.RootElement.GetProperty("items").EnumerateArray(), e => e.GetProperty("id").GetInt32() == item.ID);
         }
+
+        // Spell 43621 (Gust of Wind) has SpellMisc rows at difficulties 2 and 4
+        // whose Attributes[0] is 0x00000100, while its base (difficulty 0) row
+        // has Attributes[0] == 0. Found by scanning SpellMisc for a non-zero
+        // difficulty row whose first attribute word differs from the base row.
+        // Every difficulty-keyed section must read the row at the requested
+        // difficulty (base fallback), in both the JSON and the text render.
+        [SkippableFact]
+        public void Serialize_reads_the_SpellMisc_row_at_the_requested_difficulty()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+
+            var spell = DBC.DBC.SpellInfoStore[43621];
+
+            uint[] Group0Bits(int difficulty)
+            {
+                var json = SpellInfoJsonSerializer.Serialize(spell, new RenderContext(90, 463, difficulty), new[] { "attributes" });
+                using var document = JsonDocument.Parse(json);
+                return document.RootElement.TryGetProperty("attributes", out var attributes)
+                    ? attributes.EnumerateArray().Where(a => a.GetProperty("group").GetInt32() == 0)
+                        .Select(a => a.GetProperty("raw").GetUInt32()).ToArray()
+                    : new uint[0];
+            }
+
+            Assert.Equal(new uint[] { 0x100 }, Group0Bits(2));
+            Assert.Empty(Group0Bits(0));
+            Assert.Empty(Group0Bits(1)); // no row at 1: base row
+
+            string Text(int difficulty)
+            {
+                var writer = new PlainTextSpellInfoWriter();
+                spell.Write(writer, new RenderContext(90, 463, difficulty));
+                return writer.ToString();
+            }
+
+            Assert.Contains("Attributes: 0x00000100", Text(2));
+            Assert.DoesNotContain("Attributes: 0x00000100", Text(0));
+        }
     }
 }

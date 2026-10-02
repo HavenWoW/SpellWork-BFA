@@ -16,7 +16,7 @@ namespace SpellWork.Mcp.Tools
         public SpellTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "get_spell")]
-        [Description("The full decoded view of one spell. format is \"json\" or \"text\". sections filters to any of: misc, attributes, effects, powers, targets, reagents, aura, procs, scaling, context, cooldowns, levels, interrupts, shapeshift, equippedItems, items, triggers. difficulty is a Difficulty.dbc id (0 = base, the default); an effect index or difficulty-specific row with no row of its own at that difficulty falls back to the base row. An unknown difficulty is an error that lists the valid ids.")]
+        [Description("The full decoded view of one spell. format is \"json\" or \"text\". sections filters to any of: misc, attributes, effects, powers, targets, reagents, aura, procs, scaling, context, cooldowns, levels, interrupts, shapeshift, equippedItems, items, triggers. difficulty is a Difficulty.dbc id (0 = base, the default); every difficulty-keyed table (SpellMisc, SpellEffect, SpellCategories, SpellAuraOptions, SpellCooldowns, SpellLevels, SpellInterrupts, SpellTargetRestrictions) is read at that difficulty, and a spell with no row of its own there (per effect index for SpellEffect) uses its base row. An unknown difficulty is an error that lists the valid ids.")]
         public async Task<string> GetSpell(
             int id,
             string format = "json",
