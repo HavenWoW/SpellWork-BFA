@@ -1,22 +1,26 @@
 # SpellWork MCP server
 
-A read-only MCP server exposing SpellWork's 8.3.7 spell data, DB2 stores and
-world database to an agent. Fourteen tools; see `server_info` first when
-anything looks wrong.
+A read-only MCP server exposing SpellWork's 5.4.8 (build 18414) spell data,
+DBC/DB2 stores and world database to an agent. Fourteen tools; see
+`server_info` first when anything looks wrong.
 
 ## Build
 
 ```
-dotnet publish SpellWork.Mcp/SpellWork.Mcp.csproj -c Release -o out/mcp
+dotnet publish SpellWork.Mcp/SpellWork.Mcp.csproj -c Release -o out/mcp548
 ```
 
 ## Register
 
 ```
-claude mcp add --scope user spellwork -- dotnet /absolute/path/to/out/mcp/SpellWork.Mcp.dll
+claude mcp add --scope user spellwork-548 \
+  -e SPELLWORK_DBC_PATH=C:/MoP/MOPPREMIUM/Repack/dbc \
+  -e SPELLWORK_DB2_PATH=C:/MoP/MOPPREMIUM/Repack/db2 \
+  -- dotnet /absolute/path/to/out/mcp548/SpellWork.Mcp.dll
 ```
 
-`--scope user` makes it available in every project.
+`--scope user` makes it available in every project. Add the `SPELLWORK_MYSQL_*`
+variables below to enable the database tools.
 
 ## Configuration
 
@@ -25,20 +29,23 @@ Set these on the MCP server entry (`claude mcp add -e NAME=value`, spelled
 
 | Variable | Required | Meaning |
 | --- | --- | --- |
-| `SPELLWORK_DBC_PATH` | yes | `<emulator-build-dir>/ClientData/dbc` |
-| `SPELLWORK_GT_PATH` | yes | `<emulator-build-dir>/ClientData/gt` |
-| `SPELLWORK_LOCALE` | no (`enUS`) | Locale subdirectory under the DBC path |
-| `SPELLWORK_HOTFIX_CACHE` | no | Client `DBCache.bin` |
+| `SPELLWORK_DBC_PATH` | yes | Folder holding the client `.dbc` files |
+| `SPELLWORK_DB2_PATH` | no | Folder holding the client `.db2` files. When a table exists as both, the `.db2` is loaded |
+| `SPELLWORK_GT_PATH` | no, unused | Accepted for compatibility; gtSpellScaling is a DBC store in 5.4.8 |
+| `SPELLWORK_LOCALE` | no (`enUS`) | Locale subfolder under the DBC path. If it does not exist, the DBC path itself is used and `server_info` reports `localeFallback` |
 | `SPELLWORK_MYSQL_HOST` | no | Omit to disable the MySQL tools |
 | `SPELLWORK_MYSQL_PORT` | no (`3306`) | Port, or a named pipe when host is `.` |
 | `SPELLWORK_MYSQL_USER` | no | See the security note below |
 | `SPELLWORK_MYSQL_PASS` | no | |
 | `SPELLWORK_MYSQL_WORLD_DB` | no | Database name, e.g. `world` |
 
+`SPELLWORK_HOTFIX_CACHE` no longer exists: 5.4.8 has no `DBCache.bin` hotfix
+layer.
+
 The MySQL tools require host, user and world-db together; a partial
 configuration reports "not configured" rather than failing to connect.
 
-A misconfigured server still starts and still answers — a bad path produces a
+A misconfigured server still starts and still answers: a bad path produces a
 structured error from the data tools naming the variable to fix, not a dead
 process.
 
@@ -47,90 +54,101 @@ process.
 **`query_world_db` runs SQL that the agent composed.** Two controls stand
 between that and your database, and both are required:
 
-1. The server rejects anything that is not a single `SELECT` — multiple
+1. The server rejects anything that is not a single `SELECT`: multiple
    statements, DDL and DML are refused before the query reaches MySQL.
 2. **You connect as a MySQL user with only `SELECT` granted.**
 
 The parser is a guard. The read-only grant is the guarantee. Do not point this
-server at an account that can write:
+server at an account that can write. The repack's only MySQL account is
+`root`, so create a dedicated one before registering:
 
 ```sql
 CREATE USER 'spellwork_ro'@'localhost' IDENTIFIED BY '<password>';
 GRANT SELECT ON world.* TO 'spellwork_ro'@'localhost';
 ```
 
-Nothing in this server writes to DB2 files or to MySQL, by design.
+Nothing in this server writes to client files or to MySQL, by design.
 
 ## Tools
 
 | Tool | What it does |
 | --- | --- |
-| `server_info` | Configured paths, locale, store counts, load duration, MySQL reachability |
+| `server_info` | Configured paths, locale, `clientBuild` (18414), `localeFallback`, `openedFiles` (the exact file each store was read from), `layoutMismatches` (expected and actual field count and record size), store counts, load duration, MySQL reachability |
 | `get_spell` | The full decoded view of one spell, as JSON or rendered text |
 | `search_spells` | Find spells by name, family, aura/effect/target type, attribute or school |
 | `get_spell_triggers` | What a spell triggers and what triggers it |
 | `compare_spells` | Structured field diff of two spells |
 | `decode_flags` | Split a bitmask into named flags |
-| `list_enum` | The id↔name map for any enum |
-| `calculate_spell_scaling` | Per-effect values at a given level, item level and difficulty |
-| `list_db2` | Every `.db2` present, flagged modelled or unmodelled |
+| `list_enum` | The id-to-name map for any enum |
+| `calculate_spell_scaling` | Per-effect values at a given level and difficulty from gtSpellScaling |
+| `list_db2` | Every `.dbc` and `.db2` file present, flagged modelled / loaded / shadowed |
 | `get_db2_row` | One row from a modelled store, with real field names |
 | `query_db2` | Filtered rows from a modelled store |
 | `query_world_db` | One read-only `SELECT` against the world database |
-| `get_spell_db_overrides` | Rows for one spell from the seven `spell_*` override tables |
-| `get_spell_visual_chain` | The resolved visual chain for one spell: variants, missile, and deduplicated kits with their effects |
+| `get_spell_db_overrides` | Rows for one spell from the world database's `spell_*` override tables and `spellmisc_dbc` |
+| `get_spell_visual_chain` | The resolved visual chain for one spell: variants, missiles and deduplicated kits with their effects |
+
+### Difficulty
+
+Every `difficulty` argument is a **`Difficulty.dbc` id**. `0` is the base (the
+default) and has no Difficulty row; the valid ids are
+`0,1,2,3,4,5,6,7,8,9,11,12,14`. Anything else returns `unknown_difficulty`
+listing the valid ones.
+
+`get_spell` reads every difficulty-keyed section (SpellMisc, SpellEffect,
+SpellCategories, SpellAuraOptions, SpellCooldowns, SpellLevels,
+SpellInterrupts, SpellTargetRestrictions) at that difficulty and falls back to
+the base row for anything the difficulty does not override, per effect index
+for SpellEffect. Each effect reports `resolvedDifficulty`, the difficulty its
+row actually came from, so a partially overridden spell shows which effects
+are which.
+
+Displayed values are the **rounded (half away from zero)** result of the 5.4.8
+server formula, with the level clamped to 1..90. The server truncates, so a
+client tooltip may differ by 1. Effects that do not scale report
+`realPointsPerLevel`, which is already included in the base value.
+
+`calculate_spell_scaling` uses the same difficulty validation and the
+gtSpellScaling formula; it reports `itemLevelApplied: false`, because item
+level scaling is not applied.
+
+### Search
+
+`search_spells`' `attribute` filter takes a mask or enum member name tested
+against attribute word 0, or `word:value` with the word 0-13, e.g. `13:0x1`.
+A bare value is word 0.
 
 ### Visual
 
-`get_spell_visual_chain` walks `SpellXSpellVisual` → `SpellVisual` →
-`SpellVisualEvent`/`SpellVisualMissile` → `SpellVisualKit` →
-`SpellVisualKitEffect`. Two things about its output are easy to misread:
+`get_spell_visual_chain(id)` takes only the spell id: 5.4.8 visuals are not
+per difficulty. The chain is `SpellMisc.SpellVisualID[0]` and `[1]` (the base
+difficulty row) → `SpellVisual` → its kit columns and `SpellVisualMissile` rows
+→ `SpellVisualKit` → effect columns resolved to `SpellVisualEffectName`, plus
+`SpellVisualKitModelAttach` rows. Things that are easy to misread:
 
-- `spellVisualMissileId` is a `SpellVisualMissile` row id, **not** a
-  `SpellMissile` id. The standalone `SpellMissile` table is keyed by the spell
-  itself and is not reachable from this chain.
-- `effectType`/`effect` are raw ids. Only `effectType` 2 has a confirmed target
-  table (`SpellVisualKitModelAttach`) in this build, so no name is invented for
-  the rest.
+- Each non-zero visual id is a **variant** with a `slot` of 0 or 1.
+- Kits are deduplicated across variants and slots; `reachedVia` names every
+  visual, slot and column that reached a kit. Kits are capped at 500 across the
+  whole response.
+- `unk14MissileMotion` is `SpellVisual` column 14 reported **raw**. WoWDBDefs
+  calls it MissileMotion, but almost none of its values are `SpellMissileMotion`
+  ids, so its meaning is unverified; it is never resolved and never appears in
+  `unresolvedReferences`. The same column is `Unk14MissileMotion` in
+  `get_db2_row` and `query_db2`.
+- `SpellVisualKitAreaModel` is **not reachable** from the chain: it has no
+  parent-kit column in 5.4.8. `SpellMissile` is keyed by spell and is not
+  reachable either.
+- `unresolvedReferences` lists every non-zero id that has no row, with where it
+  came from.
 
-**`get_spell_visual_chain`'s `difficulty` is the one exception to this
-server's difficulty convention.** Everywhere else — including `get_spell` — a
-bare `difficulty` argument is a `MapDifficulty` row id. Here it is a raw
-`SpellXSpellVisual.DifficultyID`, used to filter the variant rows directly.
-The two id spaces are not interchangeable: `SpellXSpellVisual.DifficultyID` is
-a byte, so no `MapDifficulty` row id of 256 or more can ever match a row. Feed
-it the value `get_spell` reports as `visual.difficulty`, or one of the values
-it lists in `variantsAtOtherDifficulties` — not the `difficulty` you passed to
-`get_spell`. Pass `-1` for every difficulty; `0` is a real difficulty id, not a
-wildcard. Kits are capped at 500 across the whole response, not per variant.
+`get_spell`'s `visual` section is the same chain through the same resolver, in
+all three renderings. When a store the walk needs did not load, the `json`
+section reports `storeUnloaded: true` and `missingStores`, the `text` section
+prints `Visual chain unavailable -- these stores did not load: ...`, and
+`get_spell_visual_chain` returns `store_not_loaded` naming the missing stores.
+That is distinct from a spell that simply has no visual.
 
-`get_spell`'s `visual` section reports the same chain through the same
-resolver, filtered to `get_spell`'s own `difficulty` argument like the rest of
-that document. That argument names a `MapDifficulty` row, and that row's
-`DifficultyID` is the id `SpellXSpellVisual` is keyed by, so `get_spell`
-translates it and echoes the translated value back as `visual.difficulty`;
-leaving the argument unset means difficulty 0. `get_spell`'s `json` and `text`
-formats resolve the section with one shared call, so they report the same
-visuals for the same arguments.
-
-Two states that would otherwise look identical to "this spell has no visual"
-are reported explicitly, by all three renderings:
-
-- When any of the six stores the walk needs (`SpellXSpellVisual`,
-  `SpellVisual`, `SpellVisualEvent`, `SpellVisualMissile`, `SpellVisualKit`,
-  `SpellVisualKitEffect`) did not load, the `json` section reports
-  `storeUnloaded: true` instead of a variant list, the `text` section prints
-  `Visual chain unavailable -- these stores did not load: ...`, and
-  `get_spell_visual_chain` returns `store_not_loaded` naming the missing files.
-  All three branch on one answer computed in one place, so they cannot disagree
-  about it. `SpellMissileMotion` is read too but is not gated on: ids it cannot
-  resolve are already listed in `unresolvedReferences`.
-- When the difficulty filter empties the list but the spell has variants
-  elsewhere, `variantsAtOtherDifficulties` names those difficulties — in
-  `get_spell`'s section and in `get_spell_visual_chain` alike. An empty
-  `variants` with no such key means the spell has no `SpellXSpellVisual` rows
-  at all. Use `get_spell_visual_chain(difficulty: -1)` to see every difficulty
-  in one call.
+### Result sizes
 
 `search_spells`, `query_db2`, `query_world_db`, `list_enum`,
 `get_spell_triggers` and `compare_spells` cap results at 500 rows and report
@@ -142,28 +160,41 @@ many matched in total), `offset`, `limit` (the ceiling actually applied, not
 the value asked for) and `truncated`. Page past a truncated result by raising
 `offset`.
 
-`get_spell_db_overrides` caps at 500 rows **per table**, not per call. It reads
-seven `spell_*` tables in one call and applies the cap to each independently,
-so a single response can carry up to 3500 rows; `truncatedTables` names the
-tables that hit the cap. A running budget shared across the seven is not
-implemented.
+### World database overrides
 
-`list_db2` is deliberately uncapped. It is the discovery entry point — the one
-tool whose job is to report what exists — and it takes no `offset`, so a cap
-would conceal stores with no way to page to them. Its rows are a name and two
-flags each, not data rows.
+`get_spell_db_overrides` reads ten tables by spell id: `spell_proc_event`,
+`spell_proc`, `spell_script_names`, `spell_custom_attribute`,
+`spell_bonus_data`, `spell_threat`, `spell_ranks`, `spell_linked_spell`,
+`spell_dbc` and `spelleffect_dbc`. An eleventh, `spellmisc_dbc`, is keyed by
+SpellMisc id rather than spell id, so it is joined: its entry is
+`{matchedBy: "spellMiscId", miscIds, rows}`, where the ids are the client's
+`MiscID` for the spell united with the `SpellMiscId` of any `spell_dbc` rows
+found. Tables the schema lacks are listed under `missingTables` and are not an
+error. The 500-row cap applies **per table**, so a response can carry up to
+5500 rows; `truncatedTables` names the tables that hit it.
+
+### Listing stores
+
+`list_db2` is deliberately uncapped. It is the discovery entry point and takes
+no `offset`, so a cap would conceal stores with no way to page to them. It
+returns `stores`: one row per `.dbc` or `.db2` file with `extension`,
+`modelled`, `loaded` and `shadowed`, plus each modelled store that has no file
+(with `extension` null). Only modelled stores can be read with `get_db2_row`
+and `query_db2`; other files return `store_not_modelled`.
 
 ## Known limitations
 
-- SpellWork models 55 of the 715 `.db2` files. `get_db2_row` and `query_db2`
-  work on the modelled ones; the other 660 are listed by `list_db2` but return
-  `store_not_modelled`, because their fields are only available positionally.
-- The visual chain resolves against the layouts recorded in
-  `LayoutVerification`. Those layouts were measured against one client build;
-  a `.db2` whose layout hash or field count differs from the recorded one is
-  reported by `server_info` under `layoutMismatches`. Check that key before
-  trusting visual output from a client build other than the one these
-  structures were written against — a mismatched layout decodes into
-  plausible-looking but wrong ids.
+- **Stale `.dbc` shadowing.** The client's `.dbc` files can sit next to a
+  newer `.db2` (for example `SpellVisual.dbc` has the 5.3 layout of 38 fields
+  while `SpellVisual.db2` has 30). The `.db2` is always the one loaded; check
+  `list_db2` (`shadowed`) or `server_info` (`openedFiles`) to see which file a
+  store came from.
+- **Header build 18273.** The `.db2` files carry header build 18273, not 18414.
+  The loader does not check it; layouts are verified by field count and record
+  size instead, reported under `layoutMismatches`.
+- **Custom spells are overrides only.** Spells the repack adds in its world
+  database (`spell_dbc`, `spelleffect_dbc`, `spellmisc_dbc`) do not exist in the
+  client files, so they appear only through `get_spell_db_overrides`, not
+  through `get_spell` or `search_spells`.
 - Client data loads once per process. There is no reload; restart the server
-  after changing the DBC path.
+  after changing a path.

@@ -6,71 +6,58 @@
 
 SpellWork browses and displays information about World of Warcraft spells: the
 decoded spell record, its effects, auras, targeting, scaling, proc conditions
-and visual chain, read straight from client DB2 data and — optionally — a
-TrinityCore world database.
-
-![Screenshot](screenshot.png)
+and visual chain, read straight from client data and, optionally, a
+world database.
 
 ## Client support
 
-This repository tracks the **8.x** line. It parses **8.3.7 (build 35662)**
-client data and reports itself as `SpellWork 8.3.0 (34220)`.
+This branch tracks **5.4.8 (build 18414)**, the Mists of Pandaria client. It
+reads the client's `.dbc` and `.db2` files directly.
 
-DB2 structures are version-specific: pointing it at data from another
-expansion will fail layout verification rather than silently misread fields.
-For other client versions, see the branches on
+Structures are version-specific: data from another client build is reported by
+`server_info` under `layoutMismatches` (expected and actual field count and
+record size) rather than silently misread. For other client versions, see the
+other branches of this repository and
 [upstream TrinityCore/SpellWork](https://github.com/TrinityCore/SpellWork).
 
 ## What's in here
 
 | Project | Target | Purpose |
 | --- | --- | --- |
-| `SpellWork` | net48 | WinForms desktop UI |
-| `SpellWork.Core` | netstandard2.0 | DB2/GameTable loading, world DB access, the spell model, rendering and visual-chain resolution |
-| `SpellWork.Mcp` | net9.0 | Read-only [Model Context Protocol](docs/mcp-server.md) server exposing the same data to an AI agent |
-| `SpellWork.Core.Tests`, `SpellWork.Mcp.Tests` | net9.0 | xUnit suites, including golden-output rendering and DB2 layout verification |
+| `SpellWork.Core` | netstandard2.0 | DBC/DB2 loading, world DB access, the spell model, rendering and visual-chain resolution |
+| `SpellWork.Mcp` | net9.0 | Read-only [Model Context Protocol](docs/mcp-server.md) server exposing the data to an AI agent |
+| `SpellWork.Core.Tests`, `SpellWork.Mcp.Tests` | net9.0 | xUnit suites, including golden-output rendering and layout verification |
 
-The rendering logic lives in `Core`, not in the UI, so the desktop app, the MCP
-server and the golden tests all produce the same spell text from the same code.
+The WinForms desktop UI is not part of this branch.
 
-## Getting the app
+## Client data
 
-Download `SpellWork.zip` from the [latest release](https://github.com/HavenWoW/SpellWork/releases),
-or grab the artifact from the most recent
-[CI run](https://github.com/HavenWoW/SpellWork/actions/workflows/ci.yml).
+Client data is **not** redistributable and is not included here. Point the
+server at the folders holding the client's files:
 
-### Client data
+- **DBC folder** (`SPELLWORK_DBC_PATH`), holding the `.dbc` files. An optional
+  locale subfolder (default `enUS`) is used when present; otherwise the folder
+  itself is read.
+- **DB2 folder** (`SPELLWORK_DB2_PATH`, optional), holding the `.db2` files.
 
-Client data is **not** redistributable and is not included here. Extract it
-yourself with TrinityCore's extractors and point SpellWork at the result:
-
-- **DBC path** — `<emulator-build-dir>/ClientData/dbc` (contains a locale
-  subdirectory such as `enUS`)
-- **GameTables path** — `<emulator-build-dir>/ClientData/gt`
-
-Run `SpellWork.exe` and set both under **Settings**. A world database
-connection is optional; without it, the DB-backed views report as unavailable
-and everything else still works.
+When a table exists as both `X.db2` and `X.dbc`, the `.db2` wins. A world
+database connection is optional; without it the database tools report
+"not configured" and everything else still works.
 
 ## Building from source
 
-Requires Visual Studio 2022 (or the Build Tools) with the **.NET Framework 4.8
-targeting pack** for the WinForms project, plus the **.NET 9 SDK** for `Core`,
-`Mcp` and the tests.
+Requires the **.NET 9 SDK**.
 
 ```
-msbuild SpellWork.sln -t:Restore
-msbuild SpellWork.sln -p:Configuration=Release
-dotnet test SpellWork.sln -c Release --no-build
+dotnet build SpellWork.sln -c Release
+dotnet test SpellWork.Core.Tests/SpellWork.Core.Tests.csproj -c Release --nologo
+dotnet test SpellWork.Mcp.Tests/SpellWork.Mcp.Tests.csproj -c Release --nologo
 ```
 
-`dotnet build` alone is not enough: `SpellWork.csproj` is a legacy-format net48
-WinForms project and needs full MSBuild.
-
-Tests that require real client data skip themselves when none is present, so a
-clean checkout reports a large skip count rather than failures. Only the
-data-independent tests — SQL guarding, flag decoding, JSON shape, layout
-constants, MCP tool contracts — run everywhere.
+Tests that require real client data or MySQL skip themselves when none is
+configured, so a clean checkout reports a large skip count rather than
+failures. Only the data-independent tests (SQL guarding, flag decoding, JSON
+shape, layout constants, MCP tool contracts) run everywhere.
 
 `DBFileReaderLib.dll` is vendored under `packages/` because it is not published
 on NuGet and every project references it by `HintPath`. It is tracked
