@@ -195,6 +195,12 @@ namespace SpellWork.DBC
             while (_layoutMismatches.TryTake(out _)) { }
             _openedFiles.Clear();
 
+            // Reload hygiene: stale stores from a previous load must not survive.
+            SpellInfoStore.Clear();
+            SpellTriggerStore.Clear();
+            AuraOptionsIndex = null; CategoriesIndex = null; CooldownsIndex = null; InterruptsIndex = null;
+            LevelsIndex = null; TargetRestrictionsIndex = null; MiscIndex = null;
+
             ClientFileResolver.EffectiveDbcDirectory(config, out var fb);
             LocaleFallback = fb;
 
@@ -221,9 +227,9 @@ namespace SpellWork.DBC
                        var mismatch = LayoutVerification.Check(FileNameFor(dbc), file.Path, reader.FieldsCount, reader.RecordSize);
                        if (mismatch != null)
                            _layoutMismatches.Add(mismatch);
-                       _openedFiles[dbc.Name] = file;
                        dynamic storage = Activator.CreateInstance(dbc.PropertyType, reader);
                        dbc.SetValue(null, storage);
+                       _openedFiles[dbc.Name] = file; // only once the store exists
                    }
                    // The resolver only returns paths that existed a moment
                    // ago, so these two now only fire when the directory or
@@ -338,8 +344,7 @@ namespace SpellWork.DBC
         public static DifficultyIndex<SpellTargetRestrictionsEntry> TargetRestrictionsIndex { get; private set; }
         public static DifficultyIndex<SpellMiscEntry> MiscIndex { get; private set; }
 
-        public static uint SelectedLevel = MaxLevel;
-        public static uint SelectedItemLevel = 463;
-        public static int SelectedDifficulty = 0;
+        /// <summary>Item level used when a caller gives none (the 5.4.8 goldens and the MCP default).</summary>
+        public const uint DefaultItemLevel = 463;
     }
 }

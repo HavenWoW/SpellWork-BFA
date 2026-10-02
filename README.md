@@ -58,6 +58,7 @@ Tests that require real client data or MySQL skip themselves when none is
 configured, so a clean checkout reports a large skip count rather than
 failures. Only the data-independent tests (SQL guarding, flag decoding, JSON
 shape, layout constants, MCP tool contracts) run everywhere.
+Environment variables that enable the data tests: `SPELLWORK_DBC_PATH`, `SPELLWORK_DB2_PATH`, `SPELLWORK_LOCALE`; the MySQL tests: `SPELLWORK_TEST_MYSQL_HOST`, `_PORT`, `_USER`, `_PASS`, `_WORLD_DB`.
 
 `DBFileReaderLib.dll` is vendored under `packages/` because it is not published
 on NuGet and every project references it by `HintPath`. It is tracked

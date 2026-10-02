@@ -10,18 +10,16 @@ namespace SpellWork.Core.Tests
 
         public RenderContextTests(ClientDataFixture fixture) => _fixture = fixture;
 
-        // FromGlobals must snapshot exactly what the statics hold, or a caller
-        // relying on the process-wide selection renders at the wrong level.
-        [SkippableFact]
-        public void FromGlobals_SnapshotsTheStatics()
+        // Default is the documented fallback context (spec D5: level 90, item level 463, base difficulty).
+        
+        [Fact]
+        public void Default_IsMaxLevelDefaultItemLevelBase()
         {
-            _fixture.SkipIfNoClientData();
+            var context = RenderContext.Default;
 
-            var context = RenderContext.FromGlobals();
-
-            Assert.Equal(DBC.DBC.SelectedLevel, context.Level);
-            Assert.Equal(DBC.DBC.SelectedItemLevel, context.ItemLevel);
-            Assert.Equal(DBC.DBC.SelectedDifficulty, context.Difficulty);
+            Assert.Equal(DBC.DBC.MaxLevel, context.Level);
+            Assert.Equal(DBC.DBC.DefaultItemLevel, context.ItemLevel);
+            Assert.Equal(0, context.Difficulty);
         }
 
         // Contexts carry their own level; two threads rendering at different

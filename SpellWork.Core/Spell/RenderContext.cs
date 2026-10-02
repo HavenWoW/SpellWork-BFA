@@ -25,11 +25,8 @@ namespace SpellWork.Spell
         public uint ItemLevel { get; }
         public int Difficulty { get; }
 
-        /// <summary>
-        /// Snapshots the process-wide selection in <see cref="DBC.DBC.SelectedLevel"/>
-        /// and friends. Everything that can pass a context explicitly does.
-        /// </summary>
-        public static RenderContext FromGlobals() =>
-            new RenderContext(DBC.DBC.SelectedLevel, DBC.DBC.SelectedItemLevel, DBC.DBC.SelectedDifficulty);
+        /// <summary>Max level, <see cref="DBC.DBC.DefaultItemLevel"/>, base difficulty.</summary>
+        public static RenderContext Default =>
+            new RenderContext(DBC.DBC.MaxLevel, DBC.DBC.DefaultItemLevel, 0);
     }
 }

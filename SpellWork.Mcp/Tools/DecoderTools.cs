@@ -77,7 +77,7 @@ namespace SpellWork.Mcp.Tools
             };
 
             // The Difficulty.dbc id the effects were resolved at (replaces
-            // the 8.3.7 mapDifficulty report).
+            // the old mapDifficulty report, which 5.4.8 has no table for).
             payload["difficulty"] = (int)difficulty;
 
             return ToolResponse.Ok(payload);

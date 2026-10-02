@@ -30,7 +30,7 @@ namespace SpellWork.Core.Tests
         {
             Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
 
-            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals());
+            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.Default);
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
 
@@ -129,7 +129,7 @@ namespace SpellWork.Core.Tests
             Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
 
             var json = SpellInfoJsonSerializer.Serialize(
-                DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals(), new[] { "misc" });
+                DBC.DBC.SpellInfoStore[133], RenderContext.Default, new[] { "misc" });
 
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
@@ -152,7 +152,7 @@ namespace SpellWork.Core.Tests
         {
             Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
 
-            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals());
+            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.Default);
             using var document = JsonDocument.Parse(json);
 
             var effect = document.RootElement.GetProperty("effects")
@@ -170,7 +170,7 @@ namespace SpellWork.Core.Tests
         {
             Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
 
-            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[1459], RenderContext.FromGlobals());
+            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[1459], RenderContext.Default);
             using var document = JsonDocument.Parse(json);
 
             var effect = document.RootElement.GetProperty("effects")
@@ -242,7 +242,7 @@ namespace SpellWork.Core.Tests
             Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
 
             var json = SpellInfoJsonSerializer.Serialize(
-                DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals(), new[] { "Effects" });
+                DBC.DBC.SpellInfoStore[133], RenderContext.Default, new[] { "Effects" });
 
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
@@ -274,7 +274,7 @@ namespace SpellWork.Core.Tests
         {
             Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
 
-            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[118], RenderContext.FromGlobals());
+            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[118], RenderContext.Default);
             using var document = JsonDocument.Parse(json);
 
             var target = document.RootElement.GetProperty("targets")
@@ -297,7 +297,7 @@ namespace SpellWork.Core.Tests
             // 0-31 regardless of whether it is set. Spell 133's schoolMask is
             // 4 (SPELL_SCHOOL_MASK_FIRE alone), verified directly against the
             // store.
-            var fireballJson = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals());
+            var fireballJson = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.Default);
             using var fireballDocument = JsonDocument.Parse(fireballJson);
             var schoolMask = fireballDocument.RootElement.GetProperty("schoolMask");
 
@@ -357,13 +357,13 @@ namespace SpellWork.Core.Tests
         {
             Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
 
-            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals());
+            var json = SpellInfoJsonSerializer.Serialize(DBC.DBC.SpellInfoStore[133], RenderContext.Default);
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
 
-            Assert.Equal(DBC.DBC.SelectedLevel, root.GetProperty("level").GetUInt32());
-            Assert.Equal(DBC.DBC.SelectedItemLevel, root.GetProperty("itemLevel").GetUInt32());
-            Assert.Equal(DBC.DBC.SelectedDifficulty, root.GetProperty("difficulty").GetInt32());
+            Assert.Equal(DBC.DBC.MaxLevel, root.GetProperty("level").GetUInt32());
+            Assert.Equal(DBC.DBC.DefaultItemLevel, root.GetProperty("itemLevel").GetUInt32());
+            Assert.Equal(0, root.GetProperty("difficulty").GetInt32());
         }
 
         // "context" must be filterable like every other section: a caller
@@ -376,7 +376,7 @@ namespace SpellWork.Core.Tests
             Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
 
             var json = SpellInfoJsonSerializer.Serialize(
-                DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals(), new[] { "effects" });
+                DBC.DBC.SpellInfoStore[133], RenderContext.Default, new[] { "effects" });
             using var document = JsonDocument.Parse(json);
             var root = document.RootElement;
 
@@ -385,7 +385,7 @@ namespace SpellWork.Core.Tests
             Assert.False(root.TryGetProperty("difficulty", out _));
 
             var contextJson = SpellInfoJsonSerializer.Serialize(
-                DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals(), new[] { "context" });
+                DBC.DBC.SpellInfoStore[133], RenderContext.Default, new[] { "context" });
             using var contextDocument = JsonDocument.Parse(contextJson);
             Assert.True(contextDocument.RootElement.TryGetProperty("level", out _));
         }
@@ -399,7 +399,7 @@ namespace SpellWork.Core.Tests
             _fixture.SkipIfNoClientData();
 
             var json = SpellInfoJsonSerializer.Serialize(
-                DBC.DBC.SpellInfoStore[133], RenderContext.FromGlobals());
+                DBC.DBC.SpellInfoStore[133], RenderContext.Default);
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 
@@ -422,7 +422,7 @@ namespace SpellWork.Core.Tests
                 s.Effects.Any(e => e != null && e.Entry.EffectTriggerSpell != 0
                                    && DBC.DBC.SpellInfoStore.ContainsKey(e.Entry.EffectTriggerSpell)));
 
-            var json = SpellInfoJsonSerializer.Serialize(spell, RenderContext.FromGlobals());
+            var json = SpellInfoJsonSerializer.Serialize(spell, RenderContext.Default);
             using var doc = JsonDocument.Parse(json);
 
             var triggered = doc.RootElement.GetProperty("effects").EnumerateArray()
@@ -476,7 +476,7 @@ namespace SpellWork.Core.Tests
                 && s.Effects.Any(e => e != null && e.Entry.EffectTriggerSpell != 0));
 
             var json = SpellInfoJsonSerializer.Serialize(
-                spell, RenderContext.FromGlobals(), new[] { "triggers" });
+                spell, RenderContext.Default, new[] { "triggers" });
             using var doc = JsonDocument.Parse(json);
             var triggers = doc.RootElement.GetProperty("triggers");
 
@@ -495,7 +495,7 @@ namespace SpellWork.Core.Tests
             var spell = DBC.DBC.SpellInfoStore[item.SpellId.First(id => id != 0 && DBC.DBC.SpellInfoStore.ContainsKey(id))];
 
             var json = SpellInfoJsonSerializer.Serialize(
-                spell, RenderContext.FromGlobals(), new[] { "items" });
+                spell, RenderContext.Default, new[] { "items" });
             using var doc = JsonDocument.Parse(json);
 
             Assert.Contains(doc.RootElement.GetProperty("items").EnumerateArray(), e => e.GetProperty("id").GetInt32() == item.ID);

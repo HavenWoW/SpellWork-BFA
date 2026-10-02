@@ -209,7 +209,7 @@ namespace SpellWork.Spell
                 AddIfNotEmpty(root, "equippedItems", BuildEquippedItems(spell));
 
             if (Wants("triggers"))
-                root["triggers"] = BuildTriggers(spell);
+                root["triggers"] = BuildTriggers(spell, context);
 
             if (Wants("items"))
                 AddIfNotEmpty(root, "items", BuildItems(spell));
@@ -730,9 +730,9 @@ namespace SpellWork.Spell
         // are empty: "this spell triggers nothing" is an answer, and an
         // absent key would be indistinguishable from "the section was
         // filtered out".
-        private static Dictionary<string, object> BuildTriggers(SpellInfo spell)
+        private static Dictionary<string, object> BuildTriggers(SpellInfo spell, RenderContext context)
         {
-            var triggers = spell.Effects
+            var triggers = spell.EffectsFor(context.Difficulty)
                 .Where(effect => effect != null && effect.Entry.EffectTriggerSpell != 0)
                 .Select(effect => effect.Entry.EffectTriggerSpell)
                 .Distinct()

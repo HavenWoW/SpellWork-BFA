@@ -179,7 +179,19 @@ namespace SpellWork.Mcp.Tools
         /// "7:SPELL_ATTR7_UNK0" test the named word (0-13); the value is a
         /// decimal or 0x-hex mask, or a member of that word's enum.
         /// </summary>
-        private static bool TryResolveAttribute(string text, out int word, out long? mask, out string error)
+        internal static bool TryResolveAttribute(string text, out int word, out long? mask, out string error)
+        {
+            if (!TryResolveAttributeCore(text, out word, out mask, out error))
+                return false;
+            if (mask.HasValue && (mask.Value < 0 || mask.Value > uint.MaxValue))
+            {
+                error = $"'{text}' does not fit an attribute word (a 32-bit mask, at most 0xFFFFFFFF).";
+                return false;
+            }
+            return true;
+        }
+
+        private static bool TryResolveAttributeCore(string text, out int word, out long? mask, out string error)
         {
             word = 0;
             mask = null;
@@ -282,7 +294,7 @@ namespace SpellWork.Mcp.Tools
         }
 
         [McpServerTool(Name = "get_spell_triggers")]
-        [Description("Which spells this spell triggers (from its own effects, with the effect index) and which spells trigger it.")]
+        [Description("Which spells this spell triggers (from its own base-difficulty effects, with the effect index) and which spells trigger it. Base difficulty only; get_spell with sections=[\"triggers\"] and a difficulty resolves the forward list at that difficulty.")]
         public async Task<string> GetSpellTriggers(int id)
         {
             var data = await _data.GetAsync();
@@ -345,7 +357,7 @@ namespace SpellWork.Mcp.Tools
             // Diff the serialized documents rather than comparing fields by
             // hand: this covers every field get_spell emits, including ones
             // added later, and cannot drift away from what get_spell returns.
-            // Four of the eighteen sections are left out, each for its own
+            // Four of the get_spell sections are left out, each for its own
             // reason: "context" renders identically on both sides by
             // construction (it echoes the RenderContext this call itself
             // chose, not anything about either spell); "items" and "triggers"
@@ -356,8 +368,8 @@ namespace SpellWork.Mcp.Tools
             // have nothing to do with either spell; and "visual" is a
             // deliberate omission rather than an oversight, because a visual
             // chain diffs as a wall of raw SpellVisualKit and
-            // SpellVisualKitEffect ids whose meaning is unresolved in this
-            // build (only effectType 2 has a confirmed target), so two spells
+            // SpellVisualKitEffect ids whose meaning is largely unresolved in
+            // the 5.4.8 data (only effectType 2 has a confirmed target), so two spells
             // that look alike in every way a caller cares about still differ
             // in dozens of opaque numbers. get_spell_visual_chain compares
             // them properly, one spell at a time.
@@ -571,7 +583,7 @@ namespace SpellWork.Mcp.Tools
         internal static RenderContext ResolveContext(uint? level, uint? itemLevel, uint difficulty) =>
             new RenderContext(
                 level ?? SpellWork.DBC.DBC.MaxLevel,
-                itemLevel ?? 475,
+                itemLevel ?? SpellWork.DBC.DBC.DefaultItemLevel,
                 (int)difficulty);
 
         // Shared by get_spell and calculate_spell_scaling: null when the
@@ -594,8 +606,8 @@ namespace SpellWork.Mcp.Tools
                     ? null
                     : new Dictionary<string, object> { ["variable"] = data.ErrorVariable });
 
-        // Spec section 9: an unknown id gets nearest-name suggestions from
-        // SpellName, so the agent can recover from a typo or a stale id
+        // Spec section 9: an unknown id gets the nearest ids by number (with
+        // their Spell.dbc names) as suggestions, so the agent can recover from a typo or a stale id
         // without a second round trip.
         internal static string NotFound(int id) =>
             ToolResponse.Error("spell_not_found", $"No spell with id {id}.",

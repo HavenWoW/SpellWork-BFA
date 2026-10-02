@@ -123,8 +123,8 @@ namespace SpellWork.Mcp.Tools
 
             // Ask once whether the server is reachable at all. Without this a
             // server that is simply down reports the same connection error
-            // seven times, once per table, and the caller has to read all
-            // seven to work out that none of them is about a table.
+            // once per table, and the caller has to read all
+            // of them to work out that none of them is about a table.
             if (!worldDatabase.TestConnection(out var connectionError))
             {
                 return ToolResponse.Error("connection_failed",
@@ -151,9 +151,9 @@ namespace SpellWork.Mcp.Tools
                 }
                 catch (Exception ex) when (IsMissingTable(ex))
                 {
-                    // Expected, not a failure: two of these seven tables are
-                    // absent from TrinityCore's BfA-era world schema, so this
-                    // branch fires on every call against it. Reporting an
+                    // Expected, not a failure: some of these tables are
+                    // absent from a given repack's world schema (forks differ), so this
+                    // branch can fire on every call against it. Reporting an
                     // expected absence in the same shape as a real fault --
                     // a syntax error, a permission denial, a wrong id column
                     // -- would train the caller to ignore both.

@@ -153,9 +153,8 @@ change with them.
 the Cataclysm/MoP formula: `SpellScaling` (class, min/max level, cast-time
 scaling, `NerfFactor`) times the `gtSpellScaling` row for
 `(class-1)*100 + level-1`, times `SpellEffectScaling` coefficient/variance.
-Levels clamp to 1..90 (`MaxLevel = 90`). `itemLevel` applies only to item-
-enchant/random-property spells, through `RandPropPoints`, as in 5.4.8. For any
-other spell it is echoed back with `"itemLevelApplied": false`.
+Levels clamp to 1..90 (`MaxLevel = 90`). SkyFire_548 `CalcValue` has no item-level path; `itemLevel` is echoed with
+`"itemLevelApplied": false` for every spell.
 
 ## 6. Visual chain (full)
 
@@ -246,8 +245,8 @@ Same variables as `main`, minus `SPELLWORK_HOTFIX_CACHE`. Additions:
 
 - `SPELLWORK_DB2_PATH` (optional): a second directory searched for `.db2`
   files. If it's unset, `.db2` files are looked up in `SPELLWORK_DBC_PATH`.
-- `SPELLWORK_GT_PATH` becomes optional. 5.4.8 keeps `gtSpellScaling.dbc` in the
-  DBC folder, which is the default lookup.
+- `SPELLWORK_GT_PATH` is accepted for compatibility but unused: 5.4.8 keeps
+  `gtSpellScaling.dbc` in the DBC folder, which is where it is read from.
 - `SPELLWORK_LOCALE`: when the subfolder doesn't exist, the DBC root is used
   and `server_info` says so.
 
@@ -266,7 +265,7 @@ the file (D5, D7). Tools that read that store keep answering.
   enums, JSON shape, layout constants, tool contracts, file-resolution rules
   (.db2 over .dbc, optional locale) against a temp directory with synthetic
   WDBC/WDB2 headers.
-- **Reference-data** (skip when `SPELLWORK_TEST_DBC_PATH` is unset): zero layout
+- **Reference-data** (skip when `SPELLWORK_DBC_PATH` is unset): zero layout
   mismatches; store counts; visual-chain integrity (every reference resolves
   or is listed); per-difficulty effect resolution on a raid spell with
   difficulty-specific rows.

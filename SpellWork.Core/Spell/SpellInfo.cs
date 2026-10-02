@@ -398,7 +398,7 @@ namespace SpellWork.Spell
                 rtb.AppendFormatLine("Rune cost: Blood {0}, Unholy {1}, Frost {2}, Chromatic {3}, RunicPower {4}",
                     RuneCost.Blood, RuneCost.Unholy, RuneCost.Frost, RuneCost.Chromatic, RuneCost.RunicPower);
 
-            rtb.AppendFormatLine($"Category = { category }, SpellIconID = { misc?.SpellIconID ?? 0 }, ActiveIconID = { misc?.ActiveIconID ?? 0 }, SpellVisualID = { misc?.SpellVisualID[0] ?? 0 }");
+            rtb.AppendFormatLine($"Category = { category }, SpellIconID = { misc?.SpellIconID ?? 0 }, ActiveIconID = { misc?.ActiveIconID ?? 0 }, SpellVisualID = { Misc?.SpellVisualID[0] ?? 0 }");
 
             rtb.AppendFormatLine("Family {0} ({1}), flag [0] 0x{2:X8} [1] 0x{3:X8} [2] 0x{4:X8} [3] 0x{5:X8}",
                     (SpellFamilyNames)SpellFamilyName, SpellFamilyName,
