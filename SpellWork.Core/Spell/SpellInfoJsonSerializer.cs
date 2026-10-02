@@ -57,7 +57,7 @@ namespace SpellWork.Spell
         {
             "misc", "attributes", "effects", "powers", "targets", "reagents", "aura", "procs", "scaling",
             "context", "cooldowns", "levels", "interrupts", "shapeshift", "equippedItems",
-            "items", "triggers",
+            "items", "triggers", "totems",
         };
 
         public static string Serialize(SpellInfo spell, RenderContext context, IReadOnlyCollection<string> sections = null)
@@ -198,6 +198,16 @@ namespace SpellWork.Spell
 
             if (Wants("shapeshift"))
                 AddIfNotEmpty(root, "shapeshift", BuildShapeshift(spell));
+
+            if (Wants("totems") && spell.Totems != null)
+            {
+                var totems = new Dictionary<string, object>();
+                if (spell.Totems.TotemCategory.Any(c => c != 0))
+                    totems["totemCategory"] = spell.Totems.TotemCategory;
+                if (spell.Totems.Totem.Any(t => t != 0))
+                    totems["totem"] = spell.Totems.Totem;
+                AddIfNotEmpty(root, "totems", totems);
+            }
 
             if (Wants("equippedItems"))
                 AddIfNotEmpty(root, "equippedItems", BuildEquippedItems(spell));

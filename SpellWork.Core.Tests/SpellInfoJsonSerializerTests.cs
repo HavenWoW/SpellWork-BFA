@@ -106,6 +106,24 @@ namespace SpellWork.Core.Tests
         }
 
         [SkippableFact]
+        public void Totems_and_computed_aura_value_are_rendered()
+        {
+            Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);
+            var ctx = new RenderContext(90, 463, 0);
+            var totem = DBC.DBC.SpellInfoStore[15786];
+            var json = JsonDocument.Parse(SpellInfoJsonSerializer.Serialize(totem, ctx)).RootElement;
+            Assert.Equal(DBC.DBC.SpellTotems[DBC.DBC.Spell[15786].TotemsID].TotemCategory[0], json.GetProperty("totems").GetProperty("totemCategory")[0].GetUInt32());
+            var w = new PlainTextSpellInfoWriter();
+            totem.Write(w, ctx);
+            Assert.Contains("Totems: TotemCategory", w.ToString());
+
+            var swp = new PlainTextSpellInfoWriter();
+            DBC.DBC.SpellInfoStore[589].Write(swp, ctx);
+            Assert.Contains("value = 780,", swp.ToString());
+            Assert.DoesNotContain("value = 5,", swp.ToString());
+        }
+
+        [SkippableFact]
         public void Serialize_honours_the_sections_filter()
         {
             Skip.IfNot(_fixture.Loaded, ClientDataFixture.SkipReason);

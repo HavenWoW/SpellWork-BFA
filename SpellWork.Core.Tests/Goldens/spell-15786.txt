@@ -1,0 +1,35 @@
+ID - 15786 Earthbind Totem
+=================================================
+Summons an Earthbind Totem that lasts $d. and periodically reduces the movement speed of nearby enemies to $3600s1% of normal.
+Category = 0, SpellIconID = 686, ActiveIconID = 0, SpellVisualID = 264
+Family SPELLFAMILY_GENERIC (0), flag [0] 0x00000000 [1] 0x00000000 [2] 0x00000000 [3] 0x00000000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_NATURE (8)
+DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
+PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
+=================================================
+Attributes: 0x00090000 (SPELL_ATTR0_NOT_SHAPESHIFT, SPELL_ATTR0_LEVEL_DAMAGE_CALCULATION)
+=================================================
+Totems: TotemCategory [2, 0], Totem (item) [0, 0]
+Spell Level = 20, base 20, max 0
+
+Category = 0
+DispelType = 0 (DISPEL_NONE)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 1) "Self Only":
+    MinRangeNegative = 0, MinRangePositive = 0
+    MaxRangeNegative = 0, MaxRangePositive = 0
+Cast Time: (ID 1): 0
+RecoveryTime: 0 ms, CategoryRecoveryTime: 0 ms
+StartRecoveryCategory = 133, StartRecoveryTime = 1500.00 ms
+Duration 45000, 0, 45000
+Power POWER_MANA, Base 30
+Chance = 0, charges - 0
+=================================================
+Effect 0: Id 28 (SPELL_EFFECT_SUMMON)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 5.00
+Targets (41, 0) (TARGET_DEST_CASTER_FRONT_RIGHT, 0)
+EffectMiscValueA = 2630
+EffectMiscValueB = 81
+

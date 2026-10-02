@@ -503,6 +503,10 @@ namespace SpellWork.Spell
                 }
             }
 
+            if (Totems != null && (Totems.TotemCategory.Any(c => c != 0) || Totems.Totem.Any(t => t != 0)))
+                rtb.AppendFormatLine("Totems: TotemCategory [{0}, {1}], Totem (item) [{2}, {3}]",
+                    Totems.TotemCategory[0], Totems.TotemCategory[1], Totems.Totem[0], Totems.Totem[1]);
+
             // SpellReagents
             {
                 var printedHeader = false;
@@ -832,7 +836,7 @@ namespace SpellWork.Spell
                 effect.ImplicitTarget[0], effect.ImplicitTarget[1],
                 (Targets)effect.ImplicitTarget[0], (Targets)effect.ImplicitTarget[1]);
 
-            AuraModTypeName(rtb, effect);
+            AuraModTypeName(rtb, effect, baseValue);
 
             var classMask = effect.EffectSpellClassMask;
 
@@ -915,7 +919,7 @@ namespace SpellWork.Spell
                 name, radiusIndex, radius.Radius, radius.MaxRadius);
         }
 
-        private static void AuraModTypeName(ISpellInfoWriter rtb, SpellEffectEntry effect)
+        private static void AuraModTypeName(ISpellInfoWriter rtb, SpellEffectEntry effect, float value)
         {
             var aura = (AuraType)effect.EffectAura;
             var misc = effect.EffectMiscValue[0];
@@ -930,7 +934,7 @@ namespace SpellWork.Spell
             }
 
             rtb.AppendFormat("Aura Id {0:D} ({0})", aura);
-            rtb.AppendFormat(", value = {0}", effect.EffectBasePoints);
+            rtb.AppendFormat(", value = {0}", value);
             rtb.AppendFormat(", misc = {0} (", misc);
 
             switch (aura)

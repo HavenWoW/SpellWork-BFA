@@ -58,5 +58,5 @@ Difficulty: Id 0 (DIFFICULTY_NONE)
 BasePoints = 780.00 + spellPower * 0.366
 Scaling: Coefficient 0.743, Variance 0, ResourceCoefficient 0
 Targets (6, 0) (TARGET_UNIT_TARGET_ENEMY, 0)
-Aura Id 3 (SPELL_AURA_PERIODIC_DAMAGE), value = 5, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 3000
+Aura Id 3 (SPELL_AURA_PERIODIC_DAMAGE), value = 780, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 3000
 
