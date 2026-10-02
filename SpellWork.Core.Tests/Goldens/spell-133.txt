@@ -61,3 +61,10 @@ Targets (6, 0) (TARGET_UNIT_TARGET_ENEMY, 0)
 =================================================
 Items using this spell:
    996: Ring of Righteous Flame (TEST) 
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #67
+  PrecastKit #30: Spells\Fire_Precast_Hand.mdx (LeftHand), Spells\Fire_Precast_Hand.mdx (RightHand)
+  CastKit #38: Spells\Fire_Cast_Hand.mdx (LeftHand), Spells\Fire_Cast_Hand.mdx (RightHand)
+  ImpactKit #286: Spells\MoltenBlast_Impact_Chest.mdx (Chest)
+  Missile #88: Spells\Fireball_Missile_Low.mdx

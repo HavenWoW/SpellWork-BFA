@@ -40,3 +40,10 @@ Difficulty: Id 2 (DIFFICULTY_HEROIC)
 BasePoints = 45124.00
 Targets (6, 0) (TARGET_UNIT_TARGET_ENEMY, 0)
 
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #9697
+  PrecastKit #171: (no effects)
+  CastKit #172: (no effects)
+  ImpactKit #220: Spells\BloodyExplosion.mdx (Chest)
+  Missile #852:  (motion #23 Forward Spin)

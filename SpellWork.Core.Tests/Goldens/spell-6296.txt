@@ -38,3 +38,8 @@ EffectMiscValueA = 36
 =================================================
 Items using this spell:
    5421: Fiery Blaze Enchantment 
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #215
+  PrecastKit #358: (no effects)
+  CastKit #1964: (no effects)

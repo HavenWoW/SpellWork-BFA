@@ -34,6 +34,7 @@ namespace SpellWork.Core.Tests
             ("spell-16870", 16870, 0),
             ("spell-2825", 2825, 0),
             ("spell-6603", 6603, 0),
+            ("spell-52140", 52140, 0),   // two visual variants (SpellMisc.SpellVisualID[0] and [1])
         };
 
         public static IEnumerable<object[]> GoldenFiles() => Cases.Select(c => new object[] { c.Name });

@@ -77,3 +77,10 @@ Difficulty: Id 0 (DIFFICULTY_NONE)
 BasePoints = 0.00
 Targets (25, 0) (TARGET_UNIT_TARGET_ANY, 0)
 
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #13
+  PrecastKit #194: Spells\Ice_Precast_Low_Hand.mdx (LeftHand), Spells\Ice_Precast_Low_Hand.mdx (RightHand)
+  CastKit #202: Spells\Ice_Precast_Low_Hand.mdx (LeftHand), Spells\Ice_Precast_Low_Hand.mdx (RightHand)
+  ImpactKit #4991: Spells\Ice_ImpactDD_Med_Chest.mdx (Chest)
+  Missile #389: Spells\Frostbolt.mdx

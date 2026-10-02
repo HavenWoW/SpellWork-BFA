@@ -127,3 +127,7 @@ SpellClassMask = 0083B865 001007C0 13C40400 00000000
 	- 149460 - Starfall
 	- 150017 - Rake
 
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #2736
+  ImpactKit #9548: Spells\Clearcasting_Impact_Chest.mdx (Chest)

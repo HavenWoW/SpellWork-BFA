@@ -49,15 +49,11 @@ namespace SpellWork.Spell
         // against but that used to leave no trace in the document. Kept as
         // the single source of truth for both validating `sections` and
         // echoing back which of them were applied.
-        //
-        // "visual" is not listed while the 5.4.8 visual chain is being
-        // ported: a section which validates but never produces data is worse
-        // than a clear "unknown section" error.
         private static readonly string[] ValidSections =
         {
             "misc", "attributes", "effects", "powers", "targets", "reagents", "aura", "procs", "scaling",
             "context", "cooldowns", "levels", "interrupts", "shapeshift", "equippedItems",
-            "items", "triggers", "totems",
+            "items", "triggers", "totems", "visual",
         };
 
         public static string Serialize(SpellInfo spell, RenderContext context, IReadOnlyCollection<string> sections = null)
@@ -217,6 +213,13 @@ namespace SpellWork.Spell
 
             if (Wants("items"))
                 AddIfNotEmpty(root, "items", BuildItems(spell));
+
+            // Emitted unconditionally: {"storeUnloaded": true, ...} when a
+            // gated store is missing, otherwise the chain (spec §6). The same
+            // single ResolveSection call the text block and
+            // get_spell_visual_chain branch on.
+            if (Wants("visual"))
+                root["visual"] = SpellVisualChainJson.Describe(SpellVisualChainResolver.ResolveSection(spell.ID));
 
             return JsonSerializer.Serialize(root, SerializerOptions);
         }

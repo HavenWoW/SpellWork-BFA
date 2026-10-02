@@ -1,0 +1,45 @@
+ID - 52140 Mosswalker Chains
+=================================================
+
+Category = 0, SpellIconID = 1, ActiveIconID = 0, SpellVisualID = 11430
+Family SPELLFAMILY_GENERIC (0), flag [0] 0x00000000 [1] 0x00000000 [2] 0x00000000 [3] 0x00000000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_NORMAL (1)
+DamageClass = 0 (SPELL_DAMAGE_CLASS_NONE)
+PreventionType = 0 (SPELL_PREVENTION_TYPE_NONE)
+=================================================
+Attributes: 0x20000100 (SPELL_ATTR0_HIDE_IN_COMBAT_LOG, SPELL_ATTR0_UNAFFECTED_BY_INVULNERABILITY)
+AttributesEx1: 0x120A0404 (SPELL_ATTR1_CHANNELED_1, SPELL_ATTR1_NO_THREAT, SPELL_ATTR1_UNAUTOCASTABLE_BY_PET, SPELL_ATTR1_CANT_TARGET_SELF, SPELL_ATTR1_UNK25, SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR)
+AttributesEx2: 0x00000005 (SPELL_ATTR2_CAN_TARGET_DEAD, SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS)
+AttributesEx3: 0x10000000 (SPELL_ATTR3_UNK28)
+AttributesEx4: 0x00000080 (SPELL_ATTR4_TRIGGERED)
+AttributesEx5: 0x00000001 (SPELL_ATTR5_UNK0)
+AttributesEx6: 0x00000400 (SPELL_ATTR6_CAN_TARGET_POSSESSED_FRIENDS)
+=================================================
+Spell Level = 0, base 0, max 0
+
+Category = 0
+DispelType = 0 (DISPEL_NONE)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 13) "Anywhere":
+    MinRangeNegative = 0, MinRangePositive = 0
+    MaxRangeNegative = 50000, MaxRangePositive = 50000
+Cast Time: (ID 1): 0
+Duration -1, 0, -1
+Chance = 0, charges - 0
+=================================================
+Effect 0: Id 6 (SPELL_EFFECT_APPLY_AURA)
+Difficulty: Id 0 (DIFFICULTY_NONE)
+BasePoints = 0.00
+Targets (38, 0) (TARGET_UNIT_NEARBY_ENTRY, 0)
+Aura Id 4 (SPELL_AURA_DUMMY), value = 0, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 0
+
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #11430
+  CastKit #7552: (no effects)
+  StateKit #7776: (no effects)
+  ChannelKit #10570: (no effects)
+Visual (slot 1): SpellVisual #15586
+  CastKit #7552: (no effects)
+  ChannelKit #10570: (no effects)

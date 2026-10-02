@@ -65,3 +65,9 @@ Targets (56, 0) (TARGET_UNIT_CASTER_AREA_RAID, 0)
 Aura Id 65 (SPELL_AURA_MOD_CASTING_SPEED_NOT_STACK), value = 30, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 0
 Radius (Id 12) 100.00 (Max: 100.00)
 
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #7870
+  CastKit #6746: (no effects)
+  ImpactKit #6799: spells\bloodlust_player_cast_head.mdx (Head)
+  StateKit #6889: Spells\BloodLust_State_Hand.mdx (LeftHand), Spells\BloodLust_State_Hand.mdx (RightHand)

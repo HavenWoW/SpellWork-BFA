@@ -60,3 +60,9 @@ Scaling: Coefficient 0.743, Variance 0, ResourceCoefficient 0
 Targets (6, 0) (TARGET_UNIT_TARGET_ENEMY, 0)
 Aura Id 3 (SPELL_AURA_PERIODIC_DAMAGE), value = 780, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 3000
 
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #71
+  PrecastKit #217: Spells\Shadow_Precast_Low_Hand.mdx (LeftHand), Spells\Shadow_Precast_Low_Hand.mdx (RightHand)
+  CastKit #218: Spells\Shadow_Precast_Low_Hand.mdx (LeftHand), Spells\Shadow_Precast_Low_Hand.mdx (RightHand)
+  ImpactKit #304: Spells\ShadowWordPain_Chest.mdx (Chest)

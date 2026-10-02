@@ -33,3 +33,7 @@ Targets (41, 0) (TARGET_DEST_CASTER_FRONT_RIGHT, 0)
 EffectMiscValueA = 2630
 EffectMiscValueB = 81
 
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #264
+  CastKit #352: (no effects)

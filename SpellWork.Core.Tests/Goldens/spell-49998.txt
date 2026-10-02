@@ -79,3 +79,8 @@ Difficulty: Id 0 (DIFFICULTY_NONE)
 BasePoints = 7.00
 Targets (6, 0) (TARGET_UNIT_TARGET_ENEMY, 0)
 
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #11831
+  CastKit #10971: Spells\BloodLust_State_Hand.mdx (LeftHand), Spells\BloodLust_State_Hand.mdx (RightHand)
+  TargetImpactKit #10927: Spells\BloodyExplosion.mdx (Chest)

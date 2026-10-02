@@ -727,6 +727,89 @@ namespace SpellWork.Spell
                 AppendEffectInfo(rtb, effect, context);
 
             AppendItemInfo(rtb);
+
+            WriteVisualChain(rtb, SpellVisualChainResolver.ResolveSection(ID));
+        }
+
+        /// <summary>
+        /// The text rendering of the visual chain. Branches on the same
+        /// <see cref="SpellVisualSection"/> get_spell's JSON and
+        /// get_spell_visual_chain use, so it cannot print an empty block when a
+        /// store is missing (spec §6).
+        /// </summary>
+        internal static void WriteVisualChain(ISpellInfoWriter rtb, SpellVisualSection section)
+        {
+            if (section.Unavailable)
+            {
+                AppendVisualHeader(rtb);
+                rtb.AppendFormatLine("Visual chain unavailable -- these stores did not load: {0}.",
+                    string.Join(", ", section.MissingStores));
+                return;
+            }
+
+            var chain = section.Chain;
+            if (chain.Variants.Count == 0)
+                return;
+
+            AppendVisualHeader(rtb);
+            var kitsById = chain.Kits.ToDictionary(k => k.KitID);
+
+            foreach (var variant in chain.Variants)
+            {
+                if (!variant.VisualResolved)
+                {
+                    rtb.AppendFormatLine("Visual (slot {0}): SpellVisual #{1} -- no SpellVisual row", variant.Slot, variant.SpellVisualID);
+                    continue;
+                }
+
+                rtb.AppendFormatLine("Visual (slot {0}): SpellVisual #{1}", variant.Slot, variant.SpellVisualID);
+
+                foreach (var slot in variant.KitSlots)
+                {
+                    if (!kitsById.TryGetValue(slot.KitID, out var kit))
+                    {
+                        // Either no SpellVisualKit row (listed under Unresolved
+                        // below) or withheld by the kit cap (Truncated).
+                        rtb.AppendFormatLine("  {0} #{1}: not shown", slot.Slot, slot.KitID);
+                        continue;
+                    }
+
+                    var effects = kit.Effects.Count == 0
+                        ? "(no effects)"
+                        : string.Join(", ", kit.Effects.Select(e => $"{e.Name ?? "#" + e.EffectNameID + " unresolved"} ({e.Slot})"));
+                    rtb.AppendFormatLine("  {0} #{1}: {2}", slot.Slot, slot.KitID, effects);
+
+                    foreach (var attach in kit.ModelAttachments)
+                        rtb.AppendFormatLine("    ModelAttach #{0} (attachment {1}): {2}", attach.ID, attach.AttachmentID,
+                            attach.Name ?? "#" + attach.EffectNameID + " unresolved");
+                }
+
+                if (variant.MissileMotion != null)
+                    rtb.AppendFormatLine("  MissileMotion #{0}: {1}", variant.MissileMotion.ID, variant.MissileMotion.Name ?? "unresolved");
+
+                foreach (var missile in variant.Missiles)
+                {
+                    var motion = missile.MotionID == 0
+                        ? string.Empty
+                        : $" (motion #{missile.MotionID} {missile.MotionName ?? "unresolved"})";
+                    rtb.AppendFormatLine("  Missile #{0}: {1}{2}", missile.ID,
+                        missile.Name ?? (missile.EffectNameID == 0 ? "no model" : "#" + missile.EffectNameID + " unresolved"), motion);
+                }
+            }
+
+            if (chain.Truncated)
+                rtb.AppendFormatLine("(more kits are reachable than the {0}-kit cap shows)", SpellVisualChainResolver.DefaultMaxKits);
+
+            foreach (var reference in chain.UnresolvedReferences)
+                rtb.AppendFormatLine("Unresolved: {0}", reference);
+        }
+
+        private static void AppendVisualHeader(ISpellInfoWriter rtb)
+        {
+            rtb.AppendLine(Separator);
+            rtb.SetStyle(TextColor.Blue, TextStyle.Bold);
+            rtb.AppendLine("Spell visual:");
+            rtb.SetDefaultStyle();
         }
 
         private static readonly Func<int, float?> GtLookup =

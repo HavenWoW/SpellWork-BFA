@@ -34,3 +34,9 @@ BasePoints = 25499.00
 Targets (45, 0) (TARGET_UNIT_TARGET_CHAINHEAL_ALLY, 0)
 EffectChainTargets = 3
 
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #3659
+  PrecastKit #192: Spells\Holy_Precast_High_Base.mdx (Base), Spells\Holy_Precast_High_Hand.mdx (LeftHand), Spells\Holy_Precast_High_Hand.mdx (RightHand)
+  CastKit #3169: Spells\Holy_Precast_Low_Hand.mdx (LeftHand), Spells\Holy_Precast_Low_Hand.mdx (RightHand)
+  ImpactKit #3170: Spells\Holy_ImpactDD_Low_Chest.mdx (Chest)
