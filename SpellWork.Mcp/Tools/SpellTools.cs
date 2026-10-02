@@ -39,11 +39,9 @@ namespace SpellWork.Mcp.Tools
                     $"Unknown format '{format}'. Valid formats are: json, text.");
             }
 
-            if (difficulty != 0 && (SpellWork.DBC.DBC.Difficulty == null || !SpellWork.DBC.DBC.Difficulty.ContainsKey((int)difficulty)))
-                return ToolResponse.Error("unknown_difficulty", $"No Difficulty.dbc row {difficulty}.", new Dictionary<string, object>
-                {
-                    ["valid"] = (SpellWork.DBC.DBC.Difficulty?.Keys ?? Enumerable.Empty<int>()).OrderBy(k => k).Prepend(0).ToList()
-                });
+            var difficultyError = ValidateDifficulty(difficulty);
+            if (difficultyError != null)
+                return difficultyError;
 
             var context = ResolveContext(level, itemLevel, difficulty);
 
@@ -520,6 +518,19 @@ namespace SpellWork.Mcp.Tools
                 level ?? SpellWork.DBC.DBC.MaxLevel,
                 itemLevel ?? 475,
                 (int)difficulty);
+
+        // Shared by get_spell and calculate_spell_scaling: null when the
+        // difficulty is 0 or a Difficulty.dbc row, else the error response.
+        internal static string ValidateDifficulty(uint difficulty)
+        {
+            if (difficulty == 0 || (SpellWork.DBC.DBC.Difficulty != null && SpellWork.DBC.DBC.Difficulty.ContainsKey((int)difficulty)))
+                return null;
+
+            return ToolResponse.Error("unknown_difficulty", $"No Difficulty.dbc row {difficulty}.", new Dictionary<string, object>
+            {
+                ["valid"] = (SpellWork.DBC.DBC.Difficulty?.Keys ?? Enumerable.Empty<int>()).OrderBy(k => k).Prepend(0).ToList()
+            });
+        }
 
         internal static string DataError(SpellData data) =>
             ToolResponse.Error(data.ErrorCode ?? "client_data_unavailable",

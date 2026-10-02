@@ -58,5 +58,17 @@ namespace SpellWork.Core.Tests
             _fixture.SkipIfNoClientData();
             Assert.NotEmpty(DBC.DBC.SpellTriggerStore);
         }
+
+        [SkippableFact]
+        public void FireballScalesFromGtAtLevel90()
+        {
+            _fixture.SkipIfNoClientData();
+            var s = DBC.DBC.SpellInfoStore[133];
+            var key = SpellWork.Spell.SpellScalingCalculator.GtKey(s.Scaling.Class, 90, s.Scaling.MaxScalingLevel);
+            var gt = DBC.DBC.GtSpellScaling[key].Value;
+            var v = s.GetEffectValues(s.EffectsFor(0)[0], new SpellWork.Spell.RenderContext(90, 463, 0));
+            Assert.Equal((float)System.Math.Round(1.5f * SpellWork.Spell.SpellScalingCalculator.Multiplier(s.Scaling, 90, k => DBC.DBC.GtSpellScaling.TryGetValue(k, out var r) ? r.Value : (float?)null)), v.BaseValue);
+            Assert.True(gt > 0);
+        }
     }
 }

@@ -20,6 +20,7 @@ namespace SpellWork.Spell
         public float ValuePerResource;
         public float PerLevelValue;
         public float SpellPowerCoefficient;
+        public bool Scaled;
     }
 
     /// <summary>
@@ -37,6 +38,7 @@ namespace SpellWork.Spell
             ValuePerResource = breakdown.ValuePerResource;
             PerLevelValue = breakdown.PerLevelValue;
             SpellPowerCoefficient = breakdown.SpellPowerCoefficient;
+            Scaled = breakdown.Scaled;
         }
 
         public float BaseValue { get; }
@@ -44,6 +46,7 @@ namespace SpellWork.Spell
         public float ValuePerResource { get; }
         public float PerLevelValue { get; }
         public float SpellPowerCoefficient { get; }
+        public bool Scaled { get; }
     }
 
     /// <summary>
@@ -710,16 +713,36 @@ namespace SpellWork.Spell
 
             rtb.AppendLine(Separator);
             foreach (var effect in EffectsFor(context.Difficulty))
-                AppendEffectInfo(rtb, effect.Entry, context);
+                AppendEffectInfo(rtb, effect, context);
 
             AppendItemInfo(rtb);
         }
 
-        internal float CalculateBaseEffectValue(SpellEffectEntry effect, RenderContext context)
+        private static readonly Func<int, float?> GtLookup =
+            k => DBC.DBC.GtSpellScaling != null && DBC.DBC.GtSpellScaling.TryGetValue(k, out var r) ? r.Value : (float?)null;
+
+        private bool IsScaled(ResolvedEffect effect) =>
+            effect.Scaling != null && effect.Scaling.Coefficient != 0 && Scaling != null;
+
+        internal float CalculateBaseEffectValue(ResolvedEffect effect, RenderContext context)
         {
-            // Non-scaling value only; the SpellScaling/gtSpellScaling path is
-            // ported separately (SkyFire_548 CalcValue).
-            float value = effect.EffectBasePoints;
+            var level = (int)context.Level;
+            if (IsScaled(effect))
+                return (float)Math.Round(SpellScalingCalculator.Value(Scaling, effect.Scaling, level, GtLookup).Base);
+
+            var entry = effect.Entry;
+            float value = entry.EffectBasePoints + (entry.EffectDieSides == 1 ? 1 : 0);
+            var levels = LevelsFor(context.Difficulty);
+            if (levels != null)
+            {
+                var clamped = level;
+                if (clamped < levels.BaseLevel)
+                    clamped = levels.BaseLevel;
+                if (levels.MaxLevel > 0 && clamped > levels.MaxLevel)
+                    clamped = levels.MaxLevel;
+                value += entry.EffectRealPointsPerLevel * (clamped - levels.SpellLevel);
+            }
+
             return (float)Math.Round(value);
         }
 
@@ -727,15 +750,25 @@ namespace SpellWork.Spell
         // SpellInfoJsonSerializer render the same numbers instead of the
         // JSON side re-deriving them -- duplicated arithmetic is exactly the
         // drift this extraction exists to stop.
-        internal EffectValueBreakdown CalculateEffectValues(SpellEffectEntry effect, RenderContext context)
+        internal EffectValueBreakdown CalculateEffectValues(ResolvedEffect resolved, RenderContext context)
         {
-            var baseValue = CalculateBaseEffectValue(effect, context);
+            var effect = resolved.Entry;
+            var baseValue = CalculateBaseEffectValue(resolved, context);
             var breakdown = new EffectValueBreakdown
             {
                 BaseValue = baseValue,
+                Scaled = IsScaled(resolved),
             };
 
-            breakdown.ValuePerResource = effect.EffectPointsPerResource;
+            if (breakdown.Scaled)
+            {
+                var v = SpellScalingCalculator.Value(Scaling, resolved.Scaling, (int)context.Level, GtLookup);
+                breakdown.Variance = resolved.Scaling.Variance;
+                breakdown.ValuePerResource = v.PerComboPoint;
+            }
+            else
+                breakdown.ValuePerResource = effect.EffectPointsPerResource;
+
             if (Math.Abs(effect.EffectRealPointsPerLevel) > 1.0E-5f)
                 breakdown.PerLevelValue = effect.EffectRealPointsPerLevel;
 
@@ -752,18 +785,19 @@ namespace SpellWork.Spell
         /// get_spell renders without gaining write access to the internal
         /// breakdown.
         /// </summary>
-        public EffectValues GetEffectValues(SpellEffectEntry effect, RenderContext context) =>
+        public EffectValues GetEffectValues(ResolvedEffect effect, RenderContext context) =>
             new EffectValues(CalculateEffectValues(effect, context));
 
-        private void AppendEffectInfo(ISpellInfoWriter rtb, SpellEffectEntry effect, RenderContext context)
+        private void AppendEffectInfo(ISpellInfoWriter rtb, ResolvedEffect resolved, RenderContext context)
         {
+            var effect = resolved.Entry;
             rtb.SetBold();
             rtb.AppendFormatLine($"Effect { effect.EffectIndex }: Id { effect.Effect } ({ (SpellEffects)effect.Effect })");
             rtb.SetBold();
             rtb.AppendFormatLine($"Difficulty: Id { effect.DifficultyID } ({ (Difficulty)effect.DifficultyID })");
             rtb.SetDefaultStyle();
 
-            var values = CalculateEffectValues(effect, context);
+            var values = CalculateEffectValues(resolved, context);
             var baseValue = values.BaseValue;
             if (Math.Abs(values.Variance) > 1.0E-5f)
             {

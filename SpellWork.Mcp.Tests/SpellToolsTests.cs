@@ -489,8 +489,10 @@ namespace SpellWork.Mcp.Tests
             using var doc = JsonDocument.Parse(json);
             var result = doc.RootElement.GetProperty("result");
 
-            Assert.Equal(30, result.GetProperty("totalDifferences").GetInt32());
-            Assert.Equal(30, result.GetProperty("differences").GetArrayLength());
+            // 32 since Task 5: scaled effects now carry computed basePoints plus a
+            // Min/Max range, which the two spells no longer share.
+            Assert.Equal(32, result.GetProperty("totalDifferences").GetInt32());
+            Assert.Equal(32, result.GetProperty("differences").GetArrayLength());
         }
 
         [SkippableFact]
@@ -503,6 +505,21 @@ namespace SpellWork.Mcp.Tests
 
             Assert.True(doc.RootElement.GetProperty("result").GetProperty("differences").GetArrayLength()
                 <= ToolResponse.MaxRows);
+        }
+
+        [SkippableFact]
+        public async Task GetSpell_HonoursLevel()
+        {
+            _fixture.SkipIfNoClientData();
+
+            async Task<double> BaseAt(uint level)
+            {
+                var json = await _fixture.SpellTools.GetSpell(133, level: level);
+                using var doc = JsonDocument.Parse(json);
+                return doc.RootElement.GetProperty("result").GetProperty("effects")[0].GetProperty("basePoints").GetDouble();
+            }
+
+            Assert.NotEqual(await BaseAt(10), await BaseAt(90));
         }
     }
 }

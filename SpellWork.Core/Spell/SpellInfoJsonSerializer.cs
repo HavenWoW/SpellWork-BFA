@@ -367,7 +367,7 @@ namespace SpellWork.Spell
                 // value, a per-level value and a spell-power coefficient).
                 // Emitting the full breakdown keeps the text render and this
                 // document from disagreeing about the same effect.
-                var values = spell.CalculateEffectValues(effect, context);
+                var values = spell.CalculateEffectValues(resolved, context);
                 var baseValue = values.BaseValue;
                 entry["basePoints"] = baseValue;
                 if (Math.Abs(values.Variance) > 1.0E-5f)

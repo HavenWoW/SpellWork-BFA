@@ -37,24 +37,46 @@ namespace SpellWork.Mcp.Tests
             var fromScaling = scalingDoc.RootElement.GetProperty("result").GetProperty("effects")[0];
             var fromSpell = spellDoc.RootElement.GetProperty("result").GetProperty("effects")[0];
 
-            // Every value field, not just basePoints: the two tools emit
-            // through separately-written code and the only thing stopping
-            // them drifting is that both suppress on the same condition.
-            // Assert that, or the drift is invisible until someone reports it.
-            foreach (var field in new[]
-            {
-                "basePoints", "basePointsMin", "basePointsMax", "valuePerResource",
-                "perLevelValue", "spellPowerCoefficient",
-            })
-            {
-                var inScaling = fromScaling.TryGetProperty(field, out var scalingValue);
-                var inSpell = fromSpell.TryGetProperty(field, out var spellValue);
+            // The two tools share CalculateEffectValues; assert the numbers
+            // agree under each tool's own key names. get_spell omits a
+            // zero term, calculate_spell_scaling always reports it.
+            double Get(JsonElement el, string name) =>
+                el.TryGetProperty(name, out var v) ? v.GetDouble() : 0;
 
-                Assert.True(inScaling == inSpell,
-                    $"'{field}' is present in one tool's output and absent from the other's.");
-                if (inScaling)
-                    Assert.Equal(spellValue.ToString(), scalingValue.ToString());
-            }
+            Assert.Equal(Get(fromSpell, "basePoints"), Get(fromScaling, "base"));
+            Assert.Equal(Get(fromSpell, "valuePerResource"), Get(fromScaling, "perComboPoint"));
+            Assert.Equal(Get(fromSpell, "spellPowerCoefficient"), Get(fromScaling, "spellPowerCoefficient"));
+            Assert.Equal(fromSpell.TryGetProperty("basePointsMin", out var smin) ? smin.GetDouble() : Get(fromSpell, "basePoints"), Get(fromScaling, "min"));
+            Assert.Equal(fromSpell.TryGetProperty("basePointsMax", out var smax) ? smax.GetDouble() : Get(fromSpell, "basePoints"), Get(fromScaling, "max"));
+        }
+
+        [SkippableFact]
+        public async Task CalculateSpellScaling_UnknownDifficulty_ReturnsErrorWithValidList()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var json = await _fixture.DecoderTools.CalculateSpellScaling(133, level: 60, itemLevel: 0, difficulty: 9999);
+            using var doc = JsonDocument.Parse(json);
+
+            var error = doc.RootElement.GetProperty("error");
+            Assert.Equal("unknown_difficulty", error.GetProperty("code").GetString());
+            Assert.Contains(0, error.GetProperty("details").GetProperty("valid").EnumerateArray().Select(e => e.GetInt32()));
+        }
+
+        [SkippableFact]
+        public async Task CalculateSpellScaling_ReportsScaledAndItemLevelNotApplied()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var json = await _fixture.DecoderTools.CalculateSpellScaling(133, level: 90, itemLevel: 463);
+            using var doc = JsonDocument.Parse(json);
+            var result = doc.RootElement.GetProperty("result");
+
+            Assert.False(result.GetProperty("itemLevelApplied").GetBoolean());
+            var e = result.GetProperty("effects")[0];
+            Assert.True(e.GetProperty("scaled").GetBoolean());
+            Assert.True(e.GetProperty("base").GetDouble() > 0);
+            Assert.Equal(0, e.GetProperty("resolvedDifficulty").GetInt32());
         }
 
         [SkippableFact]

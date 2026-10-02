@@ -30,7 +30,14 @@ namespace SpellWork.Mcp.Tools
             if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(id, out var spell))
                 return SpellTools.NotFound(id);
 
-            var context = new SpellWork.Spell.RenderContext(level, itemLevel, (int)difficulty);
+            var difficultyError = SpellTools.ValidateDifficulty(difficulty);
+            if (difficultyError != null)
+                return difficultyError;
+
+            // 5.4.8 effect scaling is level-only (gtSpellScaling); clamp to
+            // the client's level range.
+            var clampedLevel = Math.Min(Math.Max(level, 1u), (uint)SpellWork.DBC.DBC.MaxLevel);
+            var context = new SpellWork.Spell.RenderContext(clampedLevel, itemLevel, (int)difficulty);
 
             var effects = new List<object>();
             foreach (var resolved in spell.EffectsFor((int)difficulty))
@@ -39,8 +46,9 @@ namespace SpellWork.Mcp.Tools
                 if (effect == null)
                     continue;
 
-                var values = spell.GetEffectValues(effect, context);
-                var entry = new Dictionary<string, object>
+                var values = spell.GetEffectValues(resolved, context);
+                var delta = Math.Abs(values.BaseValue * values.Variance * 0.5f);
+                effects.Add(new Dictionary<string, object>
                 {
                     ["index"] = effect.EffectIndex,
                     ["effect"] = new Dictionary<string, object>
@@ -48,38 +56,23 @@ namespace SpellWork.Mcp.Tools
                         ["raw"] = effect.Effect,
                         ["name"] = Enum.GetName(typeof(SpellWork.Spell.SpellEffects), effect.Effect),
                     },
-                    ["basePoints"] = values.BaseValue,
-                };
-
-                if (Math.Abs(values.Variance) > 1.0E-5f)
-                {
-                    var delta = Math.Abs(values.BaseValue * values.Variance * 0.5f);
-                    entry["basePointsMin"] = values.BaseValue - delta;
-                    entry["basePointsMax"] = values.BaseValue + delta;
-                }
-
-                // Emitted on exactly the conditions BuildEffects uses, so
-                // this tool and get_spell cannot report the same effect
-                // differently. BuildEffects suppresses these three through
-                // AddIfNonZero, which tests against exact zero -- match that,
-                // do not substitute a 1.0E-5 epsilon here. A third threshold
-                // variant in a third place is how the GUI and the JSON path
-                // drifted apart during Plan 1.
-                if (values.ValuePerResource != 0)
-                    entry["valuePerResource"] = values.ValuePerResource;
-                if (values.PerLevelValue != 0)
-                    entry["perLevelValue"] = values.PerLevelValue;
-                if (values.SpellPowerCoefficient != 0)
-                    entry["spellPowerCoefficient"] = values.SpellPowerCoefficient;
-                effects.Add(entry);
+                    ["resolvedDifficulty"] = resolved.ResolvedDifficulty,
+                    ["base"] = values.BaseValue,
+                    ["min"] = values.BaseValue - delta,
+                    ["max"] = values.BaseValue + delta,
+                    ["perComboPoint"] = values.ValuePerResource,
+                    ["spellPowerCoefficient"] = values.SpellPowerCoefficient,
+                    ["scaled"] = values.Scaled,
+                });
             }
 
             var payload = new Dictionary<string, object>
             {
                 ["id"] = spell.ID,
                 ["name"] = spell.Name,
-                ["level"] = level,
+                ["level"] = clampedLevel,
                 ["itemLevel"] = itemLevel,
+                ["itemLevelApplied"] = false,
                 ["effects"] = effects,
             };
 
