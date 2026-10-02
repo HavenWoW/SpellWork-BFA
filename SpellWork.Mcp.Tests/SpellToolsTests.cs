@@ -25,6 +25,81 @@ namespace SpellWork.Mcp.Tests
         }
 
         [SkippableFact]
+        public async Task UnknownDifficultyIsAStructuredError()
+        {
+            _fixture.SkipIfNoClientData();
+
+            foreach (var format in new[] { "json", "text" })
+            {
+                using var doc = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(133, format: format, difficulty: 10)); // 10 has no Difficulty row
+                var error = doc.RootElement.GetProperty("error");
+                Assert.Equal("unknown_difficulty", error.GetProperty("code").GetString());
+                Assert.Contains(2, error.GetProperty("details").GetProperty("valid").EnumerateArray().Select(x => x.GetInt32()));
+            }
+        }
+
+        [SkippableFact]
+        public async Task GetSpell_KnownDifficulty_IsAcceptedInBothFormats()
+        {
+            _fixture.SkipIfNoClientData();
+
+            using var json = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(43093, difficulty: 2));
+            Assert.True(json.RootElement.GetProperty("ok").GetBoolean());
+            Assert.Equal(2, json.RootElement.GetProperty("result").GetProperty("difficulty").GetInt32());
+
+            using var text = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(43093, format: "text", difficulty: 2));
+            Assert.True(text.RootElement.GetProperty("ok").GetBoolean());
+        }
+
+        [SkippableFact]
+        public async Task SearchByAttributeWord13()
+        {
+            _fixture.SkipIfNoClientData();
+
+            using var doc = JsonDocument.Parse(await _fixture.SpellTools.SearchSpells(attribute: "13:0x1"));
+            var expected = SpellWork.DBC.DBC.SpellInfoStore.Values.Count(s => (s.Attributes[13] & 1u) != 0);
+            Assert.Equal(expected, doc.RootElement.GetProperty("result").GetProperty("totalMatches").GetInt32());
+        }
+
+        [SkippableFact]
+        public async Task SearchByAttribute_WordPrefixSelectsTheWord_AndNamesResolvePerWord()
+        {
+            _fixture.SkipIfNoClientData();
+
+            using var word7 = JsonDocument.Parse(await _fixture.SpellTools.SearchSpells(attribute: "7:SPELL_ATTR7_UNK0"));
+            var expected = SpellWork.DBC.DBC.SpellInfoStore.Values.Count(s => (s.Attributes[7] & 1u) != 0);
+            Assert.Equal(expected, word7.RootElement.GetProperty("result").GetProperty("totalMatches").GetInt32());
+
+            // No prefix keeps the original meaning: word 0.
+            using var plain = JsonDocument.Parse(await _fixture.SpellTools.SearchSpells(attribute: "SPELL_ATTR0_PASSIVE"));
+            var passive = SpellWork.DBC.DBC.SpellInfoStore.Values.Count(s => (s.Attributes[0] & 0x40u) != 0);
+            Assert.Equal(passive, plain.RootElement.GetProperty("result").GetProperty("totalMatches").GetInt32());
+        }
+
+        [SkippableTheory]
+        [InlineData("14:0x1")]
+        [InlineData("-1:0x1")]
+        [InlineData("x:1")]
+        public async Task SearchByAttribute_BadWord_IsInvalidEnumValue(string attribute)
+        {
+            _fixture.SkipIfNoClientData();
+
+            using var doc = JsonDocument.Parse(await _fixture.SpellTools.SearchSpells(attribute: attribute));
+            Assert.Equal("invalid_enum_value", doc.RootElement.GetProperty("error").GetProperty("code").GetString());
+        }
+
+        [SkippableFact]
+        public async Task GetSpell_VisualSection_LoadedShape()
+        {
+            _fixture.SkipIfNoClientData();
+
+            // Real data has the visual stores; just pin the loaded shape here.
+            // The gated shape is pinned in SpellWork.Core.Tests.
+            using var doc = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(133, sections: new[] { "visual" }));
+            Assert.False(doc.RootElement.GetProperty("result").GetProperty("visual").GetProperty("storeUnloaded").GetBoolean());
+        }
+
+        [SkippableFact]
         public async Task GetSpell_TextFormat_ReturnsRenderedText()
         {
             _fixture.SkipIfNoClientData();

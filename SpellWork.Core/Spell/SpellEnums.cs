@@ -1605,6 +1605,7 @@ namespace SpellWork.Spell
     [Flags]
     public enum SpellAtributeEx7 : uint
     {
+        SPELL_ATTR7_UNK0                        = 0x00000001, // 0 SkyFire_548 comments this bit out (UNK0 / ALLOW_SPELL_REFLECT); upstream 5.4.8 SpellWork does not name it
         SPELL_ATTR7_UNK1                        = 0x00000002, // 1 Not set in 3.2.2a. (upstream 5.4.8 SpellWork; not defined in SkyFire_548)
         SPELL_ATTR7_REACTIVATE_AT_RESURRECT     = 0x00000004, // 2 Paladin's auras and 65607 only. (upstream 5.4.8 SpellWork; not defined in SkyFire_548)
         SPELL_ATTR7_IS_CHEAT_SPELL              = 0x00000008, // 3 - (5.4.8 SPELL_ATTR7_DEBUG_SPELL) Cannot cast if caster doesn't have UnitFlag2 & UNIT_FLAG2_ALLOW_CHEAT_SPELLS
@@ -1754,7 +1755,7 @@ namespace SpellWork.Spell
 
     // 5.4.8: upstream SpellWork 5.4.8 (SkyFire_548 SharedDefines.h stops at SpellAttr10)
     [Flags]
-    enum SpellAtributeEx11 : uint
+    public enum SpellAtributeEx11 : uint
     {
         SPELL_ATTR11_UNK0 = 0x00000001, //  0
         SPELL_ATTR11_UNK1 = 0x00000002, //  1
@@ -1792,7 +1793,7 @@ namespace SpellWork.Spell
 
     // 5.4.8: upstream SpellWork 5.4.8 (SkyFire_548 SharedDefines.h stops at SpellAttr10)
     [Flags]
-    enum SpellAtributeEx12 : uint
+    public enum SpellAtributeEx12 : uint
     {
         SPELL_ATTR12_UNK0 = 0x00000001, //  0
         SPELL_ATTR12_UNK1 = 0x00000002, //  1
@@ -1830,7 +1831,7 @@ namespace SpellWork.Spell
 
     // 5.4.8: upstream SpellWork 5.4.8 (SkyFire_548 SharedDefines.h stops at SpellAttr10)
     [Flags]
-    enum SpellAtributeEx13 : uint
+    public enum SpellAtributeEx13 : uint
     {
         SPELL_ATTR13_UNK0 = 0x00000001, //  0
         SPELL_ATTR13_UNK1 = 0x00000002, //  1

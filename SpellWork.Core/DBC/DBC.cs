@@ -198,6 +198,12 @@ namespace SpellWork.DBC
             ClientFileResolver.EffectiveDbcDirectory(config, out var fb);
             LocaleFallback = fb;
 
+            // A store this load does not open must not keep the previous load's
+            // data: UnloadedStores reads the properties and OpenedFiles reads the
+            // files this load opened, and after a reload they have to agree.
+            foreach (var property in StorageProperties())
+                property.SetValue(null, null);
+
             Parallel.ForEach(StorageProperties(), dbc =>
                {
                    var name = FileNameFor(dbc);
@@ -272,6 +278,10 @@ namespace SpellWork.DBC
             }
         }
 
+        private static DifficultyIndex<T> BuildIndex<T>(Storage<T> rows, Func<T, int> spellId, Func<T, int> difficultyId)
+            where T : class, new() =>
+            rows == null ? null : DifficultyIndex<T>.Build(rows.Values, spellId, difficultyId);
+
         // Split out of LoadAsync so the null-store guard above can skip this
         // whole block with a single check.
         private static async Task BuildSpellInfoStore(ISpellWorkLogger logger)
@@ -279,16 +289,17 @@ namespace SpellWork.DBC
             foreach (var spell in Spell.Values)
                 SpellInfoStore[spell.ID] = new SpellInfo(spell);
 
-            var scalingByEffect = SpellEffectScaling.Values
-                .GroupBy(s => s.SpellEffectID).ToDictionary(g => g.Key, g => g.First());
+            var scalingByEffect = SpellEffectScaling == null
+                ? new Dictionary<int, SpellEffectScalingEntry>()
+                : SpellEffectScaling.Values.GroupBy(s => s.SpellEffectID).ToDictionary(g => g.Key, g => g.First());
 
-            AuraOptionsIndex   = DifficultyIndex<SpellAuraOptionsEntry>.Build(SpellAuraOptions.Values, r => r.SpellID, r => r.DifficultyID);
-            CategoriesIndex    = DifficultyIndex<SpellCategoriesEntry>.Build(SpellCategories.Values, r => r.SpellID, r => r.DifficultyID);
-            CooldownsIndex     = DifficultyIndex<SpellCooldownsEntry>.Build(SpellCooldowns.Values, r => r.SpellID, r => r.DifficultyID);
-            InterruptsIndex    = DifficultyIndex<SpellInterruptsEntry>.Build(SpellInterrupts.Values, r => r.SpellID, r => r.DifficultyID);
-            LevelsIndex        = DifficultyIndex<SpellLevelsEntry>.Build(SpellLevels.Values, r => r.SpellID, r => r.DifficultyID);
-            TargetRestrictionsIndex = DifficultyIndex<SpellTargetRestrictionsEntry>.Build(SpellTargetRestrictions.Values, r => r.SpellID, r => r.DifficultyID);
-            MiscIndex          = DifficultyIndex<SpellMiscEntry>.Build(SpellMisc.Values, r => r.SpellID, r => r.DifficultyID);
+            AuraOptionsIndex   = BuildIndex(SpellAuraOptions, r => r.SpellID, r => r.DifficultyID);
+            CategoriesIndex    = BuildIndex(SpellCategories, r => r.SpellID, r => r.DifficultyID);
+            CooldownsIndex     = BuildIndex(SpellCooldowns, r => r.SpellID, r => r.DifficultyID);
+            InterruptsIndex    = BuildIndex(SpellInterrupts, r => r.SpellID, r => r.DifficultyID);
+            LevelsIndex        = BuildIndex(SpellLevels, r => r.SpellID, r => r.DifficultyID);
+            TargetRestrictionsIndex = BuildIndex(SpellTargetRestrictions, r => r.SpellID, r => r.DifficultyID);
+            MiscIndex          = BuildIndex(SpellMisc, r => r.SpellID, r => r.DifficultyID);
 
             await Task.WhenAll(Task.Run(() =>
             {
@@ -311,7 +322,7 @@ namespace SpellWork.DBC
                 }
             }), Task.Run(() =>
             {
-                foreach (var power in SpellPower.Values.OrderBy(p => p.OrderIndex))
+                foreach (var power in (SpellPower?.Values ?? Enumerable.Empty<SpellPowerEntry>()).OrderBy(p => p.OrderIndex))
                     if (SpellInfoStore.TryGetValue(power.SpellID, out var info))
                         info.AddPower(power);
                     else

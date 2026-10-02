@@ -10,12 +10,15 @@ namespace SpellWork.Mcp.Tools
     [McpServerToolType]
     public sealed class DiagnosticTools
     {
+        // The client build every structure class was written against.
+        private const int ClientBuild = 18414;
+
         private readonly SpellDataService _data;
 
         public DiagnosticTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "server_info")]
-        [Description("Configured paths, locale, store counts, load duration and MySQL reachability. Call this first when something looks wrong.")]
+        [Description("Configured paths, client build, locale (and whether the root was used instead), the file each store was opened from, layout mismatches, store counts, load duration and MySQL reachability. Call this first when something looks wrong.")]
         public async Task<string> ServerInfo()
         {
             var data = await _data.GetAsync();
@@ -27,6 +30,11 @@ namespace SpellWork.Mcp.Tools
                 ["dbcPath"] = config.DbcPath,
                 ["gtPath"] = config.GtPath,
                 ["db2Path"] = config.Db2Path,
+                ["clientBuild"] = ClientBuild,
+                ["localeFallback"] = SpellWork.DBC.DBC.LocaleFallback,
+                ["openedFiles"] = SpellWork.DBC.DBC.OpenedFiles
+                    .OrderBy(pair => pair.Key, System.StringComparer.Ordinal)
+                    .ToDictionary(pair => pair.Key, pair => pair.Value.Path),
                 ["locale"] = config.Locale,
                 ["clientDataLoaded"] = data.Loaded,
                 ["loadDurationMs"] = (int)data.LoadDuration.TotalMilliseconds,
@@ -53,13 +61,10 @@ namespace SpellWork.Mcp.Tools
                 };
             }
 
-            // Only the tables LayoutVerification.Expected actually checks, and
-            // only when at least one disagrees with the client build this
-            // structure class was written against (DBC.cs's LayoutMismatches
-            // is empty, never null, on a matching build). An agent seeing
-            // garbled visual data from get_spell_visual_chain needs one place
-            // that says the client build does not match, rather than having
-            // to suspect every field of every table individually.
+            // Always present: an empty array says the layouts match the client
+            // build the structure classes were written against (18414), which is
+            // an answer an agent chasing garbled visual data needs, where a
+            // missing key would read as "not checked".
             var layoutMismatches = SpellWork.DBC.DBC.LayoutMismatches
                 .Select(mismatch => (object)new Dictionary<string, object>
                 {
@@ -72,8 +77,7 @@ namespace SpellWork.Mcp.Tools
                     ["message"] = mismatch.Describe(),
                 })
                 .ToList();
-            if (layoutMismatches.Count > 0)
-                payload["layoutMismatches"] = layoutMismatches;
+            payload["layoutMismatches"] = layoutMismatches;
 
             if (config.MySqlConfigured)
             {

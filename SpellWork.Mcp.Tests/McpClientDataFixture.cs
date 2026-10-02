@@ -50,6 +50,7 @@ namespace SpellWork.Mcp.Tests
         private static Db2Tools _db2Tools;
         private static SpellData _partialResult;
         private static string _partialListDb2Json;
+        private static string _partialServerInfoJson;
         private static string _partialMissingStoreRowJson;
         private static string _partialPresentStoreQueryJson;
         private static IReadOnlyList<string> _partialUnloadedStores;
@@ -68,6 +69,9 @@ namespace SpellWork.Mcp.Tests
 
         /// <summary><c>list_db2</c>, captured while the partial load's stores were
         /// installed on DBC.DBC.</summary>
+        /// <summary><c>server_info</c>, captured in the same state.</summary>
+        public string PartialServerInfoJson { get; }
+
         public string PartialListDb2Json { get; }
 
         /// <summary><c>get_db2_row</c> against <see cref="MissingStoreName"/>,
@@ -156,6 +160,7 @@ namespace SpellWork.Mcp.Tests
                 Db2Tools = _db2Tools;
                 PartialResult = _partialResult;
                 PartialListDb2Json = _partialListDb2Json;
+                PartialServerInfoJson = _partialServerInfoJson;
                 PartialMissingStoreRowJson = _partialMissingStoreRowJson;
                 PartialPresentStoreQueryJson = _partialPresentStoreQueryJson;
                 PartialUnloadedStores = _partialUnloadedStores;
@@ -176,21 +181,16 @@ namespace SpellWork.Mcp.Tests
         /// entirely: the tests only ever assert on the JSON captured here.
         /// </para>
         /// <para>
-        /// Why the nulling step. LoadAsync only calls SetValue for stores that
-        /// open successfully; a store whose file is missing keeps whatever
-        /// value it already had. Running straight after the successful load
-        /// above would therefore leave the real data in place and prove
-        /// nothing. Clearing every property first reproduces the state a
-        /// first-ever load in a fresh process actually starts from -- the same
-        /// reasoning that fixes the order of the two loads above.
+        /// Why no nulling step. DBC.LoadAsync now nulls every store it does not
+        /// open, so the partial load starts from the same state a first load in a
+        /// fresh process does, with no help from here.
         /// </para>
         /// <para>
-        /// Why the real data survives. Every property is snapshotted before
-        /// the partial load and restored after it, in a finally. The partial
-        /// directory deliberately has no Spell/SpellMisc/SpellEffect files, so
-        /// DBC.LoadAsync's guard skips BuildSpellInfoStore: SpellInfoStore and
-        /// SpellTriggerStore are never touched (so the snapshot/restore of the
-        /// Storage&lt;T&gt; properties alone is a complete restore).
+        /// Why the real data survives. The partial directory deliberately has no
+        /// Spell/SpellMisc/SpellEffect files, so LoadAsync's guard skips
+        /// BuildSpellInfoStore and SpellInfoStore stays populated. The finally
+        /// then runs the full load again, which restores the stores and also
+        /// OpenedFiles, LayoutMismatches and LocaleFallback.
         /// </para>
         /// <para>
         /// SpellInfoStore staying populated is also what makes the partial
@@ -208,23 +208,15 @@ namespace SpellWork.Mcp.Tests
                 "spellwork-mcp-partial-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(root);
 
-            var snapshot = new Dictionary<PropertyInfo, object>();
-
+            var sourceConfig = new SpellWorkConfig { DbcPath = dbcPath, Db2Path = db2Path, Locale = locale };
             try
             {
                 // Copied from wherever the real load found them (.db2 or
                 // .dbc, locale folder or root) into the partial root.
-                var sourceConfig = new SpellWorkConfig { DbcPath = dbcPath, Db2Path = db2Path, Locale = locale };
                 foreach (var store in PresentStoreNames)
                 {
                     var source = SpellWork.DBC.ClientFileResolver.Resolve(store, sourceConfig);
                     File.Copy(source.Path, Path.Combine(root, Path.GetFileName(source.Path)));
-                }
-
-                foreach (var property in StorageProperties())
-                {
-                    snapshot[property] = property.GetValue(null);
-                    property.SetValue(null, null);
                 }
 
                 var partialService = new SpellDataService(
@@ -244,6 +236,7 @@ namespace SpellWork.Mcp.Tests
                 _partialUnloadedStores = SpellWork.DBC.DBC.UnloadedStores;
 
                 var partialDb2Tools = new Db2Tools(partialService);
+                _partialServerInfoJson = new DiagnosticTools(partialService).ServerInfo().GetAwaiter().GetResult();
                 _partialListDb2Json = partialDb2Tools.ListDb2().GetAwaiter().GetResult();
                 _partialMissingStoreRowJson =
                     partialDb2Tools.GetDb2Row(MissingStoreName, 1).GetAwaiter().GetResult();
@@ -252,8 +245,12 @@ namespace SpellWork.Mcp.Tests
             }
             finally
             {
-                foreach (var entry in snapshot)
-                    entry.Key.SetValue(null, entry.Value);
+                // Put the real client data back by loading it again. The partial
+                // load nulled every store it did not open, and replaced
+                // OpenedFiles, LayoutMismatches and LocaleFallback; a full load
+                // restores all of them together, which no per-store snapshot
+                // could (those three are not settable from here).
+                SpellWork.DBC.DBC.LoadAsync(sourceConfig, SpellWork.NullSpellWorkLogger.Instance).GetAwaiter().GetResult();
 
                 try
                 {

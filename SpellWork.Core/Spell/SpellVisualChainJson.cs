@@ -11,7 +11,7 @@ namespace SpellWork.Spell
     public static class SpellVisualChainJson
     {
         /// <summary>
-        /// <c>{"storeUnloaded": true}</c> when a gated
+        /// <c>{"storeUnloaded": true, "missingStores": [...]}</c> when a gated
         /// store did not load -- never an empty variants list, which would read
         /// as "this spell has no visual" -- otherwise the chain with
         /// <c>storeUnloaded: false</c>.
@@ -20,7 +20,11 @@ namespace SpellWork.Spell
         {
             if (section.Unavailable)
             {
-                return new Dictionary<string, object> { ["storeUnloaded"] = true };
+                return new Dictionary<string, object>
+                {
+                    ["storeUnloaded"] = true,
+                    ["missingStores"] = section.MissingStores.ToList(),
+                };
             }
 
             var chain = section.Chain;

@@ -56,6 +56,59 @@ namespace SpellWork.Mcp.Tests
         }
 
         [SkippableFact]
+        public async Task ListDb2MarksShadowedDbc()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var rows = await Stores(_fixture.Db2Tools);
+            var stale = rows.Single(r => r.GetProperty("name").GetString() == "SpellVisual" && r.GetProperty("extension").GetString() == "dbc");
+            Assert.True(stale.GetProperty("shadowed").GetBoolean());
+            Assert.False(stale.GetProperty("loaded").GetBoolean());
+
+            var current = rows.Single(r => r.GetProperty("name").GetString() == "SpellVisual" && r.GetProperty("extension").GetString() == "db2");
+            Assert.True(current.GetProperty("loaded").GetBoolean());
+            Assert.True(current.GetProperty("modelled").GetBoolean());
+            Assert.False(current.TryGetProperty("shadowed", out _));
+        }
+
+        [SkippableFact]
+        public async Task ListDb2_ReportsUnmodelledFilesAndFileNames()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var rows = await Stores(_fixture.Db2Tools);
+            Assert.Contains(rows, r => !r.GetProperty("modelled").GetBoolean() && r.GetProperty("extension").GetString() == "db2");
+            Assert.Contains(rows, r => r.GetProperty("name").GetString() == "Item-sparse" && r.GetProperty("modelled").GetBoolean());
+        }
+
+        [SkippableFact]
+        public async Task GetDb2RowAcceptsFileName()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var anyItem = SpellWork.DBC.DBC.ItemSparse.Keys.First();
+            using var doc = JsonDocument.Parse(await _fixture.Db2Tools.GetDb2Row("Item-sparse", anyItem));
+            var result = doc.RootElement.GetProperty("result");
+            Assert.Equal("ItemSparse", result.GetProperty("store").GetString());
+            Assert.Equal(anyItem, result.GetProperty("row").GetProperty("ID").GetInt32());
+        }
+
+        [SkippableFact]
+        public async Task QueryDb2AcceptsFileName()
+        {
+            _fixture.SkipIfNoClientData();
+
+            using var doc = JsonDocument.Parse(await _fixture.Db2Tools.QueryDb2("gtSpellScaling", limit: 1));
+            Assert.Equal("GtSpellScaling", doc.RootElement.GetProperty("result").GetProperty("store").GetString());
+        }
+
+        private static async Task<System.Collections.Generic.List<JsonElement>> Stores(SpellWork.Mcp.Tools.Db2Tools tools)
+        {
+            var doc = JsonDocument.Parse(await tools.ListDb2());
+            return doc.RootElement.GetProperty("result").GetProperty("stores").EnumerateArray().ToList();
+        }
+
+        [SkippableFact]
         public async Task GetDb2Row_MissingId_ReturnsRowNotFound()
         {
             _fixture.SkipIfNoClientData();

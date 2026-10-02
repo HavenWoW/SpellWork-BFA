@@ -107,7 +107,7 @@ namespace SpellWork.Mcp.Tools
         }
 
         [McpServerTool(Name = "search_spells")]
-        [Description("Find spells by any combination of name substring, family, aura type, effect type, target type, attribute bit and school mask. Enum arguments accept either a number or an enum member name. Returns id, name and a one-line summary per hit.")]
+        [Description("Find spells by any combination of name substring, family, aura type, effect type, target type, attribute bit and school mask. Enum arguments accept either a number or an enum member name. attribute is a mask or SpellAtribute member name tested against Attributes word 0, or \"word:value\" (word 0-13, value a number, 0x-hex mask or that word's enum member), e.g. \"13:0x1\". Returns id, name and a one-line summary per hit.")]
         public async Task<string> SearchSpells(
             string name = null,
             string family = null,
@@ -123,13 +123,15 @@ namespace SpellWork.Mcp.Tools
             if (!data.Loaded)
                 return DataError(data);
 
-            long? familyValue = null, auraValue = null, effectValue = null, targetValue = null, attributeValue = null;
+            long? familyValue = null, auraValue = null, effectValue = null, targetValue = null;
+            var attributeWord = 0;
+            long? attributeValue = null;
 
             if (!TryResolve(family, typeof(SpellFamilyNames), ref familyValue, out var error) ||
                 !TryResolve(auraType, typeof(AuraType), ref auraValue, out error) ||
                 !TryResolve(effectType, typeof(SpellEffects), ref effectValue, out error) ||
                 !TryResolve(targetType, typeof(Targets), ref targetValue, out error) ||
-                !TryResolve(attribute, typeof(SpellAtribute), ref attributeValue, out error))
+                !TryResolveAttribute(attribute, out attributeWord, out attributeValue, out error))
             {
                 return ToolResponse.Error("invalid_enum_value", error);
             }
@@ -146,7 +148,7 @@ namespace SpellWork.Mcp.Tools
             var effectiveOffset = Math.Max(0, offset);
 
             var matches = SpellWork.DBC.DBC.SpellInfoStore.Values
-                .Where(spell => Matches(spell, name, familyValue, auraValue, effectValue, targetValue, attributeValue, schoolMask))
+                .Where(spell => Matches(spell, name, familyValue, auraValue, effectValue, targetValue, attributeWord, attributeValue, schoolMask))
                 .OrderBy(spell => spell.ID)
                 .ToList();
 
@@ -164,6 +166,61 @@ namespace SpellWork.Mcp.Tools
             return ToolResponse.Ok(ToolResponse.Paged(rows, matches.Count, effectiveOffset, effectiveLimit));
         }
 
+        private static readonly Type[] AttributeWordEnums =
+        {
+            typeof(SpellAtribute), typeof(SpellAtributeEx), typeof(SpellAtributeEx2), typeof(SpellAtributeEx3),
+            typeof(SpellAtributeEx4), typeof(SpellAtributeEx5), typeof(SpellAtributeEx6), typeof(SpellAtributeEx7),
+            typeof(SpellAtributeEx8), typeof(SpellAtributeEx9), typeof(SpellAtributeEx10), typeof(SpellAtributeEx11),
+            typeof(SpellAtributeEx12), typeof(SpellAtributeEx13),
+        };
+
+        /// <summary>
+        /// "SPELL_ATTR0_PASSIVE" or "64" test word 0, as before. "13:0x1" or
+        /// "7:SPELL_ATTR7_UNK0" test the named word (0-13); the value is a
+        /// decimal or 0x-hex mask, or a member of that word's enum.
+        /// </summary>
+        private static bool TryResolveAttribute(string text, out int word, out long? mask, out string error)
+        {
+            word = 0;
+            mask = null;
+            error = null;
+            if (string.IsNullOrWhiteSpace(text))
+                return true;
+
+            var value = text.Trim();
+            var colon = value.IndexOf(':');
+            if (colon >= 0)
+            {
+                if (!int.TryParse(value.Substring(0, colon).Trim(), out word) || word < 0 || word >= AttributeWordEnums.Length)
+                {
+                    error = $"'{text}': the attribute word must be a number from 0 to {AttributeWordEnums.Length - 1}, as in \"13:0x1\".";
+                    return false;
+                }
+
+                value = value.Substring(colon + 1).Trim();
+            }
+
+            var enumType = AttributeWordEnums[word];
+            if (value.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!long.TryParse(value.Substring(2), System.Globalization.NumberStyles.HexNumber,
+                        System.Globalization.CultureInfo.InvariantCulture, out var hex))
+                {
+                    error = $"'{text}' is not a valid hexadecimal mask.";
+                    return false;
+                }
+
+                mask = hex;
+                return true;
+            }
+
+            if (!TryParseEnumArgument(value, enumType, out var parsed, out error))
+                return false;
+
+            mask = parsed;
+            return true;
+        }
+
         private static bool TryResolve(string text, Type enumType, ref long? slot, out string error)
         {
             error = null;
@@ -178,7 +235,7 @@ namespace SpellWork.Mcp.Tools
         }
 
         private static bool Matches(SpellInfo spell, string name, long? family, long? aura,
-            long? effect, long? target, long? attribute, uint? schoolMask)
+            long? effect, long? target, int attributeWord, long? attribute, uint? schoolMask)
         {
             if (name != null && (spell.Name == null ||
                 spell.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) < 0))
@@ -190,12 +247,10 @@ namespace SpellWork.Mcp.Tools
             if (schoolMask.HasValue && (spell.SchoolMask & schoolMask.Value) == 0)
                 return false;
 
-            // An attribute filter names a single bit, and the bit's position
-            // determines which of the fourteen Attributes words holds it. The
-            // enum values in SpellAtribute are already the shifted masks, so
-            // this only ever tests word 0; the other thirteen words have their
-            // own enums and are reachable through decode_flags.
-            if (attribute.HasValue && (spell.Attributes[0] & (uint)attribute.Value) == 0)
+            // An attribute filter is a mask tested against one of the fourteen
+            // Attributes words (0-13); "word:value" picks the word, and a bare
+            // value means word 0.
+            if (attribute.HasValue && (spell.Attributes[attributeWord] & (uint)attribute.Value) == 0)
                 return false;
 
             if (aura.HasValue && !spell.Effects.Select(r => r.Entry).Any(e => e != null && e.EffectAura == aura.Value))
