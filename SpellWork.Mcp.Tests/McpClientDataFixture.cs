@@ -10,16 +10,14 @@ namespace SpellWork.Mcp.Tests
     // DBC.DBC is process-wide static state -- see
     // SpellWork.Core.Tests/ClientDataFixture.cs for the same hazard in that
     // suite. Two loads in this process both mutate the same static
-    // Storage<T> properties on DBC.DBC, and GameTable<GtSpellScalingEntry>
-    // .Open's backing dictionary only supports Add, so a second successful
-    // load throws a duplicate-key exception.
+    // Storage<T> properties on DBC.DBC and the derived SpellInfoStore.
     //
     // This suite needs two different outcomes exercised: a load that never
-    // finds usable data (wrong locale, proving SpellDataService's
+    // finds usable data (an empty DbcPath, proving SpellDataService's
     // no_data_loaded backstop is reachable -- see DBC.cs's null guard) and
     // a load that succeeds. Order matters between them, not just count: if
     // the successful load ran first, DBC.DBC's Storage<T> properties would
-    // already be non-null real data by the time the wrong-locale load runs,
+    // already be non-null real data by the time the no-data load runs,
     // so its per-property DirectoryNotFoundException catch would leave the
     // *previous* load's data in place instead of the nulls a first-ever
     // failed load actually produces -- silently turning the regression
@@ -30,7 +28,7 @@ namespace SpellWork.Mcp.Tests
     public sealed class McpClientDataFixture
     {
         public const string SkipReason =
-            "Set SPELLWORK_DBC_PATH, SPELLWORK_GT_PATH and SPELLWORK_LOCALE to the extracted ClientData directories.";
+            "Set SPELLWORK_DBC_PATH (and optionally SPELLWORK_DB2_PATH and SPELLWORK_LOCALE) to the extracted 5.4.8 client data directories.";
 
         // The one modelled store deliberately absent from the partial-load
         // temp directory, and two that are present in it. All three are
@@ -93,33 +91,45 @@ namespace SpellWork.Mcp.Tests
                     _attempted = true;
 
                     var dbcPath = Environment.GetEnvironmentVariable("SPELLWORK_DBC_PATH");
-                    var gtPath = Environment.GetEnvironmentVariable("SPELLWORK_GT_PATH");
+                    var db2Path = Environment.GetEnvironmentVariable("SPELLWORK_DB2_PATH");
                     var locale = Environment.GetEnvironmentVariable("SPELLWORK_LOCALE") ?? "enUS";
 
-                    if (!string.IsNullOrEmpty(dbcPath) && !string.IsNullOrEmpty(gtPath))
+                    if (!string.IsNullOrEmpty(dbcPath))
                     {
                         _available = true;
 
-                        // Wrong-locale scenario FIRST, deliberately, before
-                        // any real data has ever populated DBC.DBC's static
+                        // No-data scenario FIRST, deliberately, before any
+                        // real data has ever populated DBC.DBC's static
                         // Storage<T> properties in this process -- see the
                         // class comment above for why the order is load-
-                        // bearing.
-                        var noDataService = new SpellDataService(
-                            McpServerConfig.FromEnvironment(new Dictionary<string, string>
-                            {
-                                ["SPELLWORK_DBC_PATH"] = dbcPath,
-                                ["SPELLWORK_GT_PATH"] = gtPath,
-                                ["SPELLWORK_LOCALE"] = "xx-not-a-real-locale",
-                            }),
-                            NullLoggerFactoryStub.Logger);
-                        _noDataResult = noDataService.GetAsync().GetAwaiter().GetResult();
+                        // bearing. A missing locale folder no longer yields
+                        // "no data" (the resolver falls back to the root), so
+                        // the scenario is a DbcPath that exists but holds no
+                        // client files.
+                        var emptyRoot = Path.Combine(Path.GetTempPath(),
+                            "spellwork-mcp-empty-" + Guid.NewGuid().ToString("N"));
+                        Directory.CreateDirectory(emptyRoot);
+                        try
+                        {
+                            var noDataService = new SpellDataService(
+                                McpServerConfig.FromEnvironment(new Dictionary<string, string>
+                                {
+                                    ["SPELLWORK_DBC_PATH"] = emptyRoot,
+                                    ["SPELLWORK_LOCALE"] = locale,
+                                }),
+                                NullLoggerFactoryStub.Logger);
+                            _noDataResult = noDataService.GetAsync().GetAwaiter().GetResult();
+                        }
+                        finally
+                        {
+                            try { Directory.Delete(emptyRoot, true); } catch (IOException) { }
+                        }
 
                         var loadedService = new SpellDataService(
                             McpServerConfig.FromEnvironment(new Dictionary<string, string>
                             {
                                 ["SPELLWORK_DBC_PATH"] = dbcPath,
-                                ["SPELLWORK_GT_PATH"] = gtPath,
+                                ["SPELLWORK_DB2_PATH"] = db2Path,
                                 ["SPELLWORK_LOCALE"] = locale,
                             }),
                             NullLoggerFactoryStub.Logger);
@@ -133,7 +143,7 @@ namespace SpellWork.Mcp.Tests
                         // property above has been captured -- see
                         // RunPartialLoad for why it must run here rather than
                         // inside a test.
-                        RunPartialLoad(dbcPath, gtPath, locale);
+                        RunPartialLoad(dbcPath, db2Path, locale);
                     }
                 }
 
@@ -153,8 +163,8 @@ namespace SpellWork.Mcp.Tests
         }
 
         /// <summary>
-        /// Loads a locale directory that exists but holds only two of the
-        /// forty-six modelled <c>.db2</c> files, and captures what the server
+        /// Loads a client-data directory that exists but holds only two of the
+        /// forty-six modelled client files, and captures what the server
         /// reports while that partial state is installed.
         /// <para>
         /// Why here and not in a test. DBC.DBC's Storage&lt;T&gt; properties
@@ -177,13 +187,10 @@ namespace SpellWork.Mcp.Tests
         /// <para>
         /// Why the real data survives. Every property is snapshotted before
         /// the partial load and restored after it, in a finally. The partial
-        /// directory deliberately has no SpellName.db2, so DBC.LoadAsync's
-        /// "if (SpellName != null)" guard skips BuildSpellInfoStore and
-        /// GameTable&lt;GtSpellScalingEntry&gt;.Open: SpellInfoStore and
+        /// directory deliberately has no Spell/SpellMisc/SpellEffect files, so
+        /// DBC.LoadAsync's guard skips BuildSpellInfoStore: SpellInfoStore and
         /// SpellTriggerStore are never touched (so the snapshot/restore of the
-        /// Storage&lt;T&gt; properties alone is a complete restore), and the
-        /// GameTable static that only supports Add is never populated a second
-        /// time.
+        /// Storage&lt;T&gt; properties alone is a complete restore).
         /// </para>
         /// <para>
         /// SpellInfoStore staying populated is also what makes the partial
@@ -195,21 +202,23 @@ namespace SpellWork.Mcp.Tests
         /// is fine.
         /// </para>
         /// </summary>
-        private static void RunPartialLoad(string dbcPath, string gtPath, string locale)
+        private static void RunPartialLoad(string dbcPath, string db2Path, string locale)
         {
             var root = Path.Combine(Path.GetTempPath(),
                 "spellwork-mcp-partial-" + Guid.NewGuid().ToString("N"));
-            var localeDirectory = Path.Combine(root, locale);
-            Directory.CreateDirectory(localeDirectory);
+            Directory.CreateDirectory(root);
 
             var snapshot = new Dictionary<PropertyInfo, object>();
 
             try
             {
+                // Copied from wherever the real load found them (.db2 or
+                // .dbc, locale folder or root) into the partial root.
+                var sourceConfig = new SpellWorkConfig { DbcPath = dbcPath, Db2Path = db2Path, Locale = locale };
                 foreach (var store in PresentStoreNames)
                 {
-                    File.Copy(Path.Combine(dbcPath, locale, store + ".db2"),
-                        Path.Combine(localeDirectory, store + ".db2"));
+                    var source = SpellWork.DBC.ClientFileResolver.Resolve(store, sourceConfig);
+                    File.Copy(source.Path, Path.Combine(root, Path.GetFileName(source.Path)));
                 }
 
                 foreach (var property in StorageProperties())
@@ -222,7 +231,6 @@ namespace SpellWork.Mcp.Tests
                     McpServerConfig.FromEnvironment(new Dictionary<string, string>
                     {
                         ["SPELLWORK_DBC_PATH"] = root,
-                        ["SPELLWORK_GT_PATH"] = gtPath,
                         ["SPELLWORK_LOCALE"] = locale,
                     }),
                     NullLoggerFactoryStub.Logger);

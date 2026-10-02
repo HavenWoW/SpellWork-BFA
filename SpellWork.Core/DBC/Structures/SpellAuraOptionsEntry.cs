@@ -1,19 +1,18 @@
-﻿using DBFileReaderLib.Attributes;
+// 5.4.8 layout: WoWDBDefs SpellAuraOptions.dbd BUILD 5.4.0.17266-5.4.8.18414
+using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
 {
-    public class SpellAuraOptionsEntry
+    public sealed class SpellAuraOptionsEntry
     {
-        [Index(true)]
-        public uint ID;
-        public byte DifficultyID;
-        public ushort CumulativeAura;
-        public int ProcCategoryRecovery;
-        public byte ProcChance;
-        public int ProcCharges;
-        public ushort SpellProcsPerMinuteID;
-        [Cardinality(2)]
-        public int[] ProcTypeMask = new int[2];
+        [Index(true)] public int ID;
         public int SpellID;
+        public int DifficultyID;
+        public int CumulativeAura;
+        public int ProcChance;
+        public int ProcCharges;
+        public int ProcTypeMask;
+        public int ProcCategoryRecovery;
+        public int SpellProcsPerMinuteID;
     }
 }

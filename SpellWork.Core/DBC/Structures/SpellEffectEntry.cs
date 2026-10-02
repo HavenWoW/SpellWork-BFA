@@ -1,42 +1,33 @@
-﻿using DBFileReaderLib.Attributes;
+// 5.4.8 layout: WoWDBDefs SpellEffect.dbd BUILD 5.4.0.17266-5.4.8.18414
+using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
 {
     public sealed class SpellEffectEntry
     {
-        [Index(true)]
-        public uint ID;
-        public short EffectAura;
+        [Index(true)] public int ID;
         public int DifficultyID;
-        public int EffectIndex;
-        public uint Effect;
+        public int Effect;
         public float EffectAmplitude;
-        public int EffectAttributes;
+        public int EffectAura;
         public int EffectAuraPeriod;
+        public int EffectBasePoints;
         public float EffectBonusCoefficient;
         public float EffectChainAmplitude;
         public int EffectChainTargets;
+        public int EffectDieSides;
         public int EffectItemType;
         public int EffectMechanic;
+        [Cardinality(2)] public int[] EffectMiscValue = new int[2];
         public float EffectPointsPerResource;
-        public float EffectPosFacing;
+        [Cardinality(2)] public int[] EffectRadiusIndex = new int[2];
         public float EffectRealPointsPerLevel;
+        [Cardinality(4)] public uint[] EffectSpellClassMask = new uint[4];
         public int EffectTriggerSpell;
-        public float BonusCoefficientFromAP;
-        public float PvpMultiplier;
-        public float Coefficient;
-        public float Variance;
-        public float ResourceCoefficient;
-        public float GroupSizeBasePointsCoefficient;
-        public float EffectBasePoints;
-        [Cardinality(2)]
-        public int[] EffectMiscValue = new int[2];
-        [Cardinality(2)]
-        public uint[] EffectRadiusIndex = new uint[2];
-        [Cardinality(4)]
-        public int[] EffectSpellClassMask = new int[4];
-        [Cardinality(2)]
-        public short[] ImplicitTarget = new short[2];
+        public float EffectPosFacing;
+        [Cardinality(2)] public int[] ImplicitTarget = new int[2];
         public int SpellID;
+        public int EffectIndex;
+        public int EffectAttributes;
     }
 }

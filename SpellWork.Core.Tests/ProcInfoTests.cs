@@ -40,7 +40,7 @@ namespace SpellWork.Core.Tests
             // Kind is checked against SkillLineAbility data below, not against
             // itself: `s.Kind == Skill || s.Kind == Spell` is true of every
             // child that could possibly exist and catches nothing.
-            var skillSpells = new HashSet<int>(DBC.DBC.SkillLineAbility.Values.Select(s => s.Spell));
+            var skillSpells = new HashSet<int>(DBC.DBC.SkillLineAbility.Values.Select(s => (int)s.SpellId));
 
             Assert.All(spells, s =>
             {

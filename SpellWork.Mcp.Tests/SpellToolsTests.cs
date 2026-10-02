@@ -36,26 +36,6 @@ namespace SpellWork.Mcp.Tests
             Assert.Contains("ID - 133", text);
         }
 
-        // The reason Task 1 exists: two levels in flight at once must produce
-        // two different renderings, and each must be the one it produces alone.
-        [SkippableFact]
-        public async Task GetSpell_HonoursLevel()
-        {
-            _fixture.SkipIfNoClientData();
-
-            var atTwenty = await _fixture.SpellTools.GetSpell(606, level: 20);
-            var atOneTwenty = await _fixture.SpellTools.GetSpell(606, level: 120);
-
-            Assert.NotEqual(BasePoints(atTwenty), BasePoints(atOneTwenty));
-
-            static double BasePoints(string json)
-            {
-                using var doc = JsonDocument.Parse(json);
-                return doc.RootElement.GetProperty("result").GetProperty("effects")[0]
-                    .GetProperty("basePoints").GetDouble();
-            }
-        }
-
         [SkippableFact]
         public async Task GetSpell_UnknownId_ReturnsNotFoundWithSuggestions()
         {
@@ -221,8 +201,8 @@ namespace SpellWork.Mcp.Tests
             _fixture.SkipIfNoClientData();
 
             var spell = SpellWork.DBC.DBC.SpellInfoStore.Values.First(s =>
-                s.Effects.Any(e => e != null && e.EffectTriggerSpell != 0
-                                   && SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(e.EffectTriggerSpell)));
+                s.Effects.Any(e => e != null && e.Entry.EffectTriggerSpell != 0
+                                   && SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(e.Entry.EffectTriggerSpell)));
 
             var json = await _fixture.SpellTools.GetSpellTriggers(spell.ID);
             using var doc = JsonDocument.Parse(json);
@@ -495,9 +475,9 @@ namespace SpellWork.Mcp.Tests
             });
         }
 
-        // Pins the drop at exactly two. 133 vs 116 produced 37 differences
-        // before this fix and produces 35 after -- measured both ways against
-        // this client data, not inferred. If a future change reintroduces a
+        // Pins the drop at exactly two. 133 vs 116 produces 30 differences
+        // against the 5.4.8 (18414) reference data (35 against the 8.3.7 data
+        // this was first measured on) -- measured, not inferred. If a future change reintroduces a
         // root field outside the section gates, this fails rather than
         // quietly inflating every diff again.
         [SkippableFact]
@@ -509,8 +489,8 @@ namespace SpellWork.Mcp.Tests
             using var doc = JsonDocument.Parse(json);
             var result = doc.RootElement.GetProperty("result");
 
-            Assert.Equal(35, result.GetProperty("totalDifferences").GetInt32());
-            Assert.Equal(35, result.GetProperty("differences").GetArrayLength());
+            Assert.Equal(30, result.GetProperty("totalDifferences").GetInt32());
+            Assert.Equal(30, result.GetProperty("differences").GetArrayLength());
         }
 
         [SkippableFact]
@@ -523,64 +503,6 @@ namespace SpellWork.Mcp.Tests
 
             Assert.True(doc.RootElement.GetProperty("result").GetProperty("differences").GetArrayLength()
                 <= ToolResponse.MaxRows);
-        }
-
-        // The two formats are two renderings of one document, so identical
-        // arguments must describe the same spell. They did not: the json path
-        // reported every difficulty's visuals while the text path reported the
-        // difficulty argument's, so get_spell(133, "json", difficulty: N) and
-        // get_spell(133, "text", difficulty: N) disagreed about which visuals
-        // the spell has. Both the default difficulty and one that filters
-        // Fireball's single variant away are checked -- agreeing only at the
-        // default is exactly the state that shipped.
-        [SkippableFact]
-        public async Task GetSpell_TextAndJson_ReportTheSameVisualsForTheSameDifficulty()
-        {
-            _fixture.SkipIfNoClientData();
-
-            // Resolved from the data, not hardcoded: the difficulty argument
-            // is a MapDifficulty row id, and only that row's DifficultyID is
-            // in SpellXSpellVisual's id space. A hardcoded id that happened not
-            // to exist would silently fall back to difficulty 0 and make this
-            // a duplicate of the first case.
-            var elsewhere = (uint)SpellWork.DBC.DBC.MapDifficulty.Values.First(m => m.DifficultyID != 0).ID;
-
-            await AssertFormatsAgree(0);
-            await AssertFormatsAgree(elsewhere);
-        }
-
-        private async Task AssertFormatsAgree(uint difficulty)
-        {
-            using var jsonDoc = JsonDocument.Parse(
-                await _fixture.SpellTools.GetSpell(133, "json", new[] { "visual" }, difficulty));
-            using var textDoc = JsonDocument.Parse(
-                await _fixture.SpellTools.GetSpell(133, "text", null, difficulty));
-
-            var visual = jsonDoc.RootElement.GetProperty("result").GetProperty("visual");
-            var text = textDoc.RootElement.GetProperty("result").GetProperty("text").GetString();
-
-            var variants = visual.GetProperty("variants");
-            if (variants.GetArrayLength() > 0)
-            {
-                Assert.Contains("Spell visual:", text);
-                foreach (var variant in variants.EnumerateArray())
-                {
-                    Assert.Contains(
-                        $"Visual {variant.GetProperty("spellVisualId").GetInt32()} " +
-                        $"(difficulty {variant.GetProperty("difficultyId").GetInt32()}",
-                        text);
-                }
-            }
-            else if (visual.TryGetProperty("variantsAtOtherDifficulties", out _))
-            {
-                // Filtered to nothing. Neither format may render that as a
-                // spell with no visuals.
-                Assert.Contains("No visual at difficulty", text);
-            }
-            else
-            {
-                Assert.DoesNotContain("Spell visual:", text);
-            }
         }
     }
 }

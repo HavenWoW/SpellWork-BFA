@@ -39,8 +39,8 @@ namespace SpellWork.Mcp.Tests
         }
 
         // The whole point of the Lazy: concurrent first callers must produce
-        // one load, not N. A second DBC.LoadAsync in the same process throws
-        // a duplicate-key ArgumentException from GameTable<T>.Open.
+        // one load, not N. A second DBC.LoadAsync in the same process would
+        // re-populate DBC.DBC's process-wide statics underneath readers.
         //
         // A naive `if (_data == null) _data = LoadAsync();` guard only loses
         // this race intermittently (mutation testing against this exact
@@ -82,21 +82,13 @@ namespace SpellWork.Mcp.Tests
             }
         }
 
-        // DBC.cs:127 used to run an unguarded "foreach (var spell in
-        // SpellName)" -- when the locale directory under DbcPath doesn't
-        // exist (wrong SPELLWORK_LOCALE, or DbcPath pointed one level too
-        // high), every Storage<T> property is left null by a swallowed
-        // DirectoryNotFoundException, and that foreach threw
-        // NullReferenceException. This landed in the catch around
-        // DBC.LoadAsync and got reported as load_failed with a generic CLR
-        // message, so the SpellCount == 0 check just below it -- the one
-        // that produces the actionable no_data_loaded error this test
-        // asserts on -- was unreachable for exactly the misconfiguration
-        // it exists to catch. DBC.cs now guards that foreach (and the
-        // GameTable.Open after it) on SpellName != null, so a load with no
-        // usable data returns cleanly instead of throwing.
+        // A DbcPath that exists but holds no client files leaves every
+        // Storage<T> null; DBC.LoadAsync's guard then skips BuildSpellInfoStore
+        // and SpellDataService reports the actionable no_data_loaded error
+        // rather than a generic CLR exception. (A missing locale folder no
+        // longer produces this state: the resolver falls back to the root.)
         [SkippableFact]
-        public void GetAsync_WithWrongLocale_ReportsNoDataLoaded()
+        public void GetAsync_WithEmptyDbcPath_ReportsNoDataLoaded()
         {
             Skip.IfNot(_fixture.Available, McpClientDataFixture.SkipReason);
 
@@ -123,8 +115,8 @@ namespace SpellWork.Mcp.Tests
             Assert.Null(data.ErrorCode);
             Assert.True(data.SpellCount > 0);
             Assert.NotEmpty(data.StoreCounts);
-            Assert.True(data.StoreCounts.TryGetValue("SpellName", out var spellNameCount));
-            Assert.Equal(data.SpellCount, spellNameCount);
+            Assert.True(data.StoreCounts.TryGetValue("Spell", out var spellCount));
+            Assert.Equal(data.SpellCount, spellCount);
             Assert.All(data.StoreCounts.Values, count => Assert.True(count >= 0));
         }
     }

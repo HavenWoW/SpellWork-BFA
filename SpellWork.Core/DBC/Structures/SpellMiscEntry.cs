@@ -1,24 +1,21 @@
-﻿using DBFileReaderLib.Attributes;
+// 5.4.8 layout: WoWDBDefs SpellMisc.dbd BUILD 5.4.0.17266-5.4.8.18414 (the 5.4.8 file has 14 attribute words, 26 fields; the WoWDBDefs 5.4.7 block has 13)
+using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
 {
-    public class SpellMiscEntry
+    public sealed class SpellMiscEntry
     {
-        [Index(true)]
-        public uint ID;
-        [Cardinality(14)]
-        public int[] Attributes = new int[14];
-        public byte DifficultyID;
-        public ushort CastingTimeIndex;
-        public ushort DurationIndex;
-        public ushort RangeIndex;
-        public byte SchoolMask;
-        public float Speed;
-        public float LaunchDelay;
-        public float MinDuration;
-        public int SpellIconFileDataID;
-        public int ActiveIconFileDataID;
-        public int ContentTuningID;
+        [Index(true)] public int ID;
         public int SpellID;
+        public int DifficultyID;
+        [Cardinality(14)] public uint[] Attributes = new uint[14];
+        public int CastingTimeIndex;
+        public int DurationIndex;
+        public int RangeIndex;
+        public float Speed;
+        [Cardinality(2)] public int[] SpellVisualID = new int[2];
+        public int SpellIconID;
+        public int ActiveIconID;
+        public int SchoolMask;
     }
 }

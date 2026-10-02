@@ -1,18 +1,17 @@
-﻿using DBFileReaderLib.Attributes;
+// 5.4.8 layout: upstream TrinityCore/SpellWork 5.4.8 SpellWork/DBC/Structures/ItemEntry.cs
+using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
 {
     public sealed class ItemEntry
     {
-        [Index(true)]
-        public uint ID;
-        public byte ClassID;
-        public byte SubclassID;
-        public byte Material;
-        public sbyte InventoryType;
-        public byte SheatheType;
-        public sbyte SoundOverrideSubclassID;
-        public int IconFileDataID;
-        public byte ItemGroupSoundsID;
+        [Index(true)] public int ID;
+        public uint Class;
+        public uint SubClass;
+        public int SoundOverrideSubclass;
+        public int Material;
+        public uint DisplayId;
+        public uint InventoryType;
+        public uint Sheath;
     }
 }

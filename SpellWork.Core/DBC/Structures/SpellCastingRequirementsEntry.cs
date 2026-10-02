@@ -1,17 +1,16 @@
-﻿using DBFileReaderLib.Attributes;
+// 5.4.8 layout: upstream TrinityCore/SpellWork 5.4.8 SpellWork/DBC/Structures/SpellCastingRequirementsEntry.cs
+using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
 {
-    public class SpellCastingRequirementsEntry
+    public sealed class SpellCastingRequirementsEntry
     {
-        [Index(true)]
-        public uint ID;
-        public int SpellID;
-        public byte FacingCasterFlags;
-        public ushort MinFactionID;
-        public sbyte MinReputation;
-        public ushort RequiredAreasID;
-        public byte RequiredAuraVision;
-        public ushort RequiresSpellFocus;
+        [Index(true)] public int ID;
+        public uint FacingCasterFlags;
+        public uint MinFactionId;
+        public uint MinReputation;
+        public int AreaGroupId;
+        public uint RequiredAuraVision;
+        public uint RequiresSpellFocus;
     }
 }

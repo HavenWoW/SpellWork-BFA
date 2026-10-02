@@ -61,7 +61,16 @@ namespace SpellWork.Mcp.Tools
             // that says the client build does not match, rather than having
             // to suspect every field of every table individually.
             var layoutMismatches = SpellWork.DBC.DBC.LayoutMismatches
-                .Select(mismatch => (object)mismatch.Describe())
+                .Select(mismatch => (object)new Dictionary<string, object>
+                {
+                    ["table"] = mismatch.Table,
+                    ["file"] = mismatch.File,
+                    ["expectedFieldsCount"] = mismatch.ExpectedFieldsCount,
+                    ["actualFieldsCount"] = mismatch.ActualFieldsCount,
+                    ["expectedRecordSize"] = mismatch.ExpectedRecordSize,
+                    ["actualRecordSize"] = mismatch.ActualRecordSize,
+                    ["message"] = mismatch.Describe(),
+                })
                 .ToList();
             if (layoutMismatches.Count > 0)
                 payload["layoutMismatches"] = layoutMismatches;

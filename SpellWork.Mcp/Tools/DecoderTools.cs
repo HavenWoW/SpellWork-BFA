@@ -15,7 +15,7 @@ namespace SpellWork.Mcp.Tools
         public DecoderTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "calculate_spell_scaling")]
-        [Description("Per-effect computed values at a specific level, item level and map difficulty. Use this to see how a spell's numbers change with level rather than reading get_spell repeatedly. difficulty means two different things depending on whether mapId is given: with mapId, it is matched against DifficultyID on rows for that map; without mapId, it is used directly as a MapDifficulty row id. The mapDifficulty field in the response reports which row (if any) was actually selected.")]
+        [Description("Per-effect computed values at a specific level, item level and difficulty. Use this to see how a spell's numbers change with level rather than reading get_spell repeatedly. difficulty is a Difficulty.dbc id (0 = base); an effect index with no row at that difficulty uses its base row. mapId is accepted for compatibility and ignored: the 5.4.8 client has no MapDifficulty table.")]
         public async Task<string> CalculateSpellScaling(
             int id,
             uint level,
@@ -30,12 +30,12 @@ namespace SpellWork.Mcp.Tools
             if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(id, out var spell))
                 return SpellTools.NotFound(id);
 
-            var mapDifficulty = ResolveMapDifficulty(mapId, difficulty);
-            var context = new SpellWork.Spell.RenderContext(level, itemLevel, mapDifficulty);
+            var context = new SpellWork.Spell.RenderContext(level, itemLevel, (int)difficulty);
 
             var effects = new List<object>();
-            foreach (var effect in spell.Effects)
+            foreach (var resolved in spell.EffectsFor((int)difficulty))
             {
+                var effect = resolved?.Entry;
                 if (effect == null)
                     continue;
 
@@ -60,7 +60,7 @@ namespace SpellWork.Mcp.Tools
 
                 // Emitted on exactly the conditions BuildEffects uses, so
                 // this tool and get_spell cannot report the same effect
-                // differently. BuildEffects suppresses these four through
+                // differently. BuildEffects suppresses these three through
                 // AddIfNonZero, which tests against exact zero -- match that,
                 // do not substitute a 1.0E-5 epsilon here. A third threshold
                 // variant in a third place is how the GUI and the JSON path
@@ -71,11 +71,6 @@ namespace SpellWork.Mcp.Tools
                     entry["perLevelValue"] = values.PerLevelValue;
                 if (values.SpellPowerCoefficient != 0)
                     entry["spellPowerCoefficient"] = values.SpellPowerCoefficient;
-                if (values.AttackPowerCoefficient != 0)
-                    entry["attackPowerCoefficient"] = values.AttackPowerCoefficient;
-                if (values.UsesExpectedStat)
-                    entry["usesExpectedStat"] = true;
-
                 effects.Add(entry);
             }
 
@@ -88,36 +83,11 @@ namespace SpellWork.Mcp.Tools
                 ["effects"] = effects,
             };
 
-            // Reported so a caller can tell "I asked for difficulty 14 and got
-            // it" from "I asked for difficulty 14, nothing matched, and these
-            // numbers are for no difficulty at all".
-            payload["mapDifficulty"] = mapDifficulty == null
-                ? null
-                : new Dictionary<string, object>
-                {
-                    ["id"] = mapDifficulty.ID,
-                    ["mapId"] = mapDifficulty.MapID,
-                    ["difficultyId"] = mapDifficulty.DifficultyID,
-                    ["contentTuningId"] = mapDifficulty.ContentTuningID,
-                };
+            // The Difficulty.dbc id the effects were resolved at (replaces
+            // the 8.3.7 mapDifficulty report).
+            payload["difficulty"] = (int)difficulty;
 
             return ToolResponse.Ok(payload);
-        }
-
-        private static SpellWork.DBC.Structures.MapDifficultyEntry ResolveMapDifficulty(uint? mapId, uint difficulty)
-        {
-            if (mapId.HasValue)
-            {
-                return SpellWork.DBC.DBC.MapDifficulty.Values.FirstOrDefault(entry =>
-                    entry.MapID == mapId.Value &&
-                    (difficulty == 0 || entry.DifficultyID == difficulty));
-            }
-
-            if (difficulty == 0)
-                return null;
-
-            SpellWork.DBC.DBC.MapDifficulty.TryGetValue((int)difficulty, out var byId);
-            return byId;
         }
 
         [McpServerTool(Name = "decode_flags")]

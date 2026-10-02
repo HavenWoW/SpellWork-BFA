@@ -1,13 +1,12 @@
-﻿using DBFileReaderLib.Attributes;
+// 5.4.8 layout: upstream TrinityCore/SpellWork 5.4.8 SpellWork/DBC/Structures/SpellMissileEntry.cs
+using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
 {
     public sealed class SpellMissileEntry
     {
-        [Index(true)]
-        public uint ID;
-        public int SpellID;
-        public byte Flags;
+        [Index(true)] public int ID;
+        public uint Flags;
         public float DefaultPitchMin;
         public float DefaultPitchMax;
         public float DefaultSpeedMin;

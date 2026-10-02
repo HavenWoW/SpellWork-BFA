@@ -1,30 +1,22 @@
+// 5.4.8 layout: WoWDBDefs SpellChainEffects.dbd BUILD 5.3.0.16965-5.4.8.18414 (58 header fields / 220 bytes: the five <8> colour/blend columns are packed bytes followed by 3 padding bytes)
 using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
 {
     public sealed class SpellChainEffectsEntry
     {
-        // LAYOUT 461F9829, 31DC7CA9 (WoWDBDefs SpellChainEffects.dbd) marks
-        // ID "$noninline,id$" -- Index(true). Widest table in the visual
-        // chain: 60 fields after the ID, none of them arrays wider than 11.
-        // Types below come from this LAYOUT block's own width/sign
-        // annotations (<u8>, <u16>, <u32>, <32>); COLUMNS only gives the
-        // generic "int"/"float" declaration, which is the union across every
-        // layout this table has ever had (it also lists a "Width" field that
-        // this particular layout does not carry -- schema drift between
-        // builds, not a lookup error).
-        [Index(true)]
-        public int ID;
+        [Index(true)] public int ID;
         public float AvgSegLen;
+        public float Width;
         public float NoiseScale;
         public float TexCoordScale;
-        public uint SegDuration;
-        public ushort SegDelay;
-        public uint Flags;
-        public ushort JointCount;
+        public int SegDuration;
+        public int SegDelay;
+        public int Flags;
+        public int JointCount;
         public float JointOffsetRadius;
-        public byte JointsPerMinorJoint;
-        public byte MinorJointsPerMajorJoint;
+        public int JointsPerMinorJoint;
+        public int MinorJointsPerMajorJoint;
         public float MinorJointScale;
         public float MajorJointScale;
         public float JointMoveSpeed;
@@ -56,32 +48,11 @@ namespace SpellWork.DBC.Structures
         public byte Green;
         public byte Blue;
         public byte BlendMode;
-        public byte RenderLayer;
+        [Cardinality(3)] public byte[] Padding = new byte[3];
+        public int RenderLayer;
+        public float TextureLength;
         public float WavePhase;
-        public float TimePerFlipFrame;
-        public float VariancePerFlipFrame;
-        public uint TextureParticleFileDataID;
-        public float StartWidth;
-        public float EndWidth;
-        public ushort WidthScaleCurveID;
-        public byte NumFlipFramesU;
-        public byte NumFlipFramesV;
-        public uint SoundKitID;
-        public float ParticleScaleMultiplier;
-        public float ParticleEmissionRateMultiplier;
-        // Self-referencing: up to 11 sibling SpellChainEffects rows (e.g.
-        // alternate segments/LODs of the same chain). Zero means unused.
-        [Cardinality(11)]
-        public ushort[] SpellChainEffectID = new ushort[11];
-        [Cardinality(3)]
-        public float[] TextureCoordScaleU = new float[3];
-        [Cardinality(3)]
-        public float[] TextureCoordScaleV = new float[3];
-        [Cardinality(3)]
-        public float[] TextureRepeatLengthU = new float[3];
-        [Cardinality(3)]
-        public float[] TextureRepeatLengthV = new float[3];
-        [Cardinality(3)]
-        public int[] TextureFileDataID = new int[3];
+        [Cardinality(11)] public int[] SpellChainEffectID = new int[11];
+        public string Texture;
     }
 }

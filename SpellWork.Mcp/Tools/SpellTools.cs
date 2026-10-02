@@ -16,7 +16,7 @@ namespace SpellWork.Mcp.Tools
         public SpellTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "get_spell")]
-        [Description("The full decoded view of one spell. format is \"json\" or \"text\". sections filters to any of: misc, attributes, effects, powers, targets, reagents, aura, procs, scaling, context, cooldowns, levels, interrupts, shapeshift, equippedItems, items, triggers, visual. The visual section reports the variants for the difficulty argument only, the same as every other part of this document -- the argument names a MapDifficulty row, whose DifficultyID is the id SpellXSpellVisual is keyed by, and leaving it unset means difficulty 0. When a spell has variants only at other difficulties the section says so in variantsAtOtherDifficulties rather than looking like a spell with no visuals. Call get_spell_visual_chain with difficulty -1 for every difficulty at once.")]
+        [Description("The full decoded view of one spell. format is \"json\" or \"text\". sections filters to any of: misc, attributes, effects, powers, targets, reagents, aura, procs, scaling, context, cooldowns, levels, interrupts, shapeshift, equippedItems, items, triggers. difficulty is a Difficulty.dbc id (0 = base, the default); an effect index or difficulty-specific row with no row of its own at that difficulty falls back to the base row. An unknown difficulty is an error that lists the valid ids.")]
         public async Task<string> GetSpell(
             int id,
             string format = "json",
@@ -38,6 +38,12 @@ namespace SpellWork.Mcp.Tools
                 return ToolResponse.Error("invalid_format",
                     $"Unknown format '{format}'. Valid formats are: json, text.");
             }
+
+            if (difficulty != 0 && (SpellWork.DBC.DBC.Difficulty == null || !SpellWork.DBC.DBC.Difficulty.ContainsKey((int)difficulty)))
+                return ToolResponse.Error("unknown_difficulty", $"No Difficulty.dbc row {difficulty}.", new Dictionary<string, object>
+                {
+                    ["valid"] = (SpellWork.DBC.DBC.Difficulty?.Keys ?? Enumerable.Empty<int>()).OrderBy(k => k).Prepend(0).ToList()
+                });
 
             var context = ResolveContext(level, itemLevel, difficulty);
 
@@ -191,16 +197,16 @@ namespace SpellWork.Mcp.Tools
             // enum values in SpellAtribute are already the shifted masks, so
             // this only ever tests word 0; the other thirteen words have their
             // own enums and are reachable through decode_flags.
-            if (attribute.HasValue && (spell.Attributes & (uint)attribute.Value) == 0)
+            if (attribute.HasValue && (spell.Attributes[0] & (uint)attribute.Value) == 0)
                 return false;
 
-            if (aura.HasValue && !spell.Effects.Any(e => e != null && e.EffectAura == aura.Value))
+            if (aura.HasValue && !spell.Effects.Select(r => r.Entry).Any(e => e != null && e.EffectAura == aura.Value))
                 return false;
 
-            if (effect.HasValue && !spell.Effects.Any(e => e != null && e.Effect == effect.Value))
+            if (effect.HasValue && !spell.Effects.Select(r => r.Entry).Any(e => e != null && e.Effect == effect.Value))
                 return false;
 
-            if (target.HasValue && !spell.Effects.Any(e => e != null &&
+            if (target.HasValue && !spell.Effects.Select(r => r.Entry).Any(e => e != null &&
                 (e.ImplicitTarget[0] == target.Value || e.ImplicitTarget[1] == target.Value)))
                 return false;
 
@@ -211,7 +217,7 @@ namespace SpellWork.Mcp.Tools
         // is what distinguishes near-identically-named spells in a hit list.
         private static string Summarise(SpellInfo spell)
         {
-            var effect = spell.Effects.FirstOrDefault(e => e != null);
+            var effect = spell.Effects.Select(r => r.Entry).FirstOrDefault(e => e != null);
             if (effect == null)
                 return "no effects";
 
@@ -233,7 +239,7 @@ namespace SpellWork.Mcp.Tools
             if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(id, out var spell))
                 return NotFound(id);
 
-            var triggers = spell.Effects
+            var triggers = spell.Effects.Select(r => r.Entry)
                 .Where(effect => effect != null && effect.EffectTriggerSpell != 0)
                 .Select(effect => (object)new Dictionary<string, object>
                 {
@@ -509,17 +515,11 @@ namespace SpellWork.Mcp.Tools
                 ["b"] = b.ToString(),
             };
 
-        internal static RenderContext ResolveContext(uint? level, uint? itemLevel, uint difficulty)
-        {
-            SpellWork.DBC.Structures.MapDifficultyEntry mapDifficulty = null;
-            if (difficulty != 0)
-                SpellWork.DBC.DBC.MapDifficulty.TryGetValue((int)difficulty, out mapDifficulty);
-
-            return new RenderContext(
+        internal static RenderContext ResolveContext(uint? level, uint? itemLevel, uint difficulty) =>
+            new RenderContext(
                 level ?? SpellWork.DBC.DBC.MaxLevel,
                 itemLevel ?? 475,
-                mapDifficulty);
-        }
+                (int)difficulty);
 
         internal static string DataError(SpellData data) =>
             ToolResponse.Error(data.ErrorCode ?? "client_data_unavailable",

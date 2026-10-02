@@ -1,23 +1,22 @@
-﻿using DBFileReaderLib.Attributes;
+// 5.4.8 layout: WoWDBDefs SpellPower.dbd BUILD 5.4.0.17266-5.4.8.18414 (no DifficultyID in 5.4.8; several rows per spell ordered by OrderIndex)
+using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
 {
     public sealed class SpellPowerEntry
     {
-        [Index(false)]
-        public int ID;
-        public byte OrderIndex;
+        [Index(true)] public int ID;
+        public int SpellID;
+        public int OrderIndex;
+        public int PowerType;
         public int ManaCost;
         public int ManaCostPerLevel;
         public int ManaPerSecond;
-        public uint PowerDisplayID;
+        public int PowerDisplayID;
         public int AltPowerBarID;
         public float PowerCostPct;
-        public float PowerCostMaxPct;
         public float PowerPctPerSecond;
-        public sbyte PowerType;
         public int RequiredAuraSpellID;
-        public uint OptionalCost;
-        public int SpellID;
+        public float Unk12;
     }
 }

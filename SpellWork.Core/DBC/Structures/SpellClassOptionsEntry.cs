@@ -1,15 +1,13 @@
-﻿using DBFileReaderLib.Attributes;
+// 5.4.8 layout: upstream TrinityCore/SpellWork 5.4.8 SpellWork/DBC/Structures/SpellClassOptionsEntry.cs
+using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
 {
-    public class SpellClassOptionsEntry
+    public sealed class SpellClassOptionsEntry
     {
-        [Index(true)]
-        public uint ID;
-        public int SpellID;
+        [Index(true)] public int ID;
         public uint ModalNextSpell;
-        public byte SpellClassSet;
-        [Cardinality(4)]
-        public int[] SpellClassMask = new int[4];
+        [Cardinality(4)] public uint[] SpellFamilyFlags = new uint[4];
+        public uint SpellFamilyName;
     }
 }

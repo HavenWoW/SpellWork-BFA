@@ -1,22 +1,18 @@
-﻿using DBFileReaderLib.Attributes;
+// 5.4.8 layout: upstream TrinityCore/SpellWork 5.4.8 SpellWork/DBC/Structures/SkillLineEntry.cs
+using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
 {
     public sealed class SkillLineEntry
     {
-        public string DisplayName;
-        public string AlternateVerb;
+        [Index(true)] public int ID;
+        public int CategoryId;
+        public string Name;
         public string Description;
-        public string HordeDisplayName;
-        public string OverrideSourceInfoDisplayName;
-        [Index(false)]
-        public uint ID;
-        public sbyte CategoryID;
-        public int SpellIconFileID;
-        public sbyte CanLink;
-        public uint ParentSkillLineID;
-        public int ParentTierIndex;
-        public ushort Flags;
-        public int SpellBookSpellID;
+        public uint SpellIcon;
+        public string AlternateVerb;
+        public uint CanLink;
+        public uint UnkMop1;
+        public uint UnkMopFlags1;
     }
 }

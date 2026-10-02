@@ -45,26 +45,19 @@ namespace SpellWork.Spell
 
         // The nine section names the interface line documents, plus
         // "context" (final review fixes item 2): the render context
-        // (level/itemLevel/mapDifficulty) that basePoints is computed
+        // (level/itemLevel/difficulty) that basePoints is computed
         // against but that used to leave no trace in the document. Kept as
         // the single source of truth for both validating `sections` and
         // echoing back which of them were applied.
         //
-        // "items" and "triggers" are declared here but populated starting in
-        // Task 5 -- reserved now so the section validator and get_spell's
-        // documented `sections` list agree from the start. "visual" carries
-        // the resolved spell-visual chain (BuildVisual below): every
-        // SpellXSpellVisual variant this spell has, each variant's missile
-        // info, and the deduplicated SpellVisualKit rows it reaches with their
-        // raw effects. It was previously excluded on the grounds that a
-        // section which validates but never produces data is worse than a
-        // clear "unknown section" error; it now produces data, so that reason
-        // no longer applies.
+        // "visual" is not listed while the 5.4.8 visual chain is being
+        // ported: a section which validates but never produces data is worse
+        // than a clear "unknown section" error.
         private static readonly string[] ValidSections =
         {
             "misc", "attributes", "effects", "powers", "targets", "reagents", "aura", "procs", "scaling",
             "context", "cooldowns", "levels", "interrupts", "shapeshift", "equippedItems",
-            "items", "triggers", "visual",
+            "items", "triggers",
         };
 
         public static string Serialize(SpellInfo spell, RenderContext context, IReadOnlyCollection<string> sections = null)
@@ -123,21 +116,9 @@ namespace SpellWork.Spell
                 root["level"] = context.Level;
                 root["itemLevel"] = context.ItemLevel;
 
-                // MapDifficulty is the one piece of render context that can
-                // genuinely be absent (nothing selected) rather than merely
-                // zero, so it alone is omitted when null. When present,
-                // ContentTuningID is the field that actually reaches the
-                // arithmetic at SpellInfo.cs:678-679, so it travels alongside
-                // the id rather than requiring a second lookup.
-                var mapDifficulty = context.MapDifficulty;
-                if (mapDifficulty != null)
-                {
-                    root["mapDifficulty"] = new Dictionary<string, object>
-                    {
-                        ["id"] = mapDifficulty.ID,
-                        ["contentTuningId"] = mapDifficulty.ContentTuningID,
-                    };
-                }
+                // A Difficulty.dbc id; 0 is the base difficulty. Emitted
+                // directly: 0 is a real render context.
+                root["difficulty"] = context.Difficulty;
             }
 
             AddIfNotEmpty(root, "description", spell.Description);
@@ -170,8 +151,8 @@ namespace SpellWork.Spell
             if (Wants("powers") && spell.Powers.Count > 0)
                 root["powers"] = BuildPowers(spell);
 
-            if (Wants("targets") && spell.TargetRestrictions.Count > 0)
-                root["targets"] = BuildTargets(spell);
+            if (Wants("targets") && spell.TargetRestrictionsFor(context.Difficulty) != null)
+                root["targets"] = BuildTargets(spell, context);
 
             if (Wants("reagents"))
                 AddIfNotEmpty(root, "reagents", BuildReagents(spell));
@@ -206,15 +187,6 @@ namespace SpellWork.Spell
             if (Wants("items"))
                 AddIfNotEmpty(root, "items", BuildItems(spell));
 
-            // Assigned unconditionally, deliberately not through
-            // AddIfNotEmpty: BuildVisual's whole job is to be able to say
-            // "the store is not loaded", and a helper that drops the key when
-            // the payload is small would erase exactly that distinction --
-            // leaving an unloaded SpellVisual.db2 indistinguishable from a
-            // spell that genuinely has no visual.
-            if (Wants("visual"))
-                root["visual"] = BuildVisual(spell, context);
-
             return JsonSerializer.Serialize(root, SerializerOptions);
         }
 
@@ -234,8 +206,8 @@ namespace SpellWork.Spell
             AddIfNotEmpty(misc, "castingTimeIndex", BuildCastTime(spell.CastingTimeIndex));
             AddIfNotEmpty(misc, "rangeIndex", BuildRange(spell));
 
-            AddIfNonZero(misc, "spellIconFileDataID", spell.SpellIconFileDataID);
-            AddIfNonZero(misc, "activeIconFileDataID", spell.ActiveIconFileDataID);
+            AddIfNonZero(misc, "spellIconID", spell.SpellIconID);
+            AddIfNonZero(misc, "activeIconID", spell.ActiveIconID);
             AddIfNonZero(misc, "category", spell.Category);
             AddIfNonZero(misc, "startRecoveryCategory", spell.StartRecoveryCategory);
 
@@ -267,16 +239,16 @@ namespace SpellWork.Spell
         // state, which is presentation logic, not data this store row holds.
         private static Dictionary<string, object> BuildCastTime(int castingTimeIndex)
         {
-            if (!DBC.DBC.SpellCastTimes.ContainsKey(castingTimeIndex))
+            if (DBC.DBC.SpellCastTimes == null || !DBC.DBC.SpellCastTimes.ContainsKey(castingTimeIndex))
                 return null;
 
             var castTime = DBC.DBC.SpellCastTimes[castingTimeIndex];
             return new Dictionary<string, object>
             {
                 ["id"] = castingTimeIndex,
-                ["base"] = castTime.Base,
-                ["perLevel"] = castTime.PerLevel,
-                ["minimum"] = castTime.Minimum,
+                ["base"] = castTime.CastTime,
+                ["perLevel"] = castTime.CastTimePerLevel,
+                ["minimum"] = castTime.MinCastTime,
             };
         }
 
@@ -292,11 +264,11 @@ namespace SpellWork.Spell
             return new Dictionary<string, object>
             {
                 ["id"] = spell.RangeIndex,
-                ["displayName"] = spell.Range.DisplayName,
-                ["minRangeNegative"] = spell.Range.MinRange[0],
-                ["minRangePositive"] = spell.Range.MinRange[1],
-                ["maxRangeNegative"] = spell.Range.MaxRange[0],
-                ["maxRangePositive"] = spell.Range.MaxRange[1],
+                ["displayName"] = spell.Range.Name,
+                ["minRangeNegative"] = spell.Range.MinRangeNegative,
+                ["minRangePositive"] = spell.Range.MinRangePositive,
+                ["maxRangeNegative"] = spell.Range.MaxRangeNegative,
+                ["maxRangePositive"] = spell.Range.MaxRangePositive,
             };
         }
 
@@ -320,7 +292,7 @@ namespace SpellWork.Spell
         {
             var groups = new[]
             {
-                spell.Attributes, spell.AttributesEx, spell.AttributesEx2, spell.AttributesEx3,
+                spell.Attributes[0], spell.AttributesEx, spell.AttributesEx2, spell.AttributesEx3,
                 spell.AttributesEx4, spell.AttributesEx5, spell.AttributesEx6, spell.AttributesEx7,
                 spell.AttributesEx8, spell.AttributesEx9, spell.AttributesEx10, spell.AttributesEx11,
                 spell.AttributesEx12, spell.AttributesEx13,
@@ -359,16 +331,15 @@ namespace SpellWork.Spell
             return result;
         }
 
-        // Effects holds one entry per (effect index, difficulty) pair, not one
-        // per effect -- SpellEffectInfoStore is keyed on EffectIndex alone and
-        // would silently drop rows for later difficulties, so it is not used
-        // here. HasEffect/HasAura/HasTargetA/HasTargetB all guard against null
-        // entries; this does the same.
+        // One entry per effect index, resolved at the context's difficulty:
+        // the row at that difficulty if the spell has one for the index, else
+        // the base (difficulty 0) row. difficultyId says which one it was.
         private static List<object> BuildEffects(SpellInfo spell, RenderContext context)
         {
             var result = new List<object>();
-            foreach (var effect in spell.Effects)
+            foreach (var resolved in spell.EffectsFor(context.Difficulty))
             {
+                var effect = resolved?.Entry;
                 if (effect == null)
                     continue;
 
@@ -379,7 +350,7 @@ namespace SpellWork.Spell
                     ["effect"] = new Dictionary<string, object>
                     {
                         ["raw"] = effect.Effect,
-                        ["name"] = GetEnumName(typeof(SpellEffects), effect.Effect),
+                        ["name"] = GetEnumName(typeof(SpellEffects), unchecked((uint)effect.Effect)),
                     },
                 };
 
@@ -392,38 +363,27 @@ namespace SpellWork.Spell
                     };
                 }
 
-                // CalculateEffectValues folds in Coefficient, Scaling and the
-                // spell's level data for the base value, plus the four extra
-                // terms AppendEffectInfo renders alongside it
-                // (SpellInfo.cs:694-716: a per-resource value, a per-level
-                // value, a spell-power coefficient and an attack-power
-                // coefficient). Reading only CalculateBaseEffectValue and
-                // stopping there was the Critical this extraction exists to
-                // fix: Fireball's whole 0.59 spell-power scaling lived in
-                // that dropped half, so its basePoints alone reads as "deals
-                // 0 damage". Emitting the full breakdown is the one
-                // divergence between the GUI and MCP this whole extraction
-                // exists to prevent.
+                // CalculateEffectValues yields the base value plus the extra
+                // terms AppendEffectInfo renders alongside it (a per-resource
+                // value, a per-level value and a spell-power coefficient).
+                // Emitting the full breakdown keeps the text render and this
+                // document from disagreeing about the same effect.
                 var values = spell.CalculateEffectValues(effect, context);
                 var baseValue = values.BaseValue;
                 entry["basePoints"] = baseValue;
-                if (Math.Abs(effect.Variance) > 1.0E-5f)
+                if (Math.Abs(values.Variance) > 1.0E-5f)
                 {
-                    var delta = Math.Abs(baseValue * effect.Variance * 0.5f);
+                    var delta = Math.Abs(baseValue * values.Variance * 0.5f);
                     entry["basePointsMin"] = baseValue - delta;
                     entry["basePointsMax"] = baseValue + delta;
                 }
 
                 // Each omitted on exactly the condition the text path uses to
                 // suppress it -- see CalculateEffectValues, which zeroes a
-                // field out (or leaves UsesExpectedStat false) whenever
-                // AppendEffectInfo would not have printed it.
+                // field out whenever AppendEffectInfo would not have printed it.
                 AddIfNonZero(entry, "valuePerResource", values.ValuePerResource);
                 AddIfNonZero(entry, "perLevelValue", values.PerLevelValue);
                 AddIfNonZero(entry, "spellPowerCoefficient", values.SpellPowerCoefficient);
-                AddIfNonZero(entry, "attackPowerCoefficient", values.AttackPowerCoefficient);
-                if (values.UsesExpectedStat)
-                    entry["usesExpectedStat"] = true;
 
                 entry["targetA"] = new Dictionary<string, object>
                 {
@@ -468,7 +428,7 @@ namespace SpellWork.Spell
                 if (effect.EffectMechanic != 0)
                     entry["mechanic"] = BuildRawAndName((uint)effect.EffectMechanic, typeof(Mechanics));
 
-                var effectClassMask = Array.ConvertAll(effect.EffectSpellClassMask, i => (uint)i);
+                var effectClassMask = effect.EffectSpellClassMask;
                 if (effectClassMask[0] != 0 || effectClassMask[1] != 0 || effectClassMask[2] != 0 || effectClassMask[3] != 0)
                     entry["spellClassMask"] = effectClassMask;
 
@@ -478,21 +438,20 @@ namespace SpellWork.Spell
             return result;
         }
 
-        // EffectRadiusIndex is a uint[2] of *indices*, not radii. Mirrors
+        // EffectRadiusIndex is an int[2] of *indices*, not radii. Mirrors
         // AppendRadius: resolve against DBC.DBC.SpellRadius and omit entirely
         // when the store has no such key, for both the radius and max-radius
         // slots.
-        private static Dictionary<string, object> BuildRadius(uint radiusIndex)
+        private static Dictionary<string, object> BuildRadius(int radiusIndex)
         {
-            if (!DBC.DBC.SpellRadius.ContainsKey((int)radiusIndex))
+            if (DBC.DBC.SpellRadius == null || !DBC.DBC.SpellRadius.ContainsKey(radiusIndex))
                 return null;
 
-            var radius = DBC.DBC.SpellRadius[(int)radiusIndex];
+            var radius = DBC.DBC.SpellRadius[radiusIndex];
             return new Dictionary<string, object>
             {
-                ["id"] = (int)radiusIndex,
+                ["id"] = radiusIndex,
                 ["radius"] = radius.Radius,
-                ["radiusMin"] = radius.RadiusMin,
                 ["maxRadius"] = radius.MaxRadius,
             };
         }
@@ -500,7 +459,7 @@ namespace SpellWork.Spell
         private static List<object> BuildPowers(SpellInfo spell)
         {
             var result = new List<object>();
-            foreach (var power in spell.Powers.OrderBy(p => p.OrderIndex))
+            foreach (var power in spell.Powers)
             {
                 var entry = new Dictionary<string, object>
                 {
@@ -511,19 +470,18 @@ namespace SpellWork.Spell
                 AddIfNonZero(entry, "manaCostPerLevel", power.ManaCostPerLevel);
                 AddIfNonZero(entry, "manaPerSecond", power.ManaPerSecond);
                 AddIfNonZero(entry, "powerCostPct", power.PowerCostPct);
-                AddIfNonZero(entry, "powerCostMaxPct", power.PowerCostMaxPct);
                 AddIfNonZero(entry, "powerPctPerSecond", power.PowerPctPerSecond);
-                AddIfNonZero(entry, "optionalCost", power.OptionalCost);
                 result.Add(entry);
             }
 
             return result;
         }
 
-        private static List<object> BuildTargets(SpellInfo spell)
+        private static List<object> BuildTargets(SpellInfo spell, RenderContext context)
         {
             var result = new List<object>();
-            foreach (var target in spell.TargetRestrictions)
+            var target = spell.TargetRestrictionsFor(context.Difficulty);
+            if (target != null)
             {
                 var entry = new Dictionary<string, object>
                 {
@@ -538,7 +496,7 @@ namespace SpellWork.Spell
 
                 AddIfNonZero(entry, "maxTargets", target.MaxTargets);
                 AddIfNonZero(entry, "maxTargetLevel", target.MaxTargetLevel);
-                AddIfNonZero(entry, "coneDegrees", target.ConeDegrees);
+                AddIfNonZero(entry, "coneDegrees", target.ConeAngle);
                 AddIfNonZero(entry, "width", target.Width);
                 result.Add(entry);
             }
@@ -546,8 +504,7 @@ namespace SpellWork.Spell
             return result;
         }
 
-        // Reagents and ReagentsCurrency are two different DBC sources feeding
-        // one JSON section.
+        // 5.4.8 has no SpellReagentsCurrency table; items are the only reagents.
         private static Dictionary<string, object> BuildReagents(SpellInfo spell)
         {
             var result = new Dictionary<string, object>();
@@ -555,29 +512,20 @@ namespace SpellWork.Spell
             if (spell.Reagents != null)
             {
                 var items = new List<object>();
-                for (var i = 0; i < spell.Reagents.ReagentCount.Length; i++)
+                for (var i = 0; i < spell.Reagents.Count.Length; i++)
                 {
-                    if (spell.Reagents.ReagentCount[i] == 0 || spell.Reagents.Reagent[i] == 0)
+                    if (spell.Reagents.Count[i] == 0 || spell.Reagents.ItemId[i] == 0)
                         continue;
 
                     items.Add(new Dictionary<string, object>
                     {
-                        ["itemId"] = spell.Reagents.Reagent[i],
-                        ["count"] = spell.Reagents.ReagentCount[i],
+                        ["itemId"] = spell.Reagents.ItemId[i],
+                        ["count"] = spell.Reagents.Count[i],
                     });
                 }
 
                 if (items.Count > 0)
                     result["items"] = items;
-            }
-
-            if (spell.ReagentsCurrency.Count > 0)
-            {
-                result["currency"] = spell.ReagentsCurrency.Select(rc => (object)new Dictionary<string, object>
-                {
-                    ["currencyTypeId"] = rc.CurrencyTypesID,
-                    ["count"] = rc.CurrencyCount,
-                }).ToList();
             }
 
             return result;
@@ -603,7 +551,6 @@ namespace SpellWork.Spell
             var procs = new Dictionary<string, object>();
 
             AddFlagsWithUnmatched(procs, "procFlags", typeof(ProcFlags), spell.ProcFlags);
-            AddFlagsWithUnmatched(procs, "procFlagsEx", typeof(ProcFlagsEx), spell.ProcFlagsEx);
 
             AddIfNonZero(procs, "procChance", spell.ProcChance);
             AddIfNonZero(procs, "procCharges", spell.ProcCharges);
@@ -672,7 +619,6 @@ namespace SpellWork.Spell
         {
             var result = new Dictionary<string, object>();
             AddIfNonZero(result, "class", scaling.Class);
-            AddIfNonZero(result, "minScalingLevel", scaling.MinScalingLevel);
             AddIfNonZero(result, "maxScalingLevel", scaling.MaxScalingLevel);
             AddIfNonZero(result, "scalesFromItemLevel", scaling.ScalesFromItemLevel);
             return result;
@@ -696,7 +642,6 @@ namespace SpellWork.Spell
             AddIfNonZero(result, "baseLevel", spell.Levels.BaseLevel);
             AddIfNonZero(result, "spellLevel", spell.Levels.SpellLevel);
             AddIfNonZero(result, "maxLevel", spell.Levels.MaxLevel);
-            AddIfNonZero(result, "maxPassiveAuraLevel", spell.Levels.MaxPassiveAuraLevel);
             return result;
         }
 
@@ -735,8 +680,8 @@ namespace SpellWork.Spell
             if (spell.EquippedItems == null)
                 return result;
 
-            AddIfNonZero(result, "equippedItemSubClassMask", spell.EquippedItems.EquippedItemSubclass);
-            AddIfNonZero(result, "equippedItemInventoryTypeMask", spell.EquippedItems.EquippedItemInvTypes);
+            AddIfNonZero(result, "equippedItemSubClassMask", spell.EquippedItems.EquippedItemSubClassMask);
+            AddIfNonZero(result, "equippedItemInventoryTypeMask", spell.EquippedItems.EquippedItemInventoryTypeMask);
             if (spell.EquippedItems.EquippedItemClass >= 0)
                 result["equippedItemClass"] = BuildRawAndName((uint)spell.EquippedItems.EquippedItemClass, typeof(ItemClass));
             return result;
@@ -751,8 +696,8 @@ namespace SpellWork.Spell
         private static Dictionary<string, object> BuildTriggers(SpellInfo spell)
         {
             var triggers = spell.Effects
-                .Where(effect => effect != null && effect.EffectTriggerSpell != 0)
-                .Select(effect => effect.EffectTriggerSpell)
+                .Where(effect => effect != null && effect.Entry.EffectTriggerSpell != 0)
+                .Select(effect => effect.Entry.EffectTriggerSpell)
                 .Distinct()
                 .OrderBy(id => id)
                 .Cast<object>()
@@ -769,137 +714,29 @@ namespace SpellWork.Spell
             };
         }
 
-        // Mirrors SpellInfo.AppendItemInfo's join exactly (ItemEffect.SpellID
-        // -> ItemEffect.ParentItemID -> ItemSparse), including which field it
-        // reads the display name from. A row whose ParentItemID has no
-        // ItemSparse entry is skipped rather than emitting a placeholder --
-        // AppendItemInfo prints "Non-existing Item-sparse.db2 entry N" for a
-        // human reading a report; a JSON consumer gets the rows that resolve.
+        // Mirrors SpellInfo.AppendItemInfo: 5.4.8 has no ItemEffect table, so
+        // an item uses a spell when one of Item-sparse.db2's five SpellId
+        // columns names it.
         private static List<object> BuildItems(SpellInfo spell)
         {
             var result = new List<object>();
 
-            // Unlike SpellTriggerStore (a plain field, always initialised),
-            // ItemEffect/ItemSparse are Storage<T> properties that stay null
-            // until DBC.LoadAsync runs. Serialize_AcceptsNewSections_
-            // AndStillRejectsUnknown calls this section on a MinimalSpell
-            // with no load performed at all -- guard rather than let a
-            // caller-mistake test (section validation needs no data) crash
-            // on an unrelated null reference.
-            if (DBC.DBC.ItemEffect == null || DBC.DBC.ItemSparse == null)
+            // ItemSparse is a Storage<T> property that stays null until
+            // DBC.LoadAsync runs; section validation needs no data, so guard
+            // rather than crash on a spell built without a load.
+            if (DBC.DBC.ItemSparse == null)
                 return result;
 
-            foreach (var itemEffect in DBC.DBC.ItemEffect.Values.Where(e => e.SpellID == spell.ID))
+            foreach (var item in DBC.DBC.ItemSparse.Values.Where(i => i.SpellId.Contains(spell.ID)))
             {
-                if (!DBC.DBC.ItemSparse.TryGetValue(itemEffect.ParentItemID, out var item))
-                    continue;
-
                 result.Add(new Dictionary<string, object>
                 {
-                    ["id"] = itemEffect.ParentItemID,
-                    ["name"] = item.Display,
+                    ["id"] = item.ID,
+                    ["name"] = item.Name,
                 });
             }
 
             return result;
-        }
-
-        /// <summary>
-        /// The resolved visual chain, projected through
-        /// <see cref="SpellVisualChainJson"/> -- the same per-node shape the
-        /// <c>get_spell_visual_chain</c> MCP tool emits, so the two views of
-        /// this graph cannot drift.
-        /// <para>
-        /// <b>Filtered to <paramref name="context"/>'s difficulty, exactly as
-        /// the text render is.</b> The rest of this document is already a
-        /// rendering *at a context* -- base points are computed against it and
-        /// the <c>context</c> section echoes it back -- so a visual section that
-        /// ignored it would make <c>get_spell(id, format:"json", difficulty:N)</c>
-        /// and <c>get_spell(id, format:"text", difficulty:N)</c> report
-        /// different visual sets for identical arguments. The two id spaces
-        /// involved do differ, but they are not unbridgeable: the
-        /// <c>difficulty</c> argument names a <c>MapDifficulty</c> row, and
-        /// <see cref="RenderContext.MapDifficulty"/> has already resolved it, so
-        /// <c>MapDifficultyEntry.DifficultyID</c> is the value
-        /// <c>SpellXSpellVisual.DifficultyID</c> is expressed in. That
-        /// translation is the same one <c>SpellInfo.AppendSpellVisualInfo</c>
-        /// has always performed. To ask for every difficulty at once, call
-        /// <c>get_spell_visual_chain(difficulty: -1)</c>.
-        /// </para>
-        /// <para>
-        /// <b>Filtering to nothing must never read as "this spell has no
-        /// visuals".</b> When the filter empties the list but the spell does
-        /// have variants elsewhere, <c>variantsAtOtherDifficulties</c> names
-        /// those difficulties, so an empty <c>variants</c> plus no such key
-        /// means exactly one thing: this spell has no <c>SpellXSpellVisual</c>
-        /// rows at all. That is the same failure mode <c>storeUnloaded</c>
-        /// exists to prevent, reached by a different route.
-        /// </para>
-        /// </summary>
-        private static Dictionary<string, object> BuildVisual(SpellInfo spell, RenderContext context)
-        {
-            // Reported, never inferred. Storage<T> properties stay null until
-            // DBC.LoadAsync runs -- and it swallows FileNotFoundException per
-            // store, so a partial extraction is a supported state, not a
-            // theoretical one. SpellVisualChainResolver.Resolve degrades to an
-            // empty chain rather than throwing, which is right for the resolver
-            // and wrong to pass on verbatim here: "no variants" would then mean
-            // either "this spell has no visual" or "some store never loaded".
-            //
-            // Neither the store list nor the difficulty fallback is decided
-            // here: ResolveSection decides both, once, for all three hosts.
-            // This section and VisualTools once null-checked three stores each
-            // -- different threes -- and disagreed about states DBC.LoadAsync
-            // can actually produce; the text render did not check at all.
-            // Which store is missing is server_info's question to answer, so
-            // this reports the condition, not the inventory.
-            return DescribeChain(SpellVisualChainResolver.ResolveSection(
-                spell.ID, context?.MapDifficulty?.DifficultyID ?? 0));
-        }
-
-        /// <summary>
-        /// The <c>visual</c> section for a resolved section: the
-        /// store-unavailable branch, then the chain itself. The text render
-        /// branches on the same <see cref="SpellVisualSection.Unavailable"/>
-        /// (<c>SpellInfo.WriteVisualChain</c>), which is what stops the two
-        /// formats from disagreeing about a state only one of them noticed.
-        /// </summary>
-        internal static Dictionary<string, object> DescribeChain(SpellVisualSection section)
-        {
-            if (section.Unavailable)
-                return new Dictionary<string, object> { ["storeUnloaded"] = true };
-
-            return DescribeChain(section.Chain, section.Difficulty, section.DifficultiesWithVariants);
-        }
-
-        /// <summary>
-        /// The <c>visual</c> section's envelope around an already-resolved
-        /// chain. Split out from <see cref="BuildVisual(SpellInfo, RenderContext)"/>
-        /// so the shapes that this build's client data cannot produce -- a
-        /// truncated chain, an unresolved reference -- are reachable from a test
-        /// with a synthetic chain instead of shipping unexercised.
-        /// </summary>
-        /// <param name="difficultiesWithVariants">
-        /// Null when <paramref name="chain"/> has variants. Otherwise every
-        /// difficulty the spell does have variants at, so an empty list can be
-        /// told apart from a filtered-away one.
-        /// </param>
-        internal static Dictionary<string, object> DescribeChain(
-            SpellVisualChain chain, int difficulty, IReadOnlyList<int> difficultiesWithVariants)
-        {
-            var visual = new Dictionary<string, object>
-            {
-                ["difficulty"] = difficulty,
-                ["variants"] = chain.Variants.Select(SpellVisualChainJson.Describe).ToList(),
-                ["truncated"] = chain.Truncated,
-            };
-
-            if (difficultiesWithVariants != null && difficultiesWithVariants.Count > 0)
-                visual["variantsAtOtherDifficulties"] = difficultiesWithVariants.Cast<object>().ToList();
-
-            AddIfNotEmpty(visual, "unresolvedReferences", chain.UnresolvedReferences.Cast<object>().ToList());
-
-            return visual;
         }
 
         // Re-boxes a raw value as whichever integral type actually backs the
@@ -1095,11 +932,10 @@ namespace SpellWork.Spell
                 dict[key] = value;
         }
 
-        // Stances/StancesNot are the only long-backed fields in this file --
-        // they pack two 32-bit ShapeshiftMask/ShapeshiftExclude halves into
-        // one 64-bit value (SpellInfo.cs:117-118). Mirrors every other
-        // overload's exact-zero test; do not introduce an epsilon here.
-        private static void AddIfNonZero(IDictionary<string, object> dict, string key, long value)
+        // Stances/StancesNot are the only 64-bit fields in this file
+        // (SpellShapeshift.dbc stores each as one 64-bit mask). Mirrors every
+        // other overload's exact-zero test; do not introduce an epsilon here.
+        private static void AddIfNonZero(IDictionary<string, object> dict, string key, ulong value)
         {
             if (value != 0)
                 dict[key] = value;

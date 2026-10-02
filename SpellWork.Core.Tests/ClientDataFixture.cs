@@ -3,10 +3,15 @@ using Xunit;
 
 namespace SpellWork.Core.Tests
 {
+    // The data-backed suites share one fixture instance through this
+    // collection (no other collection definition existed in this project).
+    [CollectionDefinition("ClientData")]
+    public sealed class ClientDataCollection : ICollectionFixture<ClientDataFixture> { }
+
     public sealed class ClientDataFixture
     {
         public const string SkipReason =
-            "Set SPELLWORK_DBC_PATH and SPELLWORK_GT_PATH to the extracted ClientData directories.";
+            "Set SPELLWORK_DBC_PATH (and optionally SPELLWORK_DB2_PATH) to the extracted 5.4.8 client data directories.";
 
         // DBC.DBC is process-wide static state. xunit constructs a fresh
         // ClientDataFixture per test class (IClassFixture is per-class, not
@@ -36,14 +41,13 @@ namespace SpellWork.Core.Tests
                     _attempted = true;
 
                     var dbcPath = Environment.GetEnvironmentVariable("SPELLWORK_DBC_PATH");
-                    var gtPath = Environment.GetEnvironmentVariable("SPELLWORK_GT_PATH");
 
-                    if (!string.IsNullOrEmpty(dbcPath) && !string.IsNullOrEmpty(gtPath))
+                    if (!string.IsNullOrEmpty(dbcPath))
                     {
                         var config = new SpellWorkConfig
                         {
                             DbcPath = dbcPath,
-                            GtPath = gtPath,
+                            Db2Path = Environment.GetEnvironmentVariable("SPELLWORK_DB2_PATH"),
                             Locale = Environment.GetEnvironmentVariable("SPELLWORK_LOCALE") ?? "enUS"
                         };
 

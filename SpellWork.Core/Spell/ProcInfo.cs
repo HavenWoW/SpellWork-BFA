@@ -34,16 +34,16 @@ namespace SpellWork.Spell
             var spells = from spell in DBC.DBC.SpellInfoStore.Values
                          where spell.SpellFamilyName == (uint)spellfamily
 
-                         join sk in DBC.DBC.SkillLineAbility.Values on spell.ID equals sk.Spell into temp1
+                         join sk in DBC.DBC.SkillLineAbility.Values on spell.ID equals (int)sk.SpellId into temp1
                          from skill in temp1.DefaultIfEmpty(new SkillLineAbilityEntry())
 
-                         join skl in DBC.DBC.SkillLine on skill.SkillLine equals skl.Key into temp2
+                         join skl in DBC.DBC.SkillLine on (int)skill.SkillId equals skl.Key into temp2
                          from skillLine in temp2.DefaultIfEmpty()
 
                          select new
                          {
                              spell,
-                             skill.SkillLine,
+                             SkillLine = skill.SkillId,
                              skillLine = skillLine.Value
                          };
 
@@ -84,10 +84,10 @@ namespace SpellWork.Spell
 
                 if (isSkill)
                 {
-                    name.AppendFormat("(Skill: ({0}) {1}) ", elem.SkillLine, elem.skillLine.DisplayName);
+                    name.AppendFormat("(Skill: ({0}) {1}) ", elem.SkillLine, elem.skillLine.Name);
 
                     toolTip.AppendLine();
-                    toolTip.AppendFormatLine("Skill Name: {0}", elem.skillLine.DisplayName);
+                    toolTip.AppendFormatLine("Skill Name: {0}", elem.skillLine.Name);
                     toolTip.AppendFormatLine("Description: {0}", elem.skillLine.Description);
                 }
 

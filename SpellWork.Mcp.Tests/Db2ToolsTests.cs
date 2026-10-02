@@ -24,7 +24,7 @@ namespace SpellWork.Mcp.Tests
             var result = doc.RootElement.GetProperty("result");
             var stores = result.GetProperty("stores").EnumerateArray().ToList();
 
-            Assert.Contains(stores, s => s.GetProperty("name").GetString() == "SpellName"
+            Assert.Contains(stores, s => s.GetProperty("name").GetString() == "Spell"
                                          && s.GetProperty("modelled").GetBoolean());
             Assert.True(result.GetProperty("modelledCount").GetInt32() > 0);
         }
@@ -34,7 +34,7 @@ namespace SpellWork.Mcp.Tests
         {
             _fixture.SkipIfNoClientData();
 
-            var json = await _fixture.Db2Tools.GetDb2Row("SpellName", 133);
+            var json = await _fixture.Db2Tools.GetDb2Row("Spell", 133);
             using var doc = JsonDocument.Parse(json);
             var result = doc.RootElement.GetProperty("result");
 
@@ -60,7 +60,7 @@ namespace SpellWork.Mcp.Tests
         {
             _fixture.SkipIfNoClientData();
 
-            var json = await _fixture.Db2Tools.GetDb2Row("SpellName", 999999999);
+            var json = await _fixture.Db2Tools.GetDb2Row("Spell", 999999999);
             using var doc = JsonDocument.Parse(json);
 
             Assert.Equal("row_not_found", doc.RootElement.GetProperty("error").GetProperty("code").GetString());
@@ -211,7 +211,7 @@ namespace SpellWork.Mcp.Tests
         {
             _fixture.SkipIfNoClientData();
 
-            var json = await _fixture.Db2Tools.QueryDb2("SpellName", limit: 10000);
+            var json = await _fixture.Db2Tools.QueryDb2("Spell", limit: 10000);
             using var doc = JsonDocument.Parse(json);
             var result = doc.RootElement.GetProperty("result");
 
@@ -224,7 +224,7 @@ namespace SpellWork.Mcp.Tests
         {
             _fixture.SkipIfNoClientData();
 
-            var json = await _fixture.Db2Tools.QueryDb2("SpellName", filter: "NotAField=1");
+            var json = await _fixture.Db2Tools.QueryDb2("Spell", filter: "NotAField=1");
             using var doc = JsonDocument.Parse(json);
             var error = doc.RootElement.GetProperty("error");
 

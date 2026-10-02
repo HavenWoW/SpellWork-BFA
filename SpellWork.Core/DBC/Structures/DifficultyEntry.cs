@@ -1,23 +1,21 @@
-﻿using DBFileReaderLib.Attributes;
+// 5.4.8 layout: WoWDBDefs Difficulty.dbd BUILD 5.4.0.17266-5.4.8.18414
+using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
 {
-    public class DifficultyEntry
+    public sealed class DifficultyEntry
     {
-        [Index(true)]
-        public uint ID;
+        [Index(true)] public int ID;
+        public int FallbackDifficultyID;
+        public int InstanceType;
+        public int MinPlayers;
+        public int MaxPlayers;
+        public int OldEnumValue;
+        public int Flags;
+        public int ToggleDifficultyID;
+        public int GroupSizeHealthCurveID;
+        public int GroupSizeDmgCurveID;
+        public int GroupSizeSpellPointsCurveID;
         public string Name;
-        public byte InstanceType;
-        public byte OrderIndex;
-        public sbyte OldEnumValue;
-        public byte FallbackDifficultyID;
-        public byte MinPlayers;
-        public byte MaxPlayers;
-        public ushort Flags;
-        public byte ItemContext;
-        public byte ToggleDifficultyID;
-        public ushort GroupSizeHealthCurveID;
-        public ushort GroupSizeDmgCurveID;
-        public ushort GroupSizeSpellPointsCurveID;
     }
 }

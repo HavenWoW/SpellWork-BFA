@@ -33,11 +33,11 @@ namespace SpellWork.Mcp
     }
 
     /// <summary>
-    /// Loads DBC and GameTable data exactly once, on first use.
+    /// Loads client data exactly once, on first use.
     /// ExecutionAndPublication rather than a plain lock: DBC.LoadAsync has no
-    /// load guard and GameTable&lt;T&gt;.Open populates with _records.Add, so a
-    /// second load in the same process throws a duplicate-key
-    /// ArgumentException. The Lazy is what makes that unreachable.
+    /// load guard and adds to process-wide static stores, so a second load in
+    /// the same process would double-populate them. The Lazy is what makes
+    /// that unreachable.
     /// </summary>
     public sealed class SpellDataService
     {
@@ -67,11 +67,8 @@ namespace SpellWork.Mcp
 
             try
             {
-                // DBC.LoadAsync already opens the one GameTable SpellWork uses
-                // (GtSpellScalingEntry, from SpellScaling.txt) as its last
-                // step -- see DBC.cs. There is no separate GameTable.LoadAll
-                // API; SpellWork\Program.cs (the WinForms entry point) calls
-                // nothing beyond DBC.LoadAsync either, so this mirrors it.
+                // gtSpellScaling is an ordinary DBC store in 5.4.8, so
+                // DBC.LoadAsync is the whole load.
                 await DBC.DBC.LoadAsync(_config.ToSpellWorkConfig(), new LoggerAdapter(_logger));
             }
             catch (Exception ex)

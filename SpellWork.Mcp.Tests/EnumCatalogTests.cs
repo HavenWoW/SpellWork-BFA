@@ -1,3 +1,4 @@
+using System.Linq;
 using Xunit;
 
 namespace SpellWork.Mcp.Tests
@@ -31,6 +32,27 @@ namespace SpellWork.Mcp.Tests
         {
             foreach (var name in new[] { "SpellSchoolMask", "SpellEffects", "AuraType", "Targets", "SpellFamilyNames" })
                 Assert.True(EnumCatalog.TryResolve(name, out _), $"{name} missing after cold static init.");
+        }
+
+        // 5.4.8 (SkyFire_548) ids, not 8.3.7 ones.
+        [Theory]
+        [InlineData("AuraType", 3, "SPELL_AURA_PERIODIC_DAMAGE")]
+        [InlineData("AuraType", 42, "SPELL_AURA_PROC_TRIGGER_SPELL")]
+        [InlineData("SpellEffects", 2, "SPELL_EFFECT_SCHOOL_DAMAGE")]
+        [InlineData("SpellEffects", 64, "SPELL_EFFECT_TRIGGER_SPELL")]
+        [InlineData("Targets", 25, "TARGET_UNIT_TARGET_ANY")]
+        public void FiveFourEightEnumValues(string enumName, int id, string name)
+        {
+            var t = typeof(SpellWork.Spell.SpellInfo).Assembly.GetTypes().Single(x => x.IsEnum && x.Name == enumName);
+            Assert.Equal(name, System.Enum.GetName(t, System.Enum.ToObject(t, id)));
+        }
+
+        [Fact]
+        public void AttributeWordsCoverZeroToThirteen()
+        {
+            var names = typeof(SpellWork.Spell.SpellInfo).Assembly.GetTypes().Where(x => x.IsEnum).Select(x => x.Name).ToList();
+            Assert.Contains("SpellAtribute", names);
+            for (var i = 1; i <= 13; i++) Assert.Contains("SpellAtributeEx" + (i == 1 ? "" : i.ToString()), names);
         }
     }
 }
