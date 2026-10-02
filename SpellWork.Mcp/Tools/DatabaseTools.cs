@@ -17,29 +17,33 @@ namespace SpellWork.Mcp.Tools
         /// wrong".</summary>
         internal const int MySqlErrorNoSuchTable = 1146;
 
-        // Every table get_spell_db_overrides collects, with the column that
-        // holds the spell id in each. TrinityCore names these inconsistently,
-        // which is why the column travels with the table name rather than
-        // being assumed.
+        // Every table get_spell_db_overrides collects by spell id, with the
+        // column that holds the spell id in each. The names are this 5.4.8
+        // repack's world schema (SkyFire-style spell_proc_event, spell_dbc /
+        // spelleffect_dbc custom spell rows, spell_custom_attribute,
+        // spell_linked_spell), and they are inconsistent, which is why the
+        // column travels with the table name rather than being assumed.
+        // spellmisc_dbc is not in this list: it is keyed by SpellMisc id, not
+        // spell id, and is looked up separately (see GetSpellDbOverrides).
         //
-        // Not every fork has every one of these: spell_bonus_data and
-        // spell_ranks were dropped from TrinityCore's BfA-era branch and are
-        // absent from the world schema this server is primarily built against
-        // (verified against BFA-HavenCore-Corruption/sql/base/bfa_world.sql,
-        // where the other five exist with exactly these id columns). They stay
-        // in the list because other forks still have them and the tool should
-        // stay portable -- their absence is reported as an absence, not as a
-        // failure. See GetSpellDbOverrides.
-        private static readonly (string Table, string IdColumn)[] OverrideTables =
+        // A table the connected schema does not have is still reported as
+        // absent (missingTables), not as a failure, so the tool stays usable
+        // against other forks.
+        internal static readonly (string Table, string IdColumn)[] OverrideTables =
         {
-            ("spell_proc", "SpellId"),
+            ("spell_proc_event", "entry"),
+            ("spell_proc", "spellId"),
             ("spell_script_names", "spell_id"),
-            ("spell_custom_attr", "entry"),
+            ("spell_custom_attribute", "spell"),
             ("spell_bonus_data", "entry"),
             ("spell_threat", "entry"),
             ("spell_ranks", "spell_id"),
+            ("spell_linked_spell", "spell_trigger"),
             ("spell_dbc", "Id"),
+            ("spelleffect_dbc", "EffectSpellId"),
         };
+
+        internal const string SpellMiscTable = "spellmisc_dbc";
 
         private readonly SpellDataService _data;
 
@@ -95,12 +99,12 @@ namespace SpellWork.Mcp.Tools
         }
 
         [McpServerTool(Name = "get_spell_db_overrides")]
-        [Description("Rows for one spell id from whichever TrinityCore spell override tables this world database has: spell_proc, spell_script_names, spell_custom_attr, spell_bonus_data, spell_threat, spell_ranks, spell_dbc. Forks differ in which exist; tables the schema does not have are listed under missingTables, which is expected and not an error.")]
-        public Task<string> GetSpellDbOverrides(int id)
+        [Description("Rows for one spell id from whichever spell override tables this repack's world database has: spell_proc_event, spell_proc, spell_script_names, spell_custom_attribute, spell_bonus_data, spell_threat, spell_ranks, spell_linked_spell, spell_dbc, spelleffect_dbc, and spellmisc_dbc (matched by SpellMisc id; see matchedBy). Forks differ in which exist; tables the schema does not have are listed under missingTables, which is expected and not an error.")]
+        public async Task<string> GetSpellDbOverrides(int id)
         {
             var config = _data.Config;
             if (!config.MySqlConfigured)
-                return Task.FromResult(NotConfigured());
+                return NotConfigured();
 
             var worldDatabase = new WorldDatabase(config.ToSpellWorkConfig());
 
@@ -110,8 +114,8 @@ namespace SpellWork.Mcp.Tools
             // seven to work out that none of them is about a table.
             if (!worldDatabase.TestConnection(out var connectionError))
             {
-                return Task.FromResult(ToolResponse.Error("connection_failed",
-                    $"Could not connect to '{config.WorldDatabase}' on {config.MySqlHost}: {connectionError}"));
+                return ToolResponse.Error("connection_failed",
+                    $"Could not connect to '{config.WorldDatabase}' on {config.MySqlHost}: {connectionError}");
             }
 
             var tables = new Dictionary<string, object>();
@@ -121,17 +125,13 @@ namespace SpellWork.Mcp.Tools
 
             foreach (var (table, idColumn) in OverrideTables)
             {
-                // id is an int parameter, not caller-supplied text, so this
-                // interpolation cannot carry an injection. Everything else in
-                // the statement is a compile-time constant. Note what this
-                // does NOT do: run the string through SqlGuard and call it
-                // safe. The guard is for text an agent composed; what makes
-                // this safe is that id is an int.
-                var sql = $"SELECT * FROM `{table}` WHERE `{idColumn}` = {id}";
+                // The id is bound as @id. Table and column names are
+                // compile-time constants from OverrideTables.
+                var sql = $"SELECT * FROM `{table}` WHERE `{idColumn}` = @id";
 
                 try
                 {
-                    var result = worldDatabase.SelectRows(sql, ToolResponse.MaxRows);
+                    var result = worldDatabase.SelectRows(sql, ToolResponse.MaxRows, ("@id", id));
                     tables[table] = result.Rows.Cast<object>().ToList();
                     if (result.Truncated)
                         truncated.Add(table);
@@ -150,6 +150,69 @@ namespace SpellWork.Mcp.Tools
                 {
                     errors[table] = ex.Message;
                 }
+            }
+
+            // spellmisc_dbc is keyed by SpellMisc id. The ids to look up are
+            // the client's (DBC Spell.MiscID, when client data is loaded) plus
+            // the repack's own (spell_dbc.SpellMiscId for this spell).
+            var miscIds = new SortedSet<int>();
+            try { await _data.GetAsync(); } catch (Exception) { /* client data is optional here */ }
+            if (DBC.DBC.Spell != null && DBC.DBC.Spell.TryGetValue(id, out var clientSpell) && clientSpell.MiscID != 0)
+                miscIds.Add(clientSpell.MiscID);
+
+            if (tables.TryGetValue("spell_dbc", out var spellDbcRows))
+            {
+                foreach (var row in (List<object>)spellDbcRows)
+                {
+                    if (row is Dictionary<string, object> r && r.TryGetValue("SpellMiscId", out var m) && m != null)
+                    {
+                        var miscId = Convert.ToInt32(m);
+                        if (miscId != 0) miscIds.Add(miscId);
+                    }
+                }
+            }
+
+            try
+            {
+                string sql;
+                var args = new List<(string, object)>();
+                string matchedBy;
+                if (miscIds.Count > 0)
+                {
+                    // Placeholders are generated (@m0, @m1, ...); values are bound.
+                    var names = new List<string>();
+                    foreach (var miscId in miscIds)
+                    {
+                        var name = "@m" + names.Count;
+                        names.Add(name);
+                        args.Add((name, miscId));
+                    }
+                    sql = $"SELECT * FROM `{SpellMiscTable}` WHERE `Id` IN ({string.Join(", ", names)})";
+                    matchedBy = "spellMiscId";
+                }
+                else
+                {
+                    sql = $"SELECT * FROM `{SpellMiscTable}` WHERE `Id` = @id";
+                    args.Add(("@id", id));
+                    matchedBy = "spellId";
+                }
+
+                var result = worldDatabase.SelectRows(sql, ToolResponse.MaxRows, args.ToArray());
+                tables[SpellMiscTable] = new Dictionary<string, object>
+                {
+                    ["matchedBy"] = matchedBy,
+                    ["rows"] = result.Rows.Cast<object>().ToList(),
+                };
+                if (result.Truncated)
+                    truncated.Add(SpellMiscTable);
+            }
+            catch (Exception ex) when (IsMissingTable(ex))
+            {
+                missing.Add(SpellMiscTable);
+            }
+            catch (Exception ex)
+            {
+                errors[SpellMiscTable] = ex.Message;
             }
 
             var payload = new Dictionary<string, object>
@@ -173,7 +236,7 @@ namespace SpellWork.Mcp.Tools
             if (errors.Count > 0)
                 payload["unavailableTables"] = errors;
 
-            return Task.FromResult(ToolResponse.Ok(payload));
+            return ToolResponse.Ok(payload);
         }
 
         /// <summary>

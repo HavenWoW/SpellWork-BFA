@@ -63,13 +63,15 @@ namespace SpellWork.Database
                             {
                                 reader.GetUInt32(3),
                                 reader.GetUInt32(4),
-                                reader.GetUInt32(5)
+                                reader.GetUInt32(5),
+                                reader.GetUInt32(6)
                             },
-                            ProcFlags           = reader.GetUInt32(6),
-                            ProcEx              = reader.GetUInt32(7),
-                            PpmRate             = reader.GetFloat(8),
-                            CustomChance        = reader.GetFloat(9),
-                            Cooldown            = reader.GetUInt32(10)
+                            ProcFlags           = reader.GetUInt32(7),
+                            ProcEx              = reader.GetUInt32(8),
+                            Phase               = reader.GetUInt32(9),
+                            PpmRate             = reader.GetFloat(10),
+                            CustomChance        = reader.GetFloat(11),
+                            Cooldown            = reader.GetUInt32(12)
                         });
                     }
                 }
@@ -107,13 +109,18 @@ namespace SpellWork.Database
         /// why the documented MySQL account is a read-only grant. Neither
         /// control is sufficient alone.
         /// </summary>
-        public QueryResult SelectRows(string sql, int limit)
+        public QueryResult SelectRows(string sql, int limit, params (string Name, object Value)[] parameters)
         {
             var result = new QueryResult();
 
             using (var connection = new MySqlConnection(ConnectionString))
             using (var command = new MySqlCommand(sql, connection))
             {
+                // Callers that build the statement themselves bind values here
+                // (@name), never by concatenation.
+                foreach (var (name, value) in parameters)
+                    command.Parameters.AddWithValue(name, value);
+
                 command.CommandTimeout = SelectRowsTimeoutSeconds;
                 connection.Open();
 

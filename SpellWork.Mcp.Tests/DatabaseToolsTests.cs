@@ -120,6 +120,61 @@ namespace SpellWork.Mcp.Tests
             Assert.False(DatabaseTools.IsMissingTable(MySqlError(1142)));   // SELECT command denied
         }
 
+        [Fact]
+        public void OverrideTables_AreTheRepackSchemaList()
+        {
+            Assert.Equal(new[]
+            {
+                ("spell_proc_event", "entry"),
+                ("spell_proc", "spellId"),
+                ("spell_script_names", "spell_id"),
+                ("spell_custom_attribute", "spell"),
+                ("spell_bonus_data", "entry"),
+                ("spell_threat", "entry"),
+                ("spell_ranks", "spell_id"),
+                ("spell_linked_spell", "spell_trigger"),
+                ("spell_dbc", "Id"),
+                ("spelleffect_dbc", "EffectSpellId"),
+            }, DatabaseTools.OverrideTables);
+        }
+
+        // Live-MySQL tests: skipped unless SPELLWORK_TEST_MYSQL_HOST is set.
+        private static DatabaseTools ToolsWithMySql()
+        {
+            var host = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_HOST");
+            Skip.If(string.IsNullOrWhiteSpace(host), "SPELLWORK_TEST_MYSQL_HOST not set.");
+
+            var values = new Dictionary<string, string>
+            {
+                ["SPELLWORK_MYSQL_HOST"] = host,
+                ["SPELLWORK_MYSQL_PORT"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_PORT") ?? "3306",
+                ["SPELLWORK_MYSQL_USER"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_USER") ?? "",
+                ["SPELLWORK_MYSQL_PASS"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_PASS") ?? "",
+                ["SPELLWORK_MYSQL_WORLD_DB"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_WORLD_DB") ?? "world",
+            };
+
+            var config = McpServerConfig.FromEnvironment(values);
+            return new DatabaseTools(new SpellDataService(config, NullLoggerFactoryStub.Logger));
+        }
+
+        [SkippableFact]
+        public async Task RepackCustomSpellOverridesIncludeMiscByMiscId()
+        {
+            // spell_dbc row: Id 3617 -> SpellMiscId 200000
+            var json = JsonDocument.Parse(await ToolsWithMySql().GetSpellDbOverrides(3617)).RootElement.GetProperty("result");
+            var misc = json.GetProperty("tables").GetProperty("spellmisc_dbc");
+            Assert.Equal("spellMiscId", misc.GetProperty("matchedBy").GetString());
+            Assert.Contains(misc.GetProperty("rows").EnumerateArray(), r => r.GetProperty("Id").GetInt32() == 200000);
+        }
+
+        [SkippableFact]
+        public async Task EveryListedTableIsQueried()
+        {
+            var tables = JsonDocument.Parse(await ToolsWithMySql().GetSpellDbOverrides(133)).RootElement.GetProperty("result").GetProperty("tables");
+            foreach (var t in new[] { "spell_proc_event", "spell_proc", "spell_script_names", "spell_custom_attribute", "spell_bonus_data", "spell_threat", "spell_ranks", "spell_linked_spell", "spell_dbc", "spelleffect_dbc", "spellmisc_dbc" })
+                Assert.True(tables.TryGetProperty(t, out _), t);
+        }
+
         /// <summary>
         /// MySqlException is sealed and every constructor is non-public, so a
         /// numbered driver error can only be built by reflection. No server is

@@ -11,6 +11,7 @@ namespace SpellWork.Database
         public uint[] SpellFamilyMask;
         public uint ProcFlags;
         public uint ProcEx;
+        public uint Phase;
         public float PpmRate;
         public float CustomChance;
         public uint Cooldown;
@@ -26,8 +27,10 @@ namespace SpellWork.Database
                 SpellFamilyMask[0].ToString(),
                 SpellFamilyMask[1].ToString(),
                 SpellFamilyMask[2].ToString(),
+                SpellFamilyMask[3].ToString(),
                 ProcFlags.ToString(),
                 ProcEx.ToString(),
+                Phase.ToString(),
                 PpmRate.ToString(CultureInfo.InvariantCulture),
                 CustomChance.ToString(CultureInfo.InvariantCulture),
                 Cooldown.ToString()
