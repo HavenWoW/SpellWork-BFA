@@ -30,13 +30,4 @@
     <ProjectReference Include="..\SpellWork.Core\SpellWork.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- Same reason as SpellWork.Core.Tests: Storage<T> is declared in
-         DBFileReaderLib, which Core references by HintPath rather than as a
-         package, so it does not flow transitively (CS0012 otherwise). -->
-    <Reference Include="DBFileReaderLib">
-      <HintPath>..\packages\DBFileReaderLib.1.0.0.0\lib\DBFileReaderLib.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 </Project>

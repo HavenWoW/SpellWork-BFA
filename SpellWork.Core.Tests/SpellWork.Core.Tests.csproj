@@ -18,17 +18,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- ProcInfoTests reads DBC.DBC.SkillLineAbility, whose declared type
-         (Storage<T>) is defined in DBFileReaderLib. Core references it via
-         HintPath rather than a package, so it does not flow transitively;
-         reference it directly here too so the type is resolvable (CS0012
-         otherwise). -->
-    <Reference Include="DBFileReaderLib">
-      <HintPath>..\packages\DBFileReaderLib.1.0.0.0\lib\DBFileReaderLib.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="Goldens\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
