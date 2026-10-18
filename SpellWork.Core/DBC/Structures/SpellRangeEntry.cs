@@ -1,17 +1,17 @@
-﻿using DBFileReaderLib.Attributes;
+using SpellWork.DBC;
 
 namespace SpellWork.DBC.Structures
 {
     public sealed class SpellRangeEntry
     {
         [Index(true)]
-        public uint ID;
+        public int ID;
         public string DisplayName;
         public string DisplayNameShort;
-        public byte Flags;
+        public int Flags;
         [Cardinality(2)]
-        public float[] MinRange = new float[2];
+        public float[] RangeMin = new float[2];
         [Cardinality(2)]
-        public float[] MaxRange = new float[2];
+        public float[] RangeMax = new float[2];
     }
 }

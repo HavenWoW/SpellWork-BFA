@@ -1,23 +1,24 @@
-﻿using DBFileReaderLib.Attributes;
+using SpellWork.DBC;
 
 namespace SpellWork.DBC.Structures
 {
-    public class DifficultyEntry
+    public sealed class DifficultyEntry
     {
         [Index(true)]
-        public uint ID;
+        public int ID;
         public string Name;
         public byte InstanceType;
         public byte OrderIndex;
         public sbyte OldEnumValue;
-        public byte FallbackDifficultyID;
+        public short FallbackDifficultyID;
         public byte MinPlayers;
         public byte MaxPlayers;
-        public ushort Flags;
+        public int Flags;
         public byte ItemContext;
-        public byte ToggleDifficultyID;
+        public short ToggleDifficultyID;
         public ushort GroupSizeHealthCurveID;
         public ushort GroupSizeDmgCurveID;
         public ushort GroupSizeSpellPointsCurveID;
+        public int Field_1_15_4_56400_013;
     }
 }

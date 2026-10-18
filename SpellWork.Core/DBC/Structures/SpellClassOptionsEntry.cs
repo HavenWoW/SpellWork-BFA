@@ -1,11 +1,11 @@
-﻿using DBFileReaderLib.Attributes;
+using SpellWork.DBC;
 
 namespace SpellWork.DBC.Structures
 {
-    public class SpellClassOptionsEntry
+    public sealed class SpellClassOptionsEntry
     {
         [Index(true)]
-        public uint ID;
+        public int ID;
         public int SpellID;
         public uint ModalNextSpell;
         public byte SpellClassSet;

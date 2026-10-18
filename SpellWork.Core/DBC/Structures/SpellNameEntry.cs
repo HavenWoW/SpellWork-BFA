@@ -1,11 +1,11 @@
-﻿using DBFileReaderLib.Attributes;
+using SpellWork.DBC;
 
 namespace SpellWork.DBC.Structures
 {
     public sealed class SpellNameEntry
     {
         [Index(true)]
-        public uint ID;
+        public int ID;
         public string Name;
     }
 }
