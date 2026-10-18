@@ -44,7 +44,10 @@ namespace SpellWork.Core.Tests
                         {
                             DbcPath = dbcPath,
                             GtPath = gtPath,
-                            Locale = Environment.GetEnvironmentVariable("SPELLWORK_LOCALE") ?? "enUS"
+                            Locale = Environment.GetEnvironmentVariable("SPELLWORK_LOCALE") ?? "enUS",
+                            DefsPath = Environment.GetEnvironmentVariable("SPELLWORK_DEFS_PATH")
+                                ?? @"F:\WorkDir\trinitycore-mop-classic\tools\mop-re\refs\wowdbdefs\definitions",
+                            Build = Environment.GetEnvironmentVariable("SPELLWORK_BUILD") ?? "5.5.4.70449"
                         };
 
                         try
