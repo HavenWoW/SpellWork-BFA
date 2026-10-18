@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using SpellWork;
 
 namespace SpellWork.Mcp
@@ -17,6 +18,8 @@ namespace SpellWork.Mcp
         public string GtPath { get; private set; }
         public string Locale { get; private set; }
         public string HotfixCachePath { get; private set; }
+        public string DefsPath { get; private set; }
+        public string Build { get; private set; }
         public string MySqlHost { get; private set; }
         public string MySqlPortOrPipe { get; private set; }
         public string MySqlUser { get; private set; }
@@ -53,6 +56,8 @@ namespace SpellWork.Mcp
                 GtPath = Get("SPELLWORK_GT_PATH"),
                 Locale = Get("SPELLWORK_LOCALE") ?? "enUS",
                 HotfixCachePath = Get("SPELLWORK_HOTFIX_CACHE"),
+                DefsPath = Get("SPELLWORK_DEFS_PATH") ?? Path.Combine(AppContext.BaseDirectory, "defs"),
+                Build = Get("SPELLWORK_BUILD") ?? "5.5.4.70449",
                 MySqlHost = Get("SPELLWORK_MYSQL_HOST"),
                 MySqlPortOrPipe = Get("SPELLWORK_MYSQL_PORT") ?? "3306",
                 MySqlUser = Get("SPELLWORK_MYSQL_USER"),
@@ -67,6 +72,8 @@ namespace SpellWork.Mcp
             GtPath = GtPath,
             Locale = Locale,
             HotfixCachePath = HotfixCachePath,
+            DefsPath = DefsPath,
+            Build = Build,
             MySqlHost = MySqlHost,
             MySqlPortOrPipe = MySqlPortOrPipe,
             MySqlUser = MySqlUser,

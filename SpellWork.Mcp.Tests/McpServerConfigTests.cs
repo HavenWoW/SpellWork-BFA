@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using Xunit;
 
 namespace SpellWork.Mcp.Tests
@@ -15,6 +17,49 @@ namespace SpellWork.Mcp.Tests
             });
 
             Assert.Equal("enUS", config.Locale);
+        }
+
+        [Fact]
+        public void FromEnvironment_BuildDefaultsTo554()
+        {
+            var config = McpServerConfig.FromEnvironment(new Dictionary<string, string>());
+
+            Assert.Equal("5.5.4.70449", config.Build);
+            Assert.Equal("5.5.4.70449", config.ToSpellWorkConfig().Build);
+        }
+
+        [Fact]
+        public void FromEnvironment_HonoursExplicitBuild()
+        {
+            var config = McpServerConfig.FromEnvironment(new Dictionary<string, string>
+            {
+                ["SPELLWORK_BUILD"] = "5.5.4.99999",
+            });
+
+            Assert.Equal("5.5.4.99999", config.Build);
+            Assert.Equal("5.5.4.99999", config.ToSpellWorkConfig().Build);
+        }
+
+        [Fact]
+        public void FromEnvironment_DefsPathDefaultsToBundledDefsDirectory()
+        {
+            var config = McpServerConfig.FromEnvironment(new Dictionary<string, string>());
+
+            var expected = Path.Combine(AppContext.BaseDirectory, "defs");
+            Assert.Equal(expected, config.DefsPath);
+            Assert.Equal(expected, config.ToSpellWorkConfig().DefsPath);
+        }
+
+        [Fact]
+        public void FromEnvironment_HonoursExplicitDefsPath()
+        {
+            var config = McpServerConfig.FromEnvironment(new Dictionary<string, string>
+            {
+                ["SPELLWORK_DEFS_PATH"] = @"C:\data\defs",
+            });
+
+            Assert.Equal(@"C:\data\defs", config.DefsPath);
+            Assert.Equal(@"C:\data\defs", config.ToSpellWorkConfig().DefsPath);
         }
 
         [Fact]

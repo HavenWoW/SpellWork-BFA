@@ -6,6 +6,8 @@ namespace SpellWork
         public string GtPath { get; set; }
         public string Locale { get; set; } = "enUS";
         public string HotfixCachePath { get; set; }
+        public string DefsPath { get; set; }
+        public string Build { get; set; }
 
         public string MySqlHost { get; set; }
         public string MySqlPortOrPipe { get; set; }
