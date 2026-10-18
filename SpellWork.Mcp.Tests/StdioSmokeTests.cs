@@ -36,7 +36,6 @@ namespace SpellWork.Mcp.Tests
             var lines = await RunHandshakeAsync(new Dictionary<string, string>
             {
                 ["SPELLWORK_DBC_PATH"] = null,
-                ["SPELLWORK_GT_PATH"] = null,
             });
 
             Assert.Contains(lines, line => line.Contains("\"result\""));
@@ -52,24 +51,12 @@ namespace SpellWork.Mcp.Tests
         // description or input schema -- only in the real listing frame.
         private const string ToolsListingMarker = "\"tools\":[";
 
-        // The complete tool surface this plan ships. get_spell_visual_chain
-        // (Task 6) is the fourteenth and last.
+        // The complete 5.5.4 bring-up tool surface.
         private static readonly string[] ExpectedTools =
         {
             "server_info",
             "get_spell",
             "search_spells",
-            "get_spell_triggers",
-            "compare_spells",
-            "decode_flags",
-            "list_enum",
-            "calculate_spell_scaling",
-            "list_db2",
-            "get_db2_row",
-            "query_db2",
-            "query_world_db",
-            "get_spell_db_overrides",
-            "get_spell_visual_chain",
         };
 
         [Fact]

@@ -16,14 +16,12 @@ namespace SpellWork.Mcp.Tools
         public SpellTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "get_spell")]
-        [Description("The full decoded view of one spell. format is \"json\" or \"text\". sections filters to any of: misc, attributes, effects, powers, targets, reagents, aura, procs, scaling, context, cooldowns, levels, interrupts, shapeshift, equippedItems, items, triggers, visual. The visual section reports the variants for the difficulty argument only, the same as every other part of this document -- the argument names a MapDifficulty row, whose DifficultyID is the id SpellXSpellVisual is keyed by, and leaving it unset means difficulty 0. When a spell has variants only at other difficulties the section says so in variantsAtOtherDifficulties rather than looking like a spell with no visuals. Call get_spell_visual_chain with difficulty -1 for every difficulty at once.")]
+        [Description("The decoded view of one spell. format is \"json\" or \"text\". sections filters (json only) to any of: misc, attributes, effects, context, triggers. difficulty is a Difficulty id (0 = base); unknown ids are rejected with the valid list.")]
         public async Task<string> GetSpell(
             int id,
             string format = "json",
             string[] sections = null,
-            uint difficulty = 0,
-            uint? level = null,
-            uint? itemLevel = null)
+            uint difficulty = 0)
         {
             var data = await _data.GetAsync();
             if (!data.Loaded)
@@ -39,7 +37,17 @@ namespace SpellWork.Mcp.Tools
                     $"Unknown format '{format}'. Valid formats are: json, text.");
             }
 
-            var context = ResolveContext(level, itemLevel, difficulty);
+            if (!SpellWork.DBC.DBC.ValidDifficultyIds.Contains((int)difficulty))
+            {
+                return ToolResponse.Error("unknown_difficulty",
+                    $"Unknown difficulty {difficulty}. Valid difficulty ids are: {string.Join(", ", SpellWork.DBC.DBC.ValidDifficultyIds)}.",
+                    new Dictionary<string, object>
+                    {
+                        ["validDifficultyIds"] = SpellWork.DBC.DBC.ValidDifficultyIds.ToList(),
+                    });
+            }
+
+            var context = ResolveContext(difficulty);
 
             if (string.Equals(format, "text", StringComparison.OrdinalIgnoreCase))
             {
@@ -98,7 +106,7 @@ namespace SpellWork.Mcp.Tools
             }
 
             error = $"'{text}' is neither a number nor a member of {enumType.Name}. " +
-                    $"Call list_enum(\"{enumType.Name}\") for the valid names.";
+                    $"Use a number or a member name of {enumType.Name}.";
             return false;
         }
 
@@ -189,8 +197,7 @@ namespace SpellWork.Mcp.Tools
             // An attribute filter names a single bit, and the bit's position
             // determines which of the fourteen Attributes words holds it. The
             // enum values in SpellAtribute are already the shifted masks, so
-            // this only ever tests word 0; the other thirteen words have their
-            // own enums and are reachable through decode_flags.
+            // this only ever tests word 0; the remaining words are not filterable here.
             if (attribute.HasValue && (spell.Attributes & (uint)attribute.Value) == 0)
                 return false;
 
@@ -222,304 +229,8 @@ namespace SpellWork.Mcp.Tools
             return description;
         }
 
-        [McpServerTool(Name = "get_spell_triggers")]
-        [Description("Which spells this spell triggers (from its own effects, with the effect index) and which spells trigger it.")]
-        public async Task<string> GetSpellTriggers(int id)
-        {
-            var data = await _data.GetAsync();
-            if (!data.Loaded)
-                return DataError(data);
-
-            if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(id, out var spell))
-                return NotFound(id);
-
-            var triggers = spell.Effects
-                .Where(effect => effect != null && effect.EffectTriggerSpell != 0)
-                .Select(effect => (object)new Dictionary<string, object>
-                {
-                    ["id"] = effect.EffectTriggerSpell,
-                    ["name"] = SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(effect.EffectTriggerSpell, out var target)
-                        ? target.Name
-                        : null,
-                    ["effectIndex"] = effect.EffectIndex,
-                })
-                .ToList();
-
-            var triggeredBy = new List<object>();
-            if (SpellWork.DBC.DBC.SpellTriggerStore.TryGetValue(id, out var sources))
-            {
-                triggeredBy.AddRange(sources.OrderBy(sourceId => sourceId)
-                    .Select(sourceId => (object)new Dictionary<string, object>
-                    {
-                        ["id"] = sourceId,
-                        ["name"] = SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(sourceId, out var source)
-                            ? source.Name
-                            : null,
-                    }));
-            }
-
-            return ToolResponse.Ok(new Dictionary<string, object>
-            {
-                ["id"] = spell.ID,
-                ["name"] = spell.Name,
-                ["triggers"] = triggers.Take(ToolResponse.MaxRows).ToList(),
-                ["triggeredBy"] = triggeredBy.Take(ToolResponse.MaxRows).ToList(),
-                ["truncated"] = triggers.Count > ToolResponse.MaxRows || triggeredBy.Count > ToolResponse.MaxRows,
-            });
-        }
-
-        [McpServerTool(Name = "compare_spells")]
-        [Description("Structured field-by-field diff of two spells. Returns each differing JSON path with both values.")]
-        public async Task<string> CompareSpells(int idA, int idB)
-        {
-            var data = await _data.GetAsync();
-            if (!data.Loaded)
-                return DataError(data);
-
-            if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(idA, out var spellA))
-                return NotFound(idA);
-            if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(idB, out var spellB))
-                return NotFound(idB);
-
-            var context = ResolveContext(null, null, 0);
-
-            // Diff the serialized documents rather than comparing fields by
-            // hand: this covers every field get_spell emits, including ones
-            // added later, and cannot drift away from what get_spell returns.
-            // Four of the eighteen sections are left out, each for its own
-            // reason: "context" renders identically on both sides by
-            // construction (it echoes the RenderContext this call itself
-            // chose, not anything about either spell); "items" and "triggers"
-            // describe how each spell relates to the surrounding tables
-            // (equippable items, spells that trigger or are triggered by it)
-            // rather than the spell's own definition -- diffing them would
-            // make two near-identical spells look different for reasons that
-            // have nothing to do with either spell; and "visual" is a
-            // deliberate omission rather than an oversight, because a visual
-            // chain diffs as a wall of raw SpellVisualKit and
-            // SpellVisualKitEffect ids whose meaning is unresolved in this
-            // build (only effectType 2 has a confirmed target), so two spells
-            // that look alike in every way a caller cares about still differ
-            // in dozens of opaque numbers. get_spell_visual_chain compares
-            // them properly, one spell at a time.
-            var sections = new[]
-            {
-                "misc", "attributes", "effects", "powers", "targets", "reagents", "aura", "procs",
-                "scaling", "cooldowns", "levels", "interrupts", "shapeshift", "equippedItems",
-            };
-
-            // Identity stripped before the diff, not filtered out of the
-            // result afterwards. SpellInfoJsonSerializer.Serialize writes "id"
-            // and "name" into the root unconditionally, outside every
-            // Wants(...) gate, so any comparison of two different spells
-            // carried at least those two guaranteed differences -- making
-            // "identical" true only when idA == idB, an advertised field that
-            // was permanently false for the only comparison anyone runs. Both
-            // values are already reported in the "a" and "b" blocks below, so
-            // nothing is lost by removing them here.
-            //
-            // Removing them from the documents rather than from the collected
-            // differences keeps every other number honest: they never consume
-            // two of the MaxRows slots, never shift which difference the
-            // truncation probe lands on, and never inflate totalDifferences --
-            // all three of which a post-hoc filter would get subtly wrong,
-            // because the recursion visits root keys in alphabetical order and
-            // may or may not have reached "id"/"name" before hitting the cap.
-            using var documentA = ParseWithoutIdentity(
-                SpellInfoJsonSerializer.Serialize(spellA, context, sections));
-            using var documentB = ParseWithoutIdentity(
-                SpellInfoJsonSerializer.Serialize(spellB, context, sections));
-
-            var differences = new List<object>();
-            // Collect one past the cap, not exactly the cap: MaxRows
-            // differences could mean "that is genuinely every difference" or
-            // "the recursion stopped there and more were never inspected",
-            // and those two situations must not report the same way. The
-            // (MaxRows + 1)th difference, if the recursion ever reaches it,
-            // is the probe that tells them apart -- it is never shown to the
-            // caller, only used to answer "was anything withheld".
-            Diff("", documentA.RootElement, documentB.RootElement, differences, ToolResponse.MaxRows + 1);
-
-            // Exact, not "at least": collecting the probe element means a
-            // count of MaxRows + 1 can only happen when the traversal found
-            // a real (MaxRows + 1)th difference, never as an artefact of the
-            // cap itself, so "> MaxRows" now means what it says.
-            var truncated = differences.Count > ToolResponse.MaxRows;
-
-            var result = new Dictionary<string, object>
-            {
-                ["a"] = new Dictionary<string, object> { ["id"] = spellA.ID, ["name"] = spellA.Name },
-                ["b"] = new Dictionary<string, object> { ["id"] = spellB.ID, ["name"] = spellB.Name },
-                ["identical"] = differences.Count == 0,
-                ["differences"] = differences.Take(ToolResponse.MaxRows).ToList(),
-                ["truncated"] = truncated,
-            };
-
-            // Only meaningful as a true total when nothing was withheld: once
-            // truncated is true, differences.Count is capped at MaxRows + 1
-            // by the probe above, an artefact of how far the recursion was
-            // allowed to run, not the real number of differences between the
-            // two documents (which could be far larger and was never
-            // counted, since Diff stops as soon as the probe is collected).
-            // Reporting that capped count under a name that says "total"
-            // would be actively misleading, so the field is omitted rather
-            // than mislabelled -- it appears only when its value is exact.
-            if (!truncated)
-                result["totalDifferences"] = differences.Count;
-
-            return ToolResponse.Ok(result);
-        }
-
-        /// <summary>
-        /// The root properties that identify <em>which</em> spell a document
-        /// describes rather than anything about its definition. Named here as
-        /// data so the reason they are dropped is stated once; see
-        /// <see cref="CompareSpells"/> for that reason.
-        /// </summary>
-        internal static readonly string[] IdentityProperties = { "id", "name" };
-
-        /// <summary>
-        /// Parses a serialized spell document with <see cref="IdentityProperties"/>
-        /// removed from its root. Every other property is copied through
-        /// verbatim -- <c>JsonProperty.WriteTo</c> reproduces the original
-        /// token exactly -- so the diff paths, values and ordering are
-        /// identical to those of the unfiltered document.
-        /// </summary>
-        private static System.Text.Json.JsonDocument ParseWithoutIdentity(string json)
-        {
-            using var source = System.Text.Json.JsonDocument.Parse(json);
-
-            var buffer = new System.IO.MemoryStream();
-            using (var writer = new System.Text.Json.Utf8JsonWriter(buffer))
-            {
-                writer.WriteStartObject();
-                foreach (var property in source.RootElement.EnumerateObject())
-                {
-                    if (Array.IndexOf(IdentityProperties, property.Name) >= 0)
-                        continue;
-
-                    property.WriteTo(writer);
-                }
-
-                writer.WriteEndObject();
-            }
-
-            return System.Text.Json.JsonDocument.Parse(buffer.ToArray());
-        }
-
-        private static void Diff(string path, System.Text.Json.JsonElement a, System.Text.Json.JsonElement b,
-            List<object> differences, int cap)
-        {
-            // Stop descending once the cap is reached: a deep recursion that
-            // collects 50,000 differences to then discard all but 500 wastes
-            // the time of the caller waiting on it. The caller decides what
-            // "reached" means -- CompareSpells passes MaxRows + 1 so the one
-            // extra difference it allows through can serve as the truncation
-            // probe described where Diff is called.
-            if (differences.Count >= cap)
-                return;
-
-            if (a.ValueKind != b.ValueKind)
-            {
-                differences.Add(Difference(path, a, b));
-                return;
-            }
-
-            switch (a.ValueKind)
-            {
-                case System.Text.Json.JsonValueKind.Object:
-                    var keys = a.EnumerateObject().Select(p => p.Name)
-                        .Union(b.EnumerateObject().Select(p => p.Name))
-                        .OrderBy(name => name, StringComparer.Ordinal);
-                    foreach (var key in keys)
-                    {
-                        // The cap check at the top of this method only runs
-                        // once per call. Without also checking it here, a
-                        // single object whose keys are mostly missing on one
-                        // side (a caller-controlled shape, not bounded by
-                        // anything about spells) can add every one of those
-                        // keys in this same loop, unboundedly, before the
-                        // check is ever reconsidered -- the recursive
-                        // Diff(...) call below is not reached for a missing
-                        // key, so its own entry check never gets a chance to
-                        // stop this branch.
-                        if (differences.Count >= cap)
-                            break;
-
-                        var childPath = path.Length == 0 ? key : path + "." + key;
-                        var hasA = a.TryGetProperty(key, out var childA);
-                        var hasB = b.TryGetProperty(key, out var childB);
-
-                        if (!hasA || !hasB)
-                        {
-                            differences.Add(new Dictionary<string, object>
-                            {
-                                ["path"] = childPath,
-                                ["a"] = hasA ? childA.ToString() : null,
-                                ["b"] = hasB ? childB.ToString() : null,
-                            });
-                            continue;
-                        }
-
-                        Diff(childPath, childA, childB, differences, cap);
-                    }
-                    break;
-
-                case System.Text.Json.JsonValueKind.Array:
-                    var arrayA = a.EnumerateArray().ToList();
-                    var arrayB = b.EnumerateArray().ToList();
-                    for (var i = 0; i < Math.Max(arrayA.Count, arrayB.Count); i++)
-                    {
-                        // Same reasoning as the object case above: a mismatched
-                        // array length can add one difference per extra index
-                        // in this loop without ever reaching the recursive
-                        // call that would otherwise re-check the cap.
-                        if (differences.Count >= cap)
-                            break;
-
-                        var childPath = $"{path}[{i}]";
-                        if (i >= arrayA.Count || i >= arrayB.Count)
-                        {
-                            differences.Add(new Dictionary<string, object>
-                            {
-                                ["path"] = childPath,
-                                ["a"] = i < arrayA.Count ? arrayA[i].ToString() : null,
-                                ["b"] = i < arrayB.Count ? arrayB[i].ToString() : null,
-                            });
-                            continue;
-                        }
-
-                        Diff(childPath, arrayA[i], arrayB[i], differences, cap);
-                    }
-                    break;
-
-                default:
-                    if (!string.Equals(a.ToString(), b.ToString(), StringComparison.Ordinal))
-                        differences.Add(Difference(path, a, b));
-                    break;
-            }
-        }
-
-        private static Dictionary<string, object> Difference(string path,
-            System.Text.Json.JsonElement a, System.Text.Json.JsonElement b) =>
-            new Dictionary<string, object>
-            {
-                ["path"] = path,
-                ["a"] = a.ToString(),
-                ["b"] = b.ToString(),
-            };
-
-        internal static RenderContext ResolveContext(uint? level, uint? itemLevel, uint difficulty)
-        {
-            SpellWork.DBC.Structures.MapDifficultyEntry mapDifficulty = null;
-            if (difficulty != 0)
-                SpellWork.DBC.DBC.MapDifficulty.TryGetValue((int)difficulty, out mapDifficulty);
-
-            return new RenderContext(
-                level ?? SpellWork.DBC.DBC.MaxLevel,
-                itemLevel ?? 475,
-                mapDifficulty);
-        }
+        internal static RenderContext ResolveContext(uint difficulty) =>
+            new RenderContext(SpellWork.DBC.DBC.MaxLevel, SpellWork.DBC.DBC.MaxItemLevel, (int)difficulty);
 
         internal static string DataError(SpellData data) =>
             ToolResponse.Error(data.ErrorCode ?? "client_data_unavailable",

@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using ModelContextProtocol.Server;
-using SpellWork.Database;
 
 namespace SpellWork.Mcp.Tools
 {
@@ -15,7 +14,7 @@ namespace SpellWork.Mcp.Tools
         public DiagnosticTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "server_info")]
-        [Description("Configured paths, locale, store counts, load duration and MySQL reachability. Call this first when something looks wrong.")]
+        [Description("Version, configured paths, build, locale, store counts, load duration and layout mismatches. Call this first when something looks wrong.")]
         public async Task<string> ServerInfo()
         {
             var data = await _data.GetAsync();
@@ -25,9 +24,10 @@ namespace SpellWork.Mcp.Tools
             {
                 ["version"] = SpellWork.DBC.DBC.Version,
                 ["dbcPath"] = config.DbcPath,
-                ["gtPath"] = config.GtPath,
+                ["defsPath"] = config.DefsPath,
+                ["build"] = config.Build,
                 ["locale"] = config.Locale,
-                ["hotfixCachePath"] = config.HotfixCachePath,
+                ["localeFallback"] = SpellWork.DBC.DBC.LocaleFallback,
                 ["clientDataLoaded"] = data.Loaded,
                 ["loadDurationMs"] = (int)data.LoadDuration.TotalMilliseconds,
                 ["spellCount"] = data.SpellCount,
@@ -40,7 +40,6 @@ namespace SpellWork.Mcp.Tools
                 ["storeCounts"] = data.StoreCounts.Where(pair => pair.Value > 0)
                     .OrderBy(pair => pair.Key)
                     .ToDictionary(pair => pair.Key, pair => pair.Value),
-                ["mysqlConfigured"] = config.MySqlConfigured,
             };
 
             if (!data.Loaded && data.ErrorCode != null)
@@ -65,14 +64,6 @@ namespace SpellWork.Mcp.Tools
                 .ToList();
             if (layoutMismatches.Count > 0)
                 payload["layoutMismatches"] = layoutMismatches;
-
-            if (config.MySqlConfigured)
-            {
-                var database = new WorldDatabase(config.ToSpellWorkConfig());
-                payload["mysqlReachable"] = database.TestConnection(out var error);
-                if (error != null)
-                    payload["mysqlError"] = error;
-            }
 
             return ToolResponse.Ok(payload);
         }

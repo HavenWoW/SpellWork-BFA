@@ -30,7 +30,6 @@ namespace SpellWork.Mcp.Tests
             var data = await ServiceFor(new Dictionary<string, string>
             {
                 ["SPELLWORK_DBC_PATH"] = @"C:\definitely\not\here",
-                ["SPELLWORK_GT_PATH"] = @"C:\definitely\not\here\gt",
             }).GetAsync();
 
             Assert.False(data.Loaded);

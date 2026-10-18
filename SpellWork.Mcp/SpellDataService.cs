@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using DBFileReaderLib;
 // SpellWork.Mcp is nested under SpellWork, which makes the sibling
 // namespace SpellWork.DBC visible unqualified as "DBC" -- colliding with,
 // and taking priority over, the class SpellWork.DBC.DBC of the same name
@@ -67,11 +66,7 @@ namespace SpellWork.Mcp
 
             try
             {
-                // DBC.LoadAsync already opens the one GameTable SpellWork uses
-                // (GtSpellScalingEntry, from SpellScaling.txt) as its last
-                // step -- see DBC.cs. There is no separate GameTable.LoadAll
-                // API; SpellWork\Program.cs (the WinForms entry point) calls
-                // nothing beyond DBC.LoadAsync either, so this mirrors it.
+                // DBC.LoadAsync reads the .db2 stores through DBCD using DefsPath + Build.
                 await DBC.DBC.LoadAsync(_config.ToSpellWorkConfig(), new LoggerAdapter(_logger));
             }
             catch (Exception ex)
@@ -112,16 +107,9 @@ namespace SpellWork.Mcp
             if (string.IsNullOrWhiteSpace(_config.DbcPath))
                 return Failure("dbc_path_missing", "SPELLWORK_DBC_PATH is not set.", "SPELLWORK_DBC_PATH");
 
-            if (string.IsNullOrWhiteSpace(_config.GtPath))
-                return Failure("gt_path_missing", "SPELLWORK_GT_PATH is not set.", "SPELLWORK_GT_PATH");
-
             if (!Directory.Exists(_config.DbcPath))
                 return Failure("dbc_path_not_found",
                     $"SPELLWORK_DBC_PATH points at '{_config.DbcPath}', which does not exist.", "SPELLWORK_DBC_PATH");
-
-            if (!Directory.Exists(_config.GtPath))
-                return Failure("gt_path_not_found",
-                    $"SPELLWORK_GT_PATH points at '{_config.GtPath}', which does not exist.", "SPELLWORK_GT_PATH");
 
             return null;
         }
@@ -146,7 +134,7 @@ namespace SpellWork.Mcp
             foreach (var property in typeof(DBC.DBC).GetProperties(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
             {
                 if (!property.PropertyType.IsGenericType ||
-                    property.PropertyType.GetGenericTypeDefinition() != typeof(Storage<>))
+                    property.PropertyType.GetGenericTypeDefinition() != typeof(SpellWork.DBC.Storage<>))
                     continue;
 
                 var storage = property.GetValue(null) as System.Collections.ICollection;
