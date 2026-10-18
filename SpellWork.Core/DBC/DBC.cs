@@ -16,6 +16,7 @@ namespace SpellWork.DBC
     {
         public const string Version = "SpellWork 5.5.4 (70449)";
         public const uint MaxLevel = 90;
+        public const uint MaxItemLevel = 1300;
 
         // ReSharper disable MemberCanBePrivate.Global
         // ReSharper disable CollectionNeverUpdated.Global
@@ -243,5 +244,6 @@ namespace SpellWork.DBC
         }
 
         public static uint SelectedLevel = MaxLevel;
+        public static uint SelectedItemLevel = 475;
     }
 }

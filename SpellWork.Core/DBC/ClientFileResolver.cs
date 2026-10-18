@@ -13,8 +13,8 @@ namespace SpellWork.DBC
 
         public ClientFileResolver(string dbcPath, string locale)
         {
-            var localeDir = Path.Combine(dbcPath ?? string.Empty, locale ?? string.Empty);
-            if (Directory.Exists(localeDir))
+            var localeDir = string.IsNullOrEmpty(locale) ? null : Path.Combine(dbcPath ?? string.Empty, locale);
+            if (localeDir != null && Directory.Exists(localeDir))
             {
                 EffectiveDbcDirectory = localeDir;
             }

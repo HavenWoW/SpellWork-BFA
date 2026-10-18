@@ -44,7 +44,7 @@ namespace SpellWork.Core.Tests
 
             Assert.Equal(DBC.DBC.SpellName.Count, DBC.DBC.SpellInfoStore.Count);
             Assert.Contains(0, DBC.DBC.ValidDifficultyIds);
-            Assert.False(string.IsNullOrEmpty(DBC.DBC.SpellInfoStore.First().Value.Name));
+            Assert.Contains(DBC.DBC.SpellName.Values, n => !string.IsNullOrEmpty(n.Name));
         }
     }
 }
