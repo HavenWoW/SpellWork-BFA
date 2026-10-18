@@ -1,32 +1,26 @@
-using SpellWork.DBC.Structures;
-
 namespace SpellWork.Spell
 {
     /// <summary>
-    /// The level, item level and map difficulty a spell is being rendered at.
+    /// The level, item level and difficulty a spell is being rendered at.
     /// Passed explicitly rather than read from statics: the MCP server answers
-    /// concurrent requests at different levels, and a shared mutable global
-    /// would hand the loser of that race a silently wrong number.
+    /// concurrent requests at different levels. Bring-up (5.5.4): no map
+    /// difficulty / scaling stores are loaded, so these are informational.
     /// </summary>
     public sealed class RenderContext
     {
-        public RenderContext(uint level, uint itemLevel, MapDifficultyEntry mapDifficulty)
+        public RenderContext(uint level, uint itemLevel, int difficultyId = 0)
         {
             Level = level;
             ItemLevel = itemLevel;
-            MapDifficulty = mapDifficulty;
+            DifficultyId = difficultyId;
         }
 
         public uint Level { get; }
         public uint ItemLevel { get; }
-        public MapDifficultyEntry MapDifficulty { get; }
+        public int DifficultyId { get; }
 
-        /// <summary>
-        /// Snapshots the GUI's selection. This is the only supported read of
-        /// <see cref="DBC.DBC.SelectedLevel"/> and friends: the WinForms app
-        /// owns that state, everything else passes a context explicitly.
-        /// </summary>
+        /// <summary>Snapshots the GUI's selection.</summary>
         public static RenderContext FromGlobals() =>
-            new RenderContext(DBC.DBC.SelectedLevel, DBC.DBC.SelectedItemLevel, DBC.DBC.SelectedMapDifficulty);
+            new RenderContext(DBC.DBC.SelectedLevel, DBC.DBC.SelectedItemLevel);
     }
 }
