@@ -123,7 +123,9 @@ namespace SpellWork.DBC
 
             var mapMethod = typeof(DbcdStorageMapper).GetMethod(nameof(DbcdStorageMapper.Map));
 
-            Parallel.ForEach(StorageProperties(), property =>
+            // Sequential on purpose: DBCD caches .dbd definitions in a non-thread-safe
+            // Dictionary, so concurrent Load calls intermittently throw.
+            foreach (var property in StorageProperties())
             {
                 var name = FileNameFor(property);
                 try
@@ -151,7 +153,7 @@ namespace SpellWork.DBC
                     throw new InvalidOperationException(
                         $"Failed to map {name}: {tie.InnerException.Message}", tie.InnerException);
                 }
-            });
+            }
 
             var ids = new SortedSet<int> { 0 };
             if (Difficulty != null)
