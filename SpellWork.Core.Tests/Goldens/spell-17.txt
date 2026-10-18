@@ -1,0 +1,20 @@
+ID - 17 Power Word: Shield
+=================================================
+Draws on the soul of the friendly target to shield them, absorbing $<shield> damage$?s55672[ and healing them for $55672s1% of the absorption amount][].  Lasts $d.  While the shield holds, spellcasting will not be interrupted by damage.  Once shielded, the target cannot be shielded again for $6788d.
+ToolTip: Absorbs $w1 damage.
+SpellIconFileDataID = 135940, ActiveIconFileDataID = 0
+Family SPELLFAMILY_PRIEST (6), flag [0] 0x00000001 [1] 0x00000000 [2] 0x00000000 [3] 0x00000000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_HOLY (2)
+Speed = 0, CastingTimeIndex = 1, RangeIndex = 5
+Duration: 15000 (per level 0, max 15000)
+=================================================
+Attributes: 0x00050800 (SPELL_ATTR0_UNK11, SPELL_ATTR0_NOT_SHAPESHIFT, SPELL_ATTR0_DONT_AFFECT_SHEATH_STATE)
+AttributesEx2: 0x00280000 (SPELL_ATTR2_NOT_NEED_SHAPESHIFT, SPELL_ATTR2_DAMAGE_REDUCED_SHIELD)
+AttributesEx8: 0x00001000 (SPELL_ATTR8_AURA_SEND_AMOUNT)
+=================================================
+Effect 0: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 2.00
+Targets (21, 0) (TARGET_UNIT_TARGET_ALLY, NO_TARGET)
+Aura Id 69 (SPELL_AURA_SCHOOL_ABSORB), value = 2, misc = 127 (127), miscB = 0, amplitude = 0, periodic = 0
+

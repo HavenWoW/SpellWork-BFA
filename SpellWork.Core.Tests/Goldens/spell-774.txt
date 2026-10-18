@@ -1,0 +1,34 @@
+ID - 774 Rejuvenation
+=================================================
+Heals the target for $s3 and an additional $s3 every $t1 sec for $d.
+ToolTip: Heals $w1 damage every $t1 seconds.
+SpellIconFileDataID = 136081, ActiveIconFileDataID = 0
+Family SPELLFAMILY_DRUID (7), flag [0] 0x00000010 [1] 0x00000000 [2] 0x00000000 [3] 0x00000000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_NATURE (8)
+Speed = 0, CastingTimeIndex = 1, RangeIndex = 5
+Duration: 12000 (per level 0, max 12000)
+=================================================
+Attributes: 0x00010000 (SPELL_ATTR0_NOT_SHAPESHIFT)
+AttributesEx2: 0x00080000 (SPELL_ATTR2_NOT_NEED_SHAPESHIFT)
+AttributesEx3: 0x00000080 (SPELL_ATTR3_STACK_FOR_DIFF_CASTERS)
+AttributesEx4: 0x00100000 (SPELL_ATTR4_NOT_CHECK_SELFCAST_POWER)
+AttributesEx5: 0x00002200 (SPELL_ATTR5_START_PERIODIC_AT_APPLY, SPELL_ATTR5_HASTE_AFFECT_DURATION)
+AttributesEx6: 0x04000000 (SPELL_ATTR6_UNK26)
+AttributesEx8: 0x01001200 (SPELL_ATTR8_DONT_RESET_PERIODIC_TIMER, SPELL_ATTR8_AURA_SEND_AMOUNT, SPELL_ATTR8_HEALING_SPELL)
+=================================================
+Effect 0: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 1.00
+Targets (21, 0) (TARGET_UNIT_TARGET_ALLY, NO_TARGET)
+Aura Id 8 (SPELL_AURA_PERIODIC_HEAL), value = 1, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 3000
+
+Effect 1: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 0.00
+Targets (21, 0) (TARGET_UNIT_TARGET_ALLY, NO_TARGET)
+Aura Id 189 (SPELL_AURA_MOD_RATING), value = 0, misc = 4 (CR_DODGE), miscB = 0, amplitude = 0, periodic = 0
+
+Effect 2: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 1.00 + spellPower * 0.392
+Targets (0, 0) (NO_TARGET, NO_TARGET)
+Aura Id 8 (SPELL_AURA_PERIODIC_HEAL), value = 1, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 3000
+

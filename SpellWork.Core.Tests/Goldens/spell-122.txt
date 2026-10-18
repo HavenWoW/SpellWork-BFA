@@ -1,0 +1,26 @@
+ID - 122 Frost Nova
+=================================================
+Blasts enemies within $A1 yds of the caster for $122s1 Frost damage and freezes them in place for up to $122d.  Damage caused may interrupt the effect.
+ToolTip: Frozen in place.
+SpellIconFileDataID = 135848, ActiveIconFileDataID = 0
+Family SPELLFAMILY_MAGE (3), flag [0] 0x00000040 [1] 0x00000000 [2] 0x00000000 [3] 0x00000000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_FROST (16)
+Speed = 0, CastingTimeIndex = 1, RangeIndex = 1
+Duration: 8000 (per level 0, max 8000)
+=================================================
+Attributes: 0x40010000 (SPELL_ATTR0_NOT_SHAPESHIFT, SPELL_ATTR0_HEARTBEAT_RESIST_CHECK)
+AttributesEx1: 0x00000088 (SPELL_ATTR1_CANT_BE_REDIRECTED, SPELL_ATTR1_CANT_BE_REFLECTED)
+AttributesEx3: 0x04000000 (SPELL_ATTR3_CAN_PROC_WITH_TRIGGERED)
+AttributesEx4: 0x20100000 (SPELL_ATTR4_NOT_CHECK_SELFCAST_POWER, SPELL_ATTR4_UNK29)
+=================================================
+Effect 0: Id 2 (SPELL_EFFECT_SCHOOL_DAMAGE)
+BasePoints = 0.93 to 1.08 + spellPower * 0.188
+Targets (22, 15) (TARGET_SRC_CASTER, TARGET_UNIT_SRC_AREA_ENEMY)
+
+Effect 1: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 0.00
+Targets (22, 15) (TARGET_SRC_CASTER, TARGET_UNIT_SRC_AREA_ENEMY)
+Aura Id 26 (SPELL_AURA_MOD_ROOT), value = 0, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 0
+Effect Mechanic = 7 (MECHANIC_ROOT)
+

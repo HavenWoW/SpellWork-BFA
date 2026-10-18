@@ -1,0 +1,40 @@
+ID - 5143 Arcane Missiles
+=================================================
+Launches five waves of Arcane Missiles at the enemy over $5143d, causing $7268s1 Arcane damage per wave. Generates an Arcane Charge.
+
+Arcane Missiles' damage is increased by $36032s1% per Arcane Charge.
+
+Arcane Missiles has a chance to be activated after each of your damaging spell casts. Limit $79683s1 charges.
+Triggered by spell: (79683) Arcane Missiles!
+=================================================
+SpellIconFileDataID = 136096, ActiveIconFileDataID = 0
+Family SPELLFAMILY_MAGE (3), flag [0] 0x00000800 [1] 0x00000000 [2] 0x00000000 [3] 0x00000000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_ARCANE (64)
+Speed = 0, CastingTimeIndex = 1, RangeIndex = 5
+Duration: 2000 (per level 0, max 2000)
+=================================================
+Attributes: 0x20010100 (SPELL_ATTR0_HIDE_IN_COMBAT_LOG, SPELL_ATTR0_NOT_SHAPESHIFT, SPELL_ATTR0_UNAFFECTED_BY_INVULNERABILITY)
+AttributesEx1: 0x14004484 (SPELL_ATTR1_CHANNELED_1, SPELL_ATTR1_CANT_BE_REFLECTED, SPELL_ATTR1_NO_THREAT, SPELL_ATTR1_CHANNEL_TRACK_TARGET, SPELL_ATTR1_UNK26, SPELL_ATTR1_DONT_DISPLAY_IN_AURA_BAR)
+AttributesEx4: 0x08000000 (SPELL_ATTR4_UNK27)
+AttributesEx5: 0x00002000 (SPELL_ATTR5_HASTE_AFFECT_DURATION)
+AttributesEx8: 0x00020000 (SPELL_ATTR8_UNK17)
+=================================================
+Effect 0: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 0.00
+Targets (6, 0) (TARGET_UNIT_TARGET_ENEMY, NO_TARGET)
+Aura Id 226 (SPELL_AURA_PERIODIC_DUMMY), value = 0, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 400
+
+Effect 1: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 0.00
+Targets (1, 0) (TARGET_UNIT_CASTER, NO_TARGET)
+Aura Id 23 (SPELL_AURA_PERIODIC_TRIGGER_SPELL), value = 0, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 400
+   Trigger spell (7268) Arcane Missiles.
+   Description: $@spelldesc5143
+
+Effect 2: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 100.00
+Targets (1, 0) (TARGET_UNIT_CASTER, NO_TARGET)
+Aura Id 108 (SPELL_AURA_ADD_PCT_MODIFIER), value = 100, misc = 9 (SPELLMOD_NOT_LOSE_CASTING_TIME), miscB = 0, amplitude = 0, periodic = 0
+SpellClassMask = 00000800 00000000 00000000 00000000
+

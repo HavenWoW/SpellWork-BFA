@@ -1,0 +1,15 @@
+ID - 133 Fireball
+=================================================
+Hurls a fiery ball that causes $s1 Fire damage.
+SpellIconFileDataID = 135812, ActiveIconFileDataID = 0
+Family SPELLFAMILY_MAGE (3), flag [0] 0x00000001 [1] 0x00000000 [2] 0x00000008 [3] 0x00000000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_FIRE (4)
+Speed = 28, CastingTimeIndex = 259, RangeIndex = 5
+=================================================
+Attributes: 0x00010000 (SPELL_ATTR0_NOT_SHAPESHIFT)
+=================================================
+Effect 0: Id 2 (SPELL_EFFECT_SCHOOL_DAMAGE)
+BasePoints = 0.88 to 1.12 + spellPower * 1.5
+Targets (6, 0) (TARGET_UNIT_TARGET_ENEMY, NO_TARGET)
+
