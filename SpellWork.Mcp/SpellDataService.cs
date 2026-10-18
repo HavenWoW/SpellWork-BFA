@@ -32,11 +32,11 @@ namespace SpellWork.Mcp
     }
 
     /// <summary>
-    /// Loads DBC and GameTable data exactly once, on first use.
+    /// Loads DBC data exactly once, on first use.
     /// ExecutionAndPublication rather than a plain lock: DBC.LoadAsync has no
-    /// load guard and GameTable&lt;T&gt;.Open populates with _records.Add, so a
-    /// second load in the same process throws a duplicate-key
-    /// ArgumentException. The Lazy is what makes that unreachable.
+    /// load guard, so a concurrent or repeated load in the same process
+    /// could race on the shared static stores. The Lazy is what makes that
+    /// unreachable.
     /// </summary>
     public sealed class SpellDataService
     {

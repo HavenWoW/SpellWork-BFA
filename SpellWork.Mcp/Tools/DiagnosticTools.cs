@@ -56,7 +56,7 @@ namespace SpellWork.Mcp.Tools
             // only when at least one disagrees with the client build this
             // structure class was written against (DBC.cs's LayoutMismatches
             // is empty, never null, on a matching build). An agent seeing
-            // garbled visual data from get_spell_visual_chain needs one place
+            // garbled decoded data from get_spell needs one place
             // that says the client build does not match, rather than having
             // to suspect every field of every table individually.
             var layoutMismatches = SpellWork.DBC.DBC.LayoutMismatches

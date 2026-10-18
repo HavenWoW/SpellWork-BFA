@@ -16,7 +16,7 @@ namespace SpellWork.Mcp.Tools
         public SpellTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "get_spell")]
-        [Description("The decoded view of one spell. format is \"json\" or \"text\". sections filters (json only) to any of: misc, attributes, effects, context, triggers. difficulty is a Difficulty id (0 = base); unknown ids are rejected with the valid list.")]
+        [Description("The decoded view of one spell. format is \"json\" or \"text\". sections filters (json only) to any of: misc, attributes, effects, context, triggers. difficulty is a Difficulty id (0 = base); unknown ids are rejected with the valid list. Difficulty overrides are not applied in this build: only base (0) is valid.")]
         public async Task<string> GetSpell(
             int id,
             string format = "json",

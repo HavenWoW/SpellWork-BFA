@@ -39,8 +39,8 @@ namespace SpellWork.DBC
         /// by name, sorted. After <see cref="LoadAsync"/> has run this is the
         /// list of stores whose .db2 (or .dbd definition) could not be opened.
         /// Derived from the properties themselves (a store is null exactly when
-        /// it did not load), so it needs no synchronisation inside the parallel
-        /// loop, no reset between loads, and is readable even if LoadAsync
+        /// it did not load), so it needs no bookkeeping during the (sequential)
+        /// load loop, no reset between loads, and is readable even if LoadAsync
         /// throws. Before any load it reports every store.
         /// </summary>
         public static IReadOnlyList<string> UnloadedStores
@@ -155,11 +155,10 @@ namespace SpellWork.DBC
                 }
             }
 
-            var ids = new SortedSet<int> { 0 };
-            if (Difficulty != null)
-                foreach (var id in Difficulty.Keys)
-                    ids.Add(id);
-            ValidDifficultyIds = ids.ToList();
+            // Bring-up: only base rows (DifficultyID == 0) are loaded and no
+            // difficulty overrides are applied, so 0 is the only valid id even
+            // though the Difficulty store itself holds every row.
+            ValidDifficultyIds = new[] { 0 };
 
             // A missing locale directory (or SpellName) leaves SpellName null;
             // skip post-processing so callers see an empty SpellInfoStore and

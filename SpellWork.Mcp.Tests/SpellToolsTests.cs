@@ -63,8 +63,9 @@ namespace SpellWork.Mcp.Tests
         {
             _fixture.SkipIfNoClientData();
 
-            var valid = SpellWork.DBC.DBC.ValidDifficultyIds.First(d => d != 0);
-            using var doc = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(133, difficulty: (uint)valid));
+            // Bring-up: only base difficulty 0 is valid (no overrides applied).
+            Assert.Equal(new[] { 0 }, SpellWork.DBC.DBC.ValidDifficultyIds.ToArray());
+            using var doc = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(133, difficulty: 0));
             Assert.True(doc.RootElement.GetProperty("ok").GetBoolean());
         }
 

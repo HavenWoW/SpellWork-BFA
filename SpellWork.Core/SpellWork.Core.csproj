@@ -10,8 +10,6 @@
 
   <ItemGroup>
     <PackageReference Include="DBCD" Version="2.3.1" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="MySql.Data" Version="8.0.33" />
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
 

@@ -310,20 +310,12 @@ namespace SpellWork.Spell
             };
         }
 
-        private static void AddFlagsWithUnmatched(IDictionary<string, object> dict, string key, Type enumType, uint raw)
-        {
-            var flags = BuildFlagList(enumType, raw, out var unmatchedBits);
-            AddIfNotEmpty(dict, key, flags);
-            AddIfNotEmpty(dict, key + "UnmatchedBits", unmatchedBits);
-        }
-
         // The shared per-bit decomposition every flag-list call site in this
         // file goes through (directly here, or via BuildFlagsList below).
         // unmatchedBits collects the bit *position* (0-31) of every set bit
         // with no declared enum member -- deliberately not paired with a
-        // "name" anywhere, matching decode_flags's own unmatchedBits shape
-        // (SpellWork.Mcp/Tools/DecoderTools.cs) so the two tools describing
-        // the same mask cannot disagree about what "no name" means.
+        // "name" anywhere, so a bit with no declared member is never
+        // disguised as a name.
         // Internal rather than private so SpellWork.Core.Tests
         // (InternalsVisibleTo) can pin this directly without needing a
         // loaded spell to reach it.
@@ -407,12 +399,9 @@ namespace SpellWork.Spell
         // that is the exact bug the review flagged: a set bit with no
         // declared member came back from this JSON path as a bare decimal in
         // the name position ("targetCreatureType": {..., "name": "8385"}-style
-        // for the *unmatched* bit specifically), while
-        // SpellWork.Mcp/Tools/DecoderTools.cs's decode_flags reports the same
-        // situation as an unmatchedBits entry instead. This resolves the
-        // disagreement by making the JSON path behave like decode_flags:
-        // returns null instead of a stringified fallback so the caller can
-        // report the bit separately, never disguise it as a name.
+        // for the *unmatched* bit specifically). This returns null instead of
+        // a stringified fallback so the caller can report the bit separately
+        // as an unmatchedBits entry, never disguise it as a name.
         private static string FindDeclaredFlagName(Type enumType, uint bitValue) =>
             Enum.GetName(enumType, Rebox(enumType, bitValue));
 
@@ -420,30 +409,12 @@ namespace SpellWork.Spell
         // single decoded value (as opposed to BuildFlagList's one-entry-per-bit
         // shape, used where the text path itself decodes several set bits at
         // once through a combined ToString()).
-        private static Dictionary<string, object> BuildRawAndName(int value, Type enumType)
-        {
-            return new Dictionary<string, object>
-            {
-                ["raw"] = value,
-                ["name"] = GetEnumName(enumType, unchecked((uint)value)),
-            };
-        }
-
         private static Dictionary<string, object> BuildRawAndName(uint value, Type enumType)
         {
             return new Dictionary<string, object>
             {
                 ["raw"] = value,
                 ["name"] = GetEnumName(enumType, value),
-            };
-        }
-
-        private static Dictionary<string, object> BuildRawAndName(sbyte value, Type enumType)
-        {
-            return new Dictionary<string, object>
-            {
-                ["raw"] = value,
-                ["name"] = GetEnumName(enumType, unchecked((uint)(byte)value)),
             };
         }
 
