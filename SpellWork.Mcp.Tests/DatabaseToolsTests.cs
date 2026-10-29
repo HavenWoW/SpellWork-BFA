@@ -207,6 +207,50 @@ namespace SpellWork.Mcp.Tests
             Assert.DoesNotContain("spellmisc_dbc", tables.EnumerateObject().Select(p => p.Name));
         }
 
+        [Fact]
+        public void KeysFor_FollowsEachTablesLoaderConvention()
+        {
+            // id 20, first rank 10
+            Assert.Equal(new[] { (20L, "exact"), (-10L, "allRanks") }, DatabaseTools.KeysFor("spell_proc", 20, 10));
+            Assert.Equal(new[] { (20L, "exact"), (-10L, "allRanks") }, DatabaseTools.KeysFor("spell_proc_event", 20, 10));
+            Assert.Equal(new[] { (20L, "exact"), (-10L, "allRanks") }, DatabaseTools.KeysFor("spell_script_names", 20, 10));
+            Assert.Equal(new[] { (20L, "exact"), (10L, "firstRank") }, DatabaseTools.KeysFor("spell_group", 20, 10));
+            Assert.Equal(new[] { (20L, "exact"), (-20L, "onRemoval") }, DatabaseTools.KeysFor("spell_linked_spell", 20, 10));
+            Assert.Equal(new[] { (20L, "exact") }, DatabaseTools.KeysFor("spell_bonus_data", 20, 10));
+            // a first-rank spell is its own first rank: the group key collapses
+            Assert.Equal(new[] { (10L, "exact") }, DatabaseTools.KeysFor("spell_group", 10, 10));
+            Assert.Equal(new[] { (10L, "exact"), (-10L, "allRanks") }, DatabaseTools.KeysFor("spell_proc", 10, 10));
+            foreach (var table in DatabaseTools.MatchRules.Keys)
+                Assert.Contains(DatabaseTools.OverrideTables, t => t.Table == table);
+        }
+
+        [SkippableFact]
+        public async Task AllRanksRow_IsReturnedForALaterRankSpell()
+        {
+            var tools = ToolsWithMySql();
+            var db = new SpellWork.Database.WorldDatabase(McpServerConfig.FromEnvironment(new Dictionary<string, string>
+            {
+                ["SPELLWORK_MYSQL_HOST"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_HOST"),
+                ["SPELLWORK_MYSQL_PORT"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_PORT") ?? "3306",
+                ["SPELLWORK_MYSQL_USER"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_USER") ?? "",
+                ["SPELLWORK_MYSQL_PASS"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_PASS") ?? "",
+                ["SPELLWORK_MYSQL_WORLD_DB"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_WORLD_DB") ?? "world",
+            }).ToSpellWorkConfig());
+
+            var found = db.SelectRows(
+                "SELECT p.`SpellId` AS proc_id, r.`spell_id` AS rank_spell FROM `spell_proc` p " +
+                "JOIN `spell_ranks` r ON r.`first_spell_id` = -p.`SpellId` AND r.`spell_id` <> r.`first_spell_id` " +
+                "ORDER BY r.`spell_id` LIMIT 1", 1);
+            Skip.If(found.Rows.Count == 0, "No rank-2+ spell with an all-ranks spell_proc row in this database.");
+
+            var rankSpell = Convert.ToInt32(found.Rows[0]["rank_spell"]);
+            var procId = Convert.ToInt32(found.Rows[0]["proc_id"]);
+            var tables = JsonDocument.Parse(await tools.GetSpellDbOverrides(rankSpell)).RootElement
+                .GetProperty("result").GetProperty("tables");
+            Assert.Contains(tables.GetProperty("spell_proc").EnumerateArray(),
+                r => r.GetProperty("SpellId").GetInt32() == procId && r.GetProperty("matchedBy").GetString() == "allRanks");
+        }
+
         /// <summary>
         /// MySqlException is sealed and every constructor is non-public, so a
         /// numbered driver error can only be built by reflection. No server is
