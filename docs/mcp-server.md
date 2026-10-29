@@ -121,25 +121,55 @@ CoA server does it (`SpellMgr::GetSpellIdForDifficulty`):
 Because resolution is by row membership, mode `0` on a 25-man id maps it to
 its 10-man id. Pass `difficulty` only when you want that mapping.
 
-`get_spell` always carries a top-level `difficulty` block
-`{requested, resolvedSpellId, variants}` (`requested` is null when omitted;
-`variants` lists every spell id of the row, empty when the spell is in none),
-and the document, `id` included, describes the resolved spell; the text format
-adds `requestedId`. `compare_spells` applies the mode to both ids and reports
-`requestedId` and the resolved id for each; `get_spell_triggers` and
-`calculate_spell_scaling` report `resolvedSpellId`. `get_spell_visual_chain`
-takes no `difficulty` (see Visual).
+**One identity rule across the spell tools** (`get_spell` json and text,
+`get_spell_triggers`, `calculate_spell_scaling`, and each of
+`compare_spells`' `a` / `b`):
+
+| Field | Meaning |
+| --- | --- |
+| `id` | the spell the result describes: the resolved variant |
+| `name` | that resolved spell's name |
+| `requestedId` | the id the caller passed |
+| `resolvedSpellId` | the resolved id again (equals `id`); in `get_spell` json it is inside the `difficulty` block |
+
+Without `difficulty`, `id`, `requestedId` and `resolvedSpellId` are all the
+id passed. `get_spell` json also always carries a top-level `difficulty`
+block `{requested, resolvedSpellId, variants}` (`requested` is the mode, null
+when omitted; `variants` lists every spell id of the row, empty when the spell
+is in none). `compare_spells` applies the mode to both ids; `requestedId` and
+`difficulty` are identity and never appear as differences.
+`get_spell_visual_chain` takes no `difficulty` (see Visual).
 
 ### Scaling
 
 `calculate_spell_scaling` and `get_spell`'s effect `basePoints` use the 3.3.5
 `SpellInfo::CalcValue` rule from the CoA source: `BasePoints +
-RealPointsPerLevel × (level clamped to BaseLevel..MaxLevel − SpellLevel)`,
+RealPointsPerLevel × (level clamped to BaseLevel..MaxLevel − max(BaseLevel, SpellLevel))`,
 with the `DieSides` roll range and `PointsPerComboPoint` reported separately
 (`min` / `max` / `perComboPoint` per effect in `calculate_spell_scaling`;
 `basePointsMin` / `basePointsMax` in `get_spell` when there is a range). The level clamps to 1..100 (CoA
 `MAX_LEVEL`). `itemLevel` is echoed with `itemLevelApplied: false`; `mapId`
 is accepted for compatibility and ignored.
+
+### get_spell JSON shape
+
+The `json` document keeps the **5.4.8 envelope**, so an agent reads every
+SpellWork server the same way; 3.3.5-only data is in **added** keys only.
+
+| 5.4.8 key | Here |
+| --- | --- |
+| `misc` object: `speed`, `castingTimeIndex {id, base, perLevel, minimum}`, `rangeIndex {id, displayName, minRangeNegative, minRangePositive, maxRangeNegative, maxRangePositive}`, `spellIconID`, `activeIconID`, `category`, `startRecoveryCategory`, `mechanic`, `damageClass`, `dispel`, `preventionType` | same; **added** `misc.categoryFlags` (SpellCategory.dbc row flags). `Negative` = hostile, `Positive` = friendly range |
+| root `spellFamilyName`, `spellClassMask`, `schoolMask`, `runeCost {blood, unholy, frost, runicPower}` (section `misc`) | same; **added** `runeCost.id`; no `chromatic` in 3.3.5 |
+| `procs {procFlags[], procFlagsUnmatchedBits?, procChance, procCharges}` | same (from the Spell row) |
+| `reagents {items[{itemId, count}]}` | same; **added** `name` per item from `item_template` when the world DB is configured |
+| `targets[] {difficultyId, targets, targetCreatureType, maxTargets, maxTargetLevel}` | same; at most one entry, `difficultyId` 0 (3.3.5 has no per-difficulty rows) |
+| `effects[]`: `index`, `effect`, `auraType`, `basePoints`, `basePointsMin/Max`, `valuePerResource`, `realPointsPerLevel`, `bonusMultiplier`, `spellPowerCoefficient`, `targetA`, `targetB`, `radius {id, radius, maxRadius}`, `chainTargets`, `triggerSpell {id, name}`, `miscValue`, `miscValueB`, `amplitude`, `mechanic`, `spellClassMask` | same names and the same omit-when-zero rules; `valuePerResource` is the 3.3.5 `PointsPerComboPoint`. **Added**, always present: `dieSides`, `auraPeriod`, `itemType`, `damageMultiplier` |
+| `nameSubtext`, `description`, `auraDescription`, `attributes`, `powers`, `aura`, `cooldowns`, `levels`, `interrupts`, `shapeshift`, `totems`, `equippedItems`, `triggers`, `items`, `visual`, `level`, `itemLevel` | same; **added** `rank` (= NameSubtext, always present), `items[].slot` / `trigger`, `itemsNote` |
+| `difficulty` (5.4.8: a Difficulty.dbc id under `context`) | the `{requested, resolvedSpellId, variants}` block, always present; **added** root `requestedId` |
+
+5.4.8 keys with no 3.3.5 source are absent: `scaling`, `effectDifficulties`,
+`effects[].resolvedDifficulty` / `scaling` / `maxRadius`, `powers[].orderIndex`,
+`targets[].coneDegrees` / `width`, `procs.procCooldown` / `baseProcRate`.
 
 ### Search
 
@@ -224,11 +254,11 @@ from the CoA `db_world` base SQL):
 | Table | Spell id column | Also matches |
 | --- | --- | --- |
 | `spell_proc` | `SpellId` | `-firstRank` (`allRanks`) |
-| `spell_proc_event` | `entry` | `-firstRank` (`allRanks`) |
+| `spell_proc_event` | `entry` | `-firstRank` (`allRanks`); **legacy: not loaded by the CoA server** |
 | `spell_script_names` | `spell_id` | `-firstRank` (`allRanks`) |
 | `spell_custom_attr` | `spell_id` | |
-| `spell_bonus_data` | `entry` | |
-| `spell_threat` | `entry` | |
+| `spell_bonus_data` | `entry` | `firstRank` (`firstRank`), only when no exact row |
+| `spell_threat` | `entry` | `firstRank` (`firstRank`), only when no exact row |
 | `spell_ranks` | `spell_id` | |
 | `spell_linked_spell` | `spell_trigger` | `-id` (`onRemoval`) |
 | `spell_dbc` | `ID` | |
@@ -244,12 +274,20 @@ chain). Every returned row carries **`matchedBy`**:
 
 - `exact` — keyed by the spell id itself;
 - `allRanks` — a negative key naming the spell's first rank, which the server
-  applies to every rank (`spell_proc`, `spell_proc_event`,
-  `spell_script_names`);
-- `firstRank` — `spell_group` lists only first ranks and membership covers
-  every rank;
+  applies to every rank (`spell_proc`, `spell_script_names`; `spell_proc_event`
+  is matched the same way for continuity, see below);
+- `firstRank` — the first rank's row: `spell_group` lists only first ranks
+  and membership covers every rank; `spell_bonus_data` and `spell_threat` use
+  the spell's own row and fall back to the first rank's only when it has none
+  (`SpellMgr::GetSpellBonusData` / `GetSpellThreatEntry`), so the tool returns
+  either the `exact` row or the `firstRank` row, never both;
 - `onRemoval` — a negative `spell_linked_spell.spell_trigger`: the link fires
   when the spell's aura is removed.
+
+**`spell_proc_event` is legacy.** The CoA server loads only `spell_proc`;
+nothing in its source reads `spell_proc_event`, so rows there have no effect
+in game. The tool still reports them (the table exists in many schemas) so a
+stale row can be spotted.
 
 Tables the schema lacks are listed under `missingTables` and are not an error;
 other per-table failures appear under `unavailableTables`. The 500-row cap
@@ -271,6 +309,9 @@ applies **per table**; `truncatedTables` names the tables that hit it.
 - **Non-enUS locales.** The CoA files may leave other locale slots empty; the
   load still succeeds and names come back empty. `server_info` reports the
   slot used.
+- **`query_world_db` database.** Omitted, empty or `world` means the
+  configured `SPELLWORK_MYSQL_WORLD_DB` (e.g. `acore_world`); any other name
+  must equal it, else `unknown_database`.
 - **World database per call.** Each world-database call opens its own
   connection; an unreachable server costs the 5 s connection timeout on every
   call that needs it. The `text` format of `get_spell` does not add

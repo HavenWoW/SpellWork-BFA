@@ -72,6 +72,9 @@ jobs:
         with:
           files: dist/*.zip
           generate_release_notes: true
+          # The "Latest" badge belongs to main's desktop releases (v*), whose
+          # README links to it; a vcoa-* release must never take it.
+          make_latest: false
           body: |
             ### Downloads
 

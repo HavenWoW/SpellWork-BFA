@@ -96,7 +96,7 @@ difficulty, SpellMisc ids) are omitted. Attributes are 8 words (0–7).
 `calculate_spell_scaling(id, level, itemLevel, difficulty)` uses the 3.3.5
 `SpellInfo::CalcValue` rule from the CoA source: base = BasePoints +
 (RealPointsPerLevel × (clamp(level, BaseLevel, MaxLevel>0 ? MaxLevel : level) −
-SpellLevel)) with DieSides range, plus PointsPerComboPoint reported separately.
+max(BaseLevel, SpellLevel))) with DieSides range, plus PointsPerComboPoint reported separately.
 Level clamps to 1..100 (CoA `MAX_LEVEL`). `itemLevel` is echoed with
 `"itemLevelApplied": false`.
 
@@ -165,7 +165,10 @@ not the plain id alone. `spell_proc`, `spell_proc_event` and
 matches the first rank (only first ranks are listed); `spell_linked_spell`
 also matches `-id` (on aura removal). The first rank comes from
 `spell_ranks.first_spell_id`. Every row reports `matchedBy`: `exact`,
-`allRanks`, `firstRank` or `onRemoval`.
+`allRanks`, `firstRank` or `onRemoval`. *Final review:* `spell_bonus_data` and
+`spell_threat` fall back to the first rank's row only when the spell has no
+row of its own (`SpellMgr.cpp:990-1019`); `spell_proc_event` is legacy, not
+loaded by the CoA server, and documented as such.
 
 §5 note: the 3.3.5 missile is `SpellVisual.MissileModel`/`MissileMotion`, not a
 row of its own, so a `missiles` entry has no `id` (5.4.8 had one) and carries

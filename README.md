@@ -70,14 +70,23 @@ slashes in paths, also on Windows. Replace the two example paths with your
 `dbc` folder and your `SpellWork.Mcp.dll`; only the line-continuation
 character differs between shells.
 
-PowerShell (backtick):
+PowerShell (backtick; note the **quoted `'--'`**):
 
 ```powershell
 claude mcp add --scope user spellwork-coa `
   -e SPELLWORK_DBC_PATH=C:/azerothcore-wotlk-coa/env/dist/data/dbc `
   -e SPELLWORK_LOCALE=enUS `
-  -- dotnet C:/SpellWork/mcpcoa/SpellWork.Mcp.dll
+  '--' dotnet C:/SpellWork/mcpcoa/SpellWork.Mcp.dll
 ```
+
+In PowerShell always write the separator as `'--'`. When `claude` is the npm
+install's `claude.ps1` script (what `npm i -g @anthropic-ai/claude-code`
+puts first on the PowerShell path), PowerShell swallows a bare `--` itself;
+`-e` then takes `dotnet` and the dll path as two more variables and the
+registration has no command. The quoted form reaches both `claude.ps1` and
+the native `claude.exe` unchanged. Also single-quote any value that contains
+`$`, a backtick, `,`, `;`, `(`, `)`, `{`, `}` or `@` (a MySQL password, say):
+`-e 'SPELLWORK_MYSQL_PASS=pa$$word'`, or PowerShell expands or splits it.
 
 bash / zsh / Git Bash (backslash):
 
@@ -104,11 +113,12 @@ claude mcp add --scope user spellwork-coa -e SPELLWORK_DBC_PATH=<dbc path> -e SP
 ```
 
 Everything before `--` is for `claude`; everything after it is the command
-that starts the server.
+that starts the server. (In PowerShell: `'--'`, quoted, as above.)
 
 **Optional: world database.** To enable `query_world_db`,
 `get_spell_db_overrides` and item names, add the world-database variables
-(bash shown; use the same continuation character as above for your shell):
+(bash shown; use the same continuation character as above for your shell,
+and in PowerShell the quoted `'--'` and single-quoted values described above):
 
 ```bash
 claude mcp add --scope user spellwork-coa \
@@ -206,6 +216,10 @@ passwords out of a committed `.mcp.json`.
 - **`mysql_not_configured` / `connection_failed`** — the MySQL tools need
   `SPELLWORK_MYSQL_HOST`, `_USER` and `_WORLD_DB` together; `server_info`
   shows `mysqlReachable` and `mysqlError`.
+- **`claude mcp list` shows the server with no command, or `dotnet` /
+  the dll path appear as environment variables in `claude mcp get`** — the
+  `--` separator was eaten by PowerShell (see Register). Remove the entry and
+  add it again with `'--'` quoted.
 - **Remove:** `claude mcp remove spellwork-coa --scope user`.
 - **Change a setting:** remove it and run `claude mcp add` again.
 - **Update:** download the new release, unzip it over the same folder (or
