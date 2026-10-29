@@ -10,83 +10,56 @@ namespace SpellWork.Core.Tests
         public ClientFileResolverTests() { Directory.CreateDirectory(_root); }
         public void Dispose() { Directory.Delete(_root, true); }
 
-        private string Touch(params string[] parts)
+        // A minimal WDBC file: header with zero records.
+        private string WriteWdbc(params string[] parts)
         {
             var p = Path.Combine(_root, Path.Combine(parts));
             Directory.CreateDirectory(Path.GetDirectoryName(p));
-            File.WriteAllBytes(p, new byte[] { 0x57, 0x44, 0x42, 0x43 });
+            var bytes = new byte[21];
+            System.Text.Encoding.ASCII.GetBytes("WDBC").CopyTo(bytes, 0);
+            System.BitConverter.GetBytes(0u).CopyTo(bytes, 4);   // records
+            System.BitConverter.GetBytes(234u).CopyTo(bytes, 8); // fields
+            System.BitConverter.GetBytes(936u).CopyTo(bytes, 12); // record size
+            System.BitConverter.GetBytes(1u).CopyTo(bytes, 16);  // string block (one NUL)
+            File.WriteAllBytes(p, bytes);
             return p;
         }
 
         [Fact]
-        public void ReadBuild_Wdb2Header_YieldsBuildAtOffset24_AndWdbcYieldsNull()
+        public void SyntheticWdbcResolves()
         {
-            var wdb2 = new byte[48];
-            System.Text.Encoding.ASCII.GetBytes("WDB2").CopyTo(wdb2, 0);
-            System.BitConverter.GetBytes(18273u).CopyTo(wdb2, 24);
-            var wdb2Path = Path.Combine(_root, "h.db2");
-            File.WriteAllBytes(wdb2Path, wdb2);
-            Assert.Equal(18273, ClientFileResolver.ReadBuild(wdb2Path));
-
-            var wdbc = new byte[48];
-            System.Text.Encoding.ASCII.GetBytes("WDBC").CopyTo(wdbc, 0);
-            System.BitConverter.GetBytes(18273u).CopyTo(wdbc, 24);
-            var wdbcPath = Path.Combine(_root, "h.dbc");
-            File.WriteAllBytes(wdbcPath, wdbc);
-            Assert.Null(ClientFileResolver.ReadBuild(wdbcPath));
-
-            var shortPath = Path.Combine(_root, "short.db2");
-            File.WriteAllBytes(shortPath, new byte[] { 0x57, 0x44, 0x42, 0x32 });
-            Assert.Null(ClientFileResolver.ReadBuild(shortPath));
-
-            var resolved = ClientFileResolver.Resolve("h", new SpellWorkConfig { DbcPath = _root });
-            Assert.Equal("db2", resolved.Extension);
-            Assert.Equal(18273, resolved.Build);
+            var spell = WriteWdbc("dbc", "Spell.dbc");
+            var r = ClientFileResolver.Resolve("Spell", new SpellWorkConfig { DbcPath = Path.Combine(_root, "dbc") });
+            Assert.Equal(spell, r.Path);
+            Assert.Equal("dbc", r.Extension);
         }
 
         [Fact]
-        public void Db2WinsOverDbcInSameDirectory()
+        public void Db2BesideTheDbcIsIgnored()
         {
-            Touch("dbc", "SpellVisual.dbc");
-            var db2 = Touch("dbc", "SpellVisual.db2");
-            var r = ClientFileResolver.Resolve("SpellVisual", new SpellWorkConfig { DbcPath = Path.Combine(_root, "dbc"), Locale = "enUS" });
-            Assert.Equal(db2, r.Path);
-            Assert.Equal("db2", r.Extension);
+            var spell = WriteWdbc("dbc", "Spell.dbc");
+            File.WriteAllBytes(Path.Combine(_root, "dbc", "Spell.db2"), new byte[] { 0x57, 0x44, 0x42, 0x32 });
+            var r = ClientFileResolver.Resolve("Spell", new SpellWorkConfig { DbcPath = Path.Combine(_root, "dbc") });
+            Assert.Equal(spell, r.Path);
+            Assert.Equal("dbc", r.Extension);
         }
 
         [Fact]
-        public void Db2InDb2PathWinsOverDbcInDbcPath()
+        public void LoneDb2IsNotResolved()
         {
-            Touch("dbc", "SpellVisual.dbc");
-            var db2 = Touch("db2", "SpellVisual.db2");
-            var r = ClientFileResolver.Resolve("SpellVisual", new SpellWorkConfig { DbcPath = Path.Combine(_root, "dbc"), Db2Path = Path.Combine(_root, "db2") });
-            Assert.Equal(db2, r.Path);
+            Directory.CreateDirectory(Path.Combine(_root, "dbc"));
+            File.WriteAllBytes(Path.Combine(_root, "dbc", "SpellVisual.db2"), new byte[] { 0x57, 0x44, 0x42, 0x32 });
+            Assert.Null(ClientFileResolver.Resolve("SpellVisual", new SpellWorkConfig { DbcPath = Path.Combine(_root, "dbc") }));
         }
 
+        // 3.3.5 keeps all locales in one file; a locale-named folder is not consulted.
         [Fact]
-        public void MissingLocaleFolderFallsBackToRootAndSaysSo()
+        public void LocaleIsNotAFolder()
         {
-            var dbc = Touch("dbc", "Spell.dbc");
-            var r = ClientFileResolver.Resolve("Spell", new SpellWorkConfig { DbcPath = Path.Combine(_root, "dbc"), Locale = "enUS" });
-            Assert.Equal(dbc, r.Path);
-            Assert.True(r.LocaleFallback);
-        }
-
-        [Fact]
-        public void ExistingLocaleFolderIsPreferred()
-        {
-            Touch("dbc", "Spell.dbc");
-            var ru = Touch("dbc", "ruRU", "Spell.dbc");
-            var r = ClientFileResolver.Resolve("Spell", new SpellWorkConfig { DbcPath = Path.Combine(_root, "dbc"), Locale = "ruRU" });
-            Assert.Equal(ru, r.Path);
-            Assert.False(r.LocaleFallback);
-        }
-
-        [Fact]
-        public void HyphenatedNameResolves()
-        {
-            var p = Touch("dbc", "Item-sparse.db2");
-            Assert.Equal(p, ClientFileResolver.Resolve("Item-sparse", new SpellWorkConfig { DbcPath = Path.Combine(_root, "dbc") }).Path);
+            var root = WriteWdbc("dbc", "Spell.dbc");
+            WriteWdbc("dbc", "deDE", "Spell.dbc");
+            var r = ClientFileResolver.Resolve("Spell", new SpellWorkConfig { DbcPath = Path.Combine(_root, "dbc"), Locale = "deDE" });
+            Assert.Equal(root, r.Path);
         }
 
         [Fact]
@@ -95,5 +68,9 @@ namespace SpellWork.Core.Tests
             Directory.CreateDirectory(Path.Combine(_root, "dbc"));
             Assert.Null(ClientFileResolver.Resolve("Nope", new SpellWorkConfig { DbcPath = Path.Combine(_root, "dbc") }));
         }
+
+        [Fact]
+        public void UnsetDbcPathResolvesNothing() =>
+            Assert.Null(ClientFileResolver.Resolve("Spell", new SpellWorkConfig()));
     }
 }

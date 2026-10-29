@@ -1,4 +1,4 @@
-// 5.4.8 layout: upstream TrinityCore/SpellWork 5.4.8 SpellWork/DBC/Structures/SpellMissileMotionEntry.cs
+// CoA 3.3.5a layout: WoWDBDefs SpellMissileMotion.dbd 3.3.5.12340 (5 fields, 20 bytes; not loaded by the CoA server)
 using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
@@ -7,8 +7,8 @@ namespace SpellWork.DBC.Structures
     {
         [Index(true)] public int ID;
         public string Name;
-        public string Script;
+        public string ScriptBody;
         public uint Flags;
-        public uint MissileCount;
+        public int MissileCount;
     }
 }

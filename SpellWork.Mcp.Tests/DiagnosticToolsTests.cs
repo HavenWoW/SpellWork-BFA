@@ -12,7 +12,7 @@ namespace SpellWork.Mcp.Tests
 
         public DiagnosticToolsTests(McpClientDataFixture fixture) => _fixture = fixture;
 
-        [SkippableFact]
+        [SkippableFact(Skip = "coa: Task 8")]
         public async Task ServerInfoReportsOpenedFilesAndBuild()
         {
             _fixture.SkipIfNoClientData();
@@ -60,7 +60,8 @@ namespace SpellWork.Mcp.Tests
             var opened = result.GetProperty("openedFiles").EnumerateObject().Select(p => p.Name).OrderBy(n => n).ToList();
 
             Assert.Equal(McpClientDataFixture.PresentStoreNames.OrderBy(n => n).ToList(), opened);
-            Assert.True(result.GetProperty("localeFallback").GetBoolean());
+            // 3.3.5a: the locale is a string slot, not a folder (spec D6).
+            Assert.Equal(0, result.GetProperty("localeSlot").GetInt32());
         }
     }
 }

@@ -1,4 +1,4 @@
-// 5.4.8 layout: upstream TrinityCore/SpellWork 5.4.8 SpellWork/DBC/Structures/SpellRadiusEntry.cs
+// CoA 3.3.5a layout: CoA DBCfmt.h SpellRadiusfmt "nfff" (4 fields, 16 bytes); names from WoWDBDefs SpellRadius.dbd 3.3.5.12340
 using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
@@ -8,7 +8,6 @@ namespace SpellWork.DBC.Structures
         [Index(true)] public int ID;
         public float Radius;
         public float RadiusPerLevel;
-        public float UnkRadiusMop;
-        public float MaxRadius;
+        public float RadiusMax;
     }
 }

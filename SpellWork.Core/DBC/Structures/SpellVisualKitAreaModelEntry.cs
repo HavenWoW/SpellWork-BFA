@@ -1,4 +1,4 @@
-// 5.4.8 layout: WoWDBDefs SpellVisualKitAreaModel.dbd BUILD 5.4.0.17266-5.4.8.18414 (not reachable from the chain in 5.4.8: no parent-kit column)
+// CoA 3.3.5a layout: WoWDBDefs SpellVisualKitAreaModel.dbd 3.3.5.12340 (3 fields, 12 bytes; not loaded by the CoA server; no parent-kit column, so not chained)
 using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
@@ -6,11 +6,8 @@ namespace SpellWork.DBC.Structures
     public sealed class SpellVisualKitAreaModelEntry
     {
         [Index(true)] public int ID;
-        public int ModelFileDataID;
-        public int Flags;
-        public int LifeTime;
-        public float EmissionRate;
-        public float Spacing;
-        public float ModelScale;
+        /// <summary>Model path (the reference data holds .mdx/.m2 paths).</summary>
+        public string Name;
+        public int EnumID;
     }
 }

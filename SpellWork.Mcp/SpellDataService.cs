@@ -92,11 +92,10 @@ namespace SpellWork.Mcp
             if (result.SpellCount == 0)
             {
                 result.ErrorCode = "no_data_loaded";
-                var effectiveDir = SpellWork.DBC.ClientFileResolver.EffectiveDbcDirectory(_config.ToSpellWorkConfig(), out var fellBack) ?? "(SPELLWORK_DBC_PATH is not set)";
+                var effectiveDir = SpellWork.DBC.ClientFileResolver.EffectiveDbcDirectory(_config.ToSpellWorkConfig()) ?? "(SPELLWORK_DBC_PATH is not set)";
                 result.ErrorMessage =
-                    $"No spells were loaded: Spell.dbc, SpellMisc.dbc and SpellEffect.dbc were not found in '{effectiveDir}'" +
-                    (fellBack ? $" (the '{_config.Locale}' locale folder does not exist, so the DBC root was used)" : "") +
-                    ". Point SPELLWORK_DBC_PATH at the folder holding the .dbc files; .db2 files are searched in SPELLWORK_DB2_PATH (default: the DBC folder).";
+                    $"No spells were loaded: Spell.dbc was not found in '{effectiveDir}'" +
+                    ". Point SPELLWORK_DBC_PATH at the folder holding the 3.3.5a .dbc files.";
                 result.ErrorVariable = "SPELLWORK_DBC_PATH";
                 return result;
             }

@@ -1,4 +1,4 @@
-// 5.4.8 layout: WoWDBDefs SpellVisualKit.dbd BUILD 5.4.0.17266-5.4.8.18414
+// CoA 3.3.5a layout: WoWDBDefs SpellVisualKit.dbd 3.3.5.12340 (38 fields, 152 bytes; not loaded by the CoA server)
 using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
@@ -8,7 +8,6 @@ namespace SpellWork.DBC.Structures
         [Index(true)] public int ID;
         public int StartAnimID;
         public int AnimID;
-        public int AnimKitID;
         public int HeadEffect;
         public int ChestEffect;
         public int BaseEffect;

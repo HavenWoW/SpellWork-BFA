@@ -279,7 +279,7 @@ namespace SpellWork.Mcp.Tools
         private IEnumerable<PresentFile> PresentFiles()
         {
             var directories = new List<string>();
-            var dbcDirectory = SpellWork.DBC.ClientFileResolver.EffectiveDbcDirectory(_data.Config.ToSpellWorkConfig(), out _);
+            var dbcDirectory = SpellWork.DBC.ClientFileResolver.EffectiveDbcDirectory(_data.Config.ToSpellWorkConfig());
             if (dbcDirectory != null)
                 directories.Add(dbcDirectory);
             if (!string.IsNullOrEmpty(_data.Config.Db2Path))

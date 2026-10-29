@@ -1,4 +1,4 @@
-// 5.4.8 layout: upstream TrinityCore/SpellWork 5.4.8 SpellWork/DBC/Structures/SkillLineAbilityEntry.cs
+// CoA 3.3.5a layout: CoA DBCfmt.h SkillLineAbilityfmt (14 fields, 56 bytes); names from WoWDBDefs SkillLineAbility.dbd 3.3.5.12340
 using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
@@ -6,17 +6,17 @@ namespace SpellWork.DBC.Structures
     public sealed class SkillLineAbilityEntry
     {
         [Index(true)] public int ID;
-        public uint SkillId;                                        // m_skillLine
-        public uint SpellId;                                        // m_spell
-        public uint Racemask;                                       // m_raceMask
-        public uint Classmask;                                      // m_classMask
-        public uint RacemaskNot;                                    // m_excludeRace
-        public uint ClassmaskNot;                                   // m_excludeClass
-        public uint ReqSkillValue;                                  // m_minSkillLineRank
-        public uint ForwardSpellid;                                 // m_supercededBySpell
-        public uint LearnOnGetSkill;                                // m_acquireMethod
-        public uint MaxValue;                                       // m_trivialSkillLineRankHigh
-        public uint MinValue;                                       // m_trivialSkillLineRankLow
-        public uint CharacterPoints;                                // m_characterPoints - MoP: no longer an array
+        public int SkillLine;
+        public int Spell;
+        public uint RaceMask;
+        public uint ClassMask;
+        public uint ExcludeRace;
+        public uint ExcludeClass;
+        public int MinSkillLineRank;
+        public int SupercededBySpell;
+        public int AcquireMethod;
+        public int TrivialSkillLineRankHigh;
+        public int TrivialSkillLineRankLow;
+        [Cardinality(2)] public int[] CharacterPoints = new int[2];
     }
 }

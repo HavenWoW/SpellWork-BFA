@@ -1,4 +1,4 @@
-// 5.4.8 layout: WoWDBDefs OverrideSpellData.dbd BUILD 5.0.1.15464-5.4.8.18414 (upstream 5.4.8 declares a string in the last column; the file has none)
+// CoA 3.3.5a layout: CoA DBCfmt.h OverrideSpellDatafmt (12 fields, 48 bytes); names from WoWDBDefs OverrideSpellData.dbd 3.3.5.12340
 using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
@@ -6,8 +6,7 @@ namespace SpellWork.DBC.Structures
     public sealed class OverrideSpellDataEntry
     {
         [Index(true)] public int ID;
-        [Cardinality(10)] public uint[] Spells = new uint[10];
+        [Cardinality(10)] public int[] Spells = new int[10];
         public int Flags;
-        public int PlayerActionbarFileDataID;
     }
 }

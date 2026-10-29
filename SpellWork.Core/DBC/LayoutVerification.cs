@@ -13,7 +13,7 @@ namespace SpellWork.DBC
         public int ActualRecordSize { get; set; }
 
         public string Describe() => string.Format(CultureInfo.InvariantCulture,
-            "{0}: {1} fields / {2}-byte records (expected {3} / {4}). The structure was written against the 5.4.8 (18414) layout; " +
+            "{0}: {1} fields / {2}-byte records (expected {3} / {4}). The structure was written against the CoA 3.3.5a (12340) layout; " +
             "a different file (stale extraction, other build) decodes into plausible but wrong values.",
             File, ActualFieldsCount, ActualRecordSize, ExpectedFieldsCount, ExpectedRecordSize);
     }
@@ -23,54 +23,39 @@ namespace SpellWork.DBC
         public static readonly IReadOnlyDictionary<string, (int FieldsCount, int RecordSize)> Expected =
             new Dictionary<string, (int, int)>
             {
-                // Read from the 5.4.8 (18414) reference extraction's headers; the
-                // field lists were checked against WoWDBDefs. Keyed by file name.
-                ["Spell"] = (25, 100),
-                ["SpellMisc"] = (26, 104),
-                ["SpellEffect"] = (30, 120),
-                ["SpellEffectScaling"] = (6, 24),
-                ["SpellPower"] = (13, 52),
-                ["SpellTargetRestrictions"] = (9, 36),
-                ["SpellAuraOptions"] = (9, 36),
-                ["SpellCategories"] = (10, 40),
-                ["SpellCooldowns"] = (6, 24),
-                ["SpellInterrupts"] = (8, 32),
-                ["SpellLevels"] = (6, 24),
-                ["SpellScaling"] = (9, 36),
-                ["SpellRuneCost"] = (6, 24),
-                ["gtSpellScaling"] = (2, 8),
-                ["Difficulty"] = (12, 48),
-                ["SpellVisual"] = (30, 120),
-                ["SpellVisualKit"] = (39, 156),
-                ["SpellVisualMissile"] = (17, 68),
-                ["SpellVisualEffectName"] = (9, 36),
-                ["SpellVisualKitModelAttach"] = (15, 60),
-                ["SpellVisualKitAreaModel"] = (7, 28),
-                ["SpellAuraRestrictions"] = (11, 44),
-                ["SpellCastingRequirements"] = (7, 28),
+                // Spec section 4.1: read from the CoA 3.3.5a (12340) reference
+                // extraction's WDBC headers; the field lists follow the CoA
+                // DBCfmt.h/DBCStructure.h and WoWDBDefs 3.3.5.12340. Keyed by file name.
+                ["Spell"] = (234, 936),
                 ["SpellCastTimes"] = (4, 16),
-                ["SpellClassOptions"] = (7, 28),
-                ["SpellDescriptionVariables"] = (2, 8),
                 ["SpellDuration"] = (4, 16),
-                ["SpellEquippedItems"] = (6, 24),
-                ["SpellRadius"] = (5, 20),
-                ["SpellRange"] = (8, 32),
-                ["SpellShapeshift"] = (6, 24),
-                ["SpellTotems"] = (5, 20),
-                ["SpellReagents"] = (19, 76),
+                ["SpellRadius"] = (4, 16),
+                ["SpellRange"] = (40, 160),
+                ["SpellRuneCost"] = (5, 20),
+                ["SpellDifficulty"] = (5, 20),
+                ["SpellCategory"] = (2, 8),
+                ["SpellDescriptionVariables"] = (2, 8),
+                ["SpellIcon"] = (2, 8),
+                ["SpellAffect"] = (3, 12),
+                ["SpellItemEnchantment"] = (38, 152),
+                ["SpellShapeshiftForm"] = (35, 140),
+                ["SpellFocusObject"] = (18, 72),
+                ["TotemCategory"] = (20, 80),
+                ["SkillLine"] = (56, 224),
+                ["SkillLineAbility"] = (14, 56),
+                ["AreaGroup"] = (8, 32),
+                ["AreaTable"] = (36, 144),
+                ["OverrideSpellData"] = (12, 48),
+                ["ScreenEffect"] = (10, 40),
+                ["SpellVisual"] = (32, 128),
+                ["SpellVisualKit"] = (38, 152),
+                ["SpellVisualEffectName"] = (7, 28),
+                ["SpellVisualKitModelAttach"] = (10, 40),
+                ["SpellVisualKitAreaModel"] = (3, 12),
                 ["SpellMissile"] = (15, 60),
                 ["SpellMissileMotion"] = (5, 20),
-                ["AreaGroup"] = (8, 32),
-                ["AreaTable"] = (30, 120),
-                ["OverrideSpellData"] = (13, 52),
-                ["ScreenEffect"] = (14, 56),
-                ["SkillLine"] = (9, 36),
-                ["SkillLineAbility"] = (13, 52),
+                ["SpellChainEffects"] = (48, 177),
                 ["Item"] = (8, 32),
-                ["Item-sparse"] = (134, 536),
-                ["SpellProcsPerMinute"] = (3, 12),
-                ["RandPropPoints"] = (16, 64),
-                ["SpellChainEffects"] = (58, 220),
             };
 
         public static LayoutMismatch Check(string fileName, string openedPath, int fieldsCount, int recordSize)

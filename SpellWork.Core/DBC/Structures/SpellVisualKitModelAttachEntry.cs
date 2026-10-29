@@ -1,4 +1,4 @@
-// 5.4.8 layout: WoWDBDefs SpellVisualKitModelAttach.dbd BUILD 5.4.0.17266-5.4.8.18414
+// CoA 3.3.5a layout: WoWDBDefs SpellVisualKitModelAttach.dbd 3.3.5.12340 (10 fields, 40 bytes; not loaded by the CoA server)
 using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures
@@ -13,10 +13,5 @@ namespace SpellWork.DBC.Structures
         public float Yaw;
         public float Pitch;
         public float Roll;
-        public int Unk8;
-        public int StartAnimID;
-        public int AnimID;
-        public int EndAnimID;
-        public int AnimKitID;
     }
 }

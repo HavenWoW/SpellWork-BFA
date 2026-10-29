@@ -1,4 +1,4 @@
-// 5.4.8 layout: upstream TrinityCore/SpellWork 5.4.8 SpellWork/DBC/Structures/SpellDescriptionVariablesEntry.cs
+// CoA 3.3.5a layout: WoWDBDefs SpellDescriptionVariables.dbd 3.3.5.12340 (2 fields, 8 bytes; not loaded by the CoA server)
 using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures

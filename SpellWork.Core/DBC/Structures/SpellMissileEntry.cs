@@ -1,4 +1,4 @@
-// 5.4.8 layout: upstream TrinityCore/SpellWork 5.4.8 SpellWork/DBC/Structures/SpellMissileEntry.cs
+// CoA 3.3.5a layout: WoWDBDefs SpellMissile.dbd 3.3.5.12340 (15 fields, 60 bytes; not loaded by the CoA server)
 using DBFileReaderLib.Attributes;
 
 namespace SpellWork.DBC.Structures

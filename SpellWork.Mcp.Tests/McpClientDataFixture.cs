@@ -37,10 +37,10 @@ namespace SpellWork.Mcp.Tests
         // load into a NullReferenceException instead of the per-store
         // degradation it is meant to demonstrate.
         public const string MissingStoreName = "ScreenEffect";
-        // Spell, SpellMisc and SpellEffect are included because LoadAsync now clears
-        // SpellInfoStore on every load: without them the partial load would have no
-        // spells and report no_data_loaded instead of per-store degradation.
-        public static readonly string[] PresentStoreNames = { "Difficulty", "SpellDuration", "Spell", "SpellMisc", "SpellEffect" };
+        // Spell is included because LoadAsync clears SpellInfoStore on every
+        // load: without it the partial load would have no spells and report
+        // no_data_loaded instead of per-store degradation.
+        public static readonly string[] PresentStoreNames = { "SpellDifficulty", "SpellDuration", "Spell" };
 
         private static readonly object SyncRoot = new object();
         private static bool _attempted;
@@ -189,14 +189,14 @@ namespace SpellWork.Mcp.Tests
         /// fresh process does, with no help from here.
         /// </para>
         /// <para>
-        /// Why the real data survives. The partial directory holds Spell, SpellMisc
-        /// and SpellEffect (LoadAsync clears SpellInfoStore on entry, so spells
-        /// must be rebuilt from them). The finally
+        /// Why the real data survives. The partial directory holds Spell
+        /// (LoadAsync clears SpellInfoStore on entry, so spells must be
+        /// rebuilt from it). The finally
         /// then runs the full load again, which restores the stores and also
         /// OpenedFiles, LayoutMismatches and LocaleFallback.
         /// </para>
         /// <para>
-        /// SpellInfoStore being rebuilt from those three files is what makes the
+        /// SpellInfoStore being rebuilt from Spell.dbc is what makes the
         /// partial SpellDataService report Loaded == true. That is what lets the Db2Tools calls
         /// below get past their "if (!data.Loaded)" guard and reach the
         /// per-store answers under test -- which is the point, since a missing

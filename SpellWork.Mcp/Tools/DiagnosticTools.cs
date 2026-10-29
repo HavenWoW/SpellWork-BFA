@@ -31,10 +31,11 @@ namespace SpellWork.Mcp.Tools
                 ["gtPath"] = config.GtPath,
                 ["db2Path"] = config.Db2Path,
                 ["clientBuild"] = ClientBuild,
-                ["localeFallback"] = SpellWork.DBC.DBC.LocaleFallback,
+                ["localeSlot"] = SpellWork.DBC.DBC.LocaleSlot,
+                ["localeSlotFallback"] = SpellWork.DBC.DBC.LocaleSlotFallback,
                 ["openedFiles"] = SpellWork.DBC.DBC.OpenedFiles
                     .OrderBy(pair => pair.Key, System.StringComparer.Ordinal)
-                    .ToDictionary(pair => pair.Key, pair => (object)new Dictionary<string, object> { ["path"] = pair.Value.Path, ["extension"] = pair.Value.Extension, ["build"] = pair.Value.Build }),
+                    .ToDictionary(pair => pair.Key, pair => (object)new Dictionary<string, object> { ["path"] = pair.Value.Path, ["extension"] = pair.Value.Extension }),
                 ["locale"] = config.Locale,
                 ["clientDataLoaded"] = data.Loaded,
                 ["loadDurationMs"] = (int)data.LoadDuration.TotalMilliseconds,

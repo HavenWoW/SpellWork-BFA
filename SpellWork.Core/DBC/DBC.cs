@@ -22,52 +22,36 @@ namespace SpellWork.DBC
 
         // ReSharper disable MemberCanBePrivate.Global
         // ReSharper disable CollectionNeverUpdated.Global
-        public static Storage<SpellEntry>                       Spell { get; set; }
-        public static Storage<SpellMiscEntry>                   SpellMisc { get; set; }
-        public static Storage<SpellEffectEntry>                 SpellEffect { get; set; }
-        public static Storage<SpellEffectScalingEntry>          SpellEffectScaling { get; set; }
-        public static Storage<SpellPowerEntry>                  SpellPower { get; set; }
-        public static Storage<SpellTargetRestrictionsEntry>     SpellTargetRestrictions { get; set; }
-        public static Storage<SpellAuraOptionsEntry>            SpellAuraOptions { get; set; }
-        public static Storage<SpellCategoriesEntry>             SpellCategories { get; set; }
-        public static Storage<SpellCooldownsEntry>              SpellCooldowns { get; set; }
-        public static Storage<SpellInterruptsEntry>             SpellInterrupts { get; set; }
-        public static Storage<SpellLevelsEntry>                 SpellLevels { get; set; }
-        public static Storage<SpellScalingEntry>                SpellScaling { get; set; }
-        public static Storage<SpellRuneCostEntry>               SpellRuneCost { get; set; }
-        public static Storage<GtSpellScalingEntry>              GtSpellScaling { get; set; }
-        public static Storage<DifficultyEntry>                  Difficulty { get; set; }
-        public static Storage<SpellVisualEntry>                 SpellVisual { get; set; }
-        public static Storage<SpellVisualKitEntry>              SpellVisualKit { get; set; }
-        public static Storage<SpellVisualMissileEntry>          SpellVisualMissile { get; set; }
-        public static Storage<SpellVisualEffectNameEntry>       SpellVisualEffectName { get; set; }
-        public static Storage<SpellVisualKitModelAttachEntry>   SpellVisualKitModelAttach { get; set; }
-        public static Storage<SpellVisualKitAreaModelEntry>     SpellVisualKitAreaModel { get; set; }
-        public static Storage<SpellAuraRestrictionsEntry>       SpellAuraRestrictions { get; set; }
-        public static Storage<SpellCastingRequirementsEntry>    SpellCastingRequirements { get; set; }
-        public static Storage<SpellCastTimesEntry>              SpellCastTimes { get; set; }
-        public static Storage<SpellClassOptionsEntry>           SpellClassOptions { get; set; }
-        public static Storage<SpellDescriptionVariablesEntry>   SpellDescriptionVariables { get; set; }
-        public static Storage<SpellDurationEntry>               SpellDuration { get; set; }
-        public static Storage<SpellEquippedItemsEntry>          SpellEquippedItems { get; set; }
-        public static Storage<SpellRadiusEntry>                 SpellRadius { get; set; }
-        public static Storage<SpellRangeEntry>                  SpellRange { get; set; }
-        public static Storage<SpellShapeshiftEntry>             SpellShapeshift { get; set; }
-        public static Storage<SpellTotemsEntry>                 SpellTotems { get; set; }
-        public static Storage<SpellReagentsEntry>               SpellReagents { get; set; }
-        public static Storage<SpellMissileEntry>                SpellMissile { get; set; }
-        public static Storage<SpellMissileMotionEntry>          SpellMissileMotion { get; set; }
-        public static Storage<AreaGroupEntry>                   AreaGroup { get; set; }
-        public static Storage<AreaTableEntry>                   AreaTable { get; set; }
-        public static Storage<OverrideSpellDataEntry>           OverrideSpellData { get; set; }
-        public static Storage<ScreenEffectEntry>                ScreenEffect { get; set; }
-        public static Storage<SkillLineEntry>                   SkillLine { get; set; }
-        public static Storage<SkillLineAbilityEntry>            SkillLineAbility { get; set; }
-        public static Storage<ItemEntry>                        Item { get; set; }
-        public static Storage<ItemSparseEntry>                  ItemSparse { get; set; }
-        public static Storage<SpellProcsPerMinuteEntry>         SpellProcsPerMinute { get; set; }
-        public static Storage<RandPropPointsEntry>              RandPropPoints { get; set; }
-        public static Storage<SpellChainEffectsEntry>           SpellChainEffects { get; set; }
+        public static Storage<SpellEntry>                      Spell { get; set; }
+        public static Storage<SpellCastTimesEntry>             SpellCastTimes { get; set; }
+        public static Storage<SpellDurationEntry>              SpellDuration { get; set; }
+        public static Storage<SpellRadiusEntry>                SpellRadius { get; set; }
+        public static Storage<SpellRangeEntry>                 SpellRange { get; set; }
+        public static Storage<SpellRuneCostEntry>              SpellRuneCost { get; set; }
+        public static Storage<SpellDifficultyEntry>            SpellDifficulty { get; set; }
+        public static Storage<SpellCategoryEntry>              SpellCategory { get; set; }
+        public static Storage<SpellDescriptionVariablesEntry>  SpellDescriptionVariables { get; set; }
+        public static Storage<SpellIconEntry>                  SpellIcon { get; set; }
+        public static Storage<SpellAffectEntry>                SpellAffect { get; set; }
+        public static Storage<SpellItemEnchantmentEntry>       SpellItemEnchantment { get; set; }
+        public static Storage<SpellShapeshiftFormEntry>        SpellShapeshiftForm { get; set; }
+        public static Storage<SpellFocusObjectEntry>           SpellFocusObject { get; set; }
+        public static Storage<TotemCategoryEntry>              TotemCategory { get; set; }
+        public static Storage<SkillLineEntry>                  SkillLine { get; set; }
+        public static Storage<SkillLineAbilityEntry>           SkillLineAbility { get; set; }
+        public static Storage<AreaGroupEntry>                  AreaGroup { get; set; }
+        public static Storage<AreaTableEntry>                  AreaTable { get; set; }
+        public static Storage<OverrideSpellDataEntry>          OverrideSpellData { get; set; }
+        public static Storage<ScreenEffectEntry>               ScreenEffect { get; set; }
+        public static Storage<SpellVisualEntry>                SpellVisual { get; set; }
+        public static Storage<SpellVisualKitEntry>             SpellVisualKit { get; set; }
+        public static Storage<SpellVisualEffectNameEntry>      SpellVisualEffectName { get; set; }
+        public static Storage<SpellVisualKitModelAttachEntry>  SpellVisualKitModelAttach { get; set; }
+        public static Storage<SpellVisualKitAreaModelEntry>    SpellVisualKitAreaModel { get; set; }
+        public static Storage<SpellMissileEntry>               SpellMissile { get; set; }
+        public static Storage<SpellMissileMotionEntry>         SpellMissileMotion { get; set; }
+        public static Storage<SpellChainEffectsEntry>          SpellChainEffects { get; set; }
+        public static Storage<ItemEntry>                       Item { get; set; }
         // ReSharper restore MemberCanBePrivate.Global
         // ReSharper restore CollectionNeverUpdated.Global
 
@@ -75,13 +59,10 @@ namespace SpellWork.DBC
         public static readonly IDictionary<int, ISet<int>> SpellTriggerStore = new Dictionary<int, ISet<int>>();
 
         /// <summary>
-        /// The client file a store property loads from. The property name is
-        /// the file name except where the file name is not a valid C#
-        /// identifier or starts lower-case.
+        /// The client file (without <c>.dbc</c>) a store property loads from.
+        /// Every 3.3.5a store property is named after its file.
         /// </summary>
-        public static string FileNameFor(PropertyInfo p) =>
-            p.Name == "ItemSparse" ? "Item-sparse" :
-            p.Name == "GtSpellScaling" ? "gtSpellScaling" : p.Name;
+        public static string FileNameFor(PropertyInfo p) => p.Name;
 
         public static IEnumerable<string> StoreFileNames() => StorageProperties().Select(FileNameFor);
         public static IEnumerable<Type> StoreEntryTypes() => StorageProperties().Select(p => p.PropertyType.GetGenericArguments()[0]);
@@ -95,15 +76,28 @@ namespace SpellWork.DBC
         public static IReadOnlyDictionary<string, ResolvedClientFile> OpenedFiles => _openedFiles;
 
         /// <summary>
-        /// True when the configured locale folder does not exist under
-        /// DbcPath and the root was used instead.
+        /// The localized-string slot (0-15) every localized column is read
+        /// at, from <see cref="SpellWorkConfig.Locale"/> (spec D6). 0 = enUS.
         /// </summary>
-        public static bool LocaleFallback { get; private set; }
+        public static int LocaleSlot { get; private set; }
+
+        /// <summary>
+        /// True when the configured locale is not a known 3.3.5 locale and
+        /// slot 0 (enUS) is used instead.
+        /// </summary>
+        public static bool LocaleSlotFallback { get; private set; }
+
+        /// <summary>
+        /// SpellDifficulty resolution (spec D4), built by <see cref="LoadAsync"/>;
+        /// resolves every spell to itself until a load has run.
+        /// </summary>
+        public static SpellDifficultyResolver DifficultyResolver { get; private set; } =
+            new SpellDifficultyResolver(null);
 
         /// <summary>
         /// Every modelled <see cref="Storage{T}"/> property that holds no data,
         /// by name, sorted. After <see cref="LoadAsync"/> has run this is the
-        /// list of stores whose client file (<c>.db2</c> or <c>.dbc</c>) could
+        /// list of stores whose client file (<c>.dbc</c>) could
         /// not be found or opened -- the per-store failures the loader below
         /// tolerates so the rest of the load can finish.
         /// <para>
@@ -144,7 +138,7 @@ namespace SpellWork.DBC
 
         /// <summary>
         /// Tables whose on-disk layout (fields count, record size) differs from
-        /// the 5.4.8 layout their structure class was written against, sorted
+        /// the CoA 3.3.5a (12340) layout their structure class was written against, sorted
         /// by table name. Empty on a matching client build.
         /// <para>
         /// Recorded rather than thrown. A mismatch means this client build
@@ -200,11 +194,10 @@ namespace SpellWork.DBC
             // Reload hygiene: stale stores from a previous load must not survive.
             SpellInfoStore.Clear();
             SpellTriggerStore.Clear();
-            AuraOptionsIndex = null; CategoriesIndex = null; CooldownsIndex = null; InterruptsIndex = null;
-            LevelsIndex = null; TargetRestrictionsIndex = null; MiscIndex = null;
+            DifficultyResolver = new SpellDifficultyResolver(null);
 
-            ClientFileResolver.EffectiveDbcDirectory(config, out var fb);
-            LocaleFallback = fb;
+            LocaleSlot = LocaleSlots.Resolve(config.Locale, out var slotFallback);
+            LocaleSlotFallback = slotFallback;
 
             // A store this load does not open must not keep the previous load's
             // data: UnloadedStores reads the properties and OpenedFiles reads the
@@ -227,9 +220,26 @@ namespace SpellWork.DBC
                        // after: a mismatched layout still constructs happily
                        // and the point is to know before anyone reads a field.
                        var mismatch = LayoutVerification.Check(FileNameFor(dbc), file.Path, reader.FieldsCount, reader.RecordSize);
-                       if (mismatch != null)
+                       object storage;
+                       if (mismatch == null)
+                           storage = Activator.CreateInstance(dbc.PropertyType, reader);
+                       else
+                       {
                            _layoutMismatches.Add(mismatch);
-                       dynamic storage = Activator.CreateInstance(dbc.PropertyType, reader);
+                           // A structure that disagrees with the file may not
+                           // even decode (fields past the record end): that is
+                           // a reported mismatch, never a failed load (Review
+                           // Focus 5). The store stays null and is listed by
+                           // UnloadedStores as well.
+                           try
+                           {
+                               storage = Activator.CreateInstance(dbc.PropertyType, reader);
+                           }
+                           catch (Exception)
+                           {
+                               return;
+                           }
+                       }
                        dbc.SetValue(null, storage);
                        _openedFiles[dbc.Name] = file; // only once the store exists
                    }
@@ -280,71 +290,37 @@ namespace SpellWork.DBC
             // Skipping post-processing here leaves SpellInfoStore empty,
             // exactly the state the loaded path already treats as "nothing
             // to report" for any row it can't resolve.
-            if (Spell != null && SpellMisc != null && SpellEffect != null)
+            if (Spell != null)
             {
                 await BuildSpellInfoStore(logger);
             }
         }
 
-        private static DifficultyIndex<T> BuildIndex<T>(Storage<T> rows, Func<T, int> spellId, Func<T, int> difficultyId)
-            where T : class, new() =>
-            rows == null ? null : DifficultyIndex<T>.Build(rows.Values, spellId, difficultyId);
-
         // Split out of LoadAsync so the null-store guard above can skip this
-        // whole block with a single check.
-        private static async Task BuildSpellInfoStore(ISpellWorkLogger logger)
+        // whole block with a single check. 3.3.5 has one fat Spell row per
+        // spell, so this is a single pass building the SpellInfo and the
+        // reverse trigger index from EffectTriggerSpell[0..2] (non-zero
+        // effect slots only), then the spell -> SpellDifficulty row index.
+        private static Task BuildSpellInfoStore(ISpellWorkLogger logger)
         {
             foreach (var spell in Spell.Values)
+            {
                 SpellInfoStore[spell.ID] = new SpellInfo(spell);
 
-            var scalingByEffect = SpellEffectScaling == null
-                ? new Dictionary<int, SpellEffectScalingEntry>()
-                : SpellEffectScaling.Values.GroupBy(s => s.SpellEffectID).ToDictionary(g => g.Key, g => g.First());
-
-            AuraOptionsIndex   = BuildIndex(SpellAuraOptions, r => r.SpellID, r => r.DifficultyID);
-            CategoriesIndex    = BuildIndex(SpellCategories, r => r.SpellID, r => r.DifficultyID);
-            CooldownsIndex     = BuildIndex(SpellCooldowns, r => r.SpellID, r => r.DifficultyID);
-            InterruptsIndex    = BuildIndex(SpellInterrupts, r => r.SpellID, r => r.DifficultyID);
-            LevelsIndex        = BuildIndex(SpellLevels, r => r.SpellID, r => r.DifficultyID);
-            TargetRestrictionsIndex = BuildIndex(SpellTargetRestrictions, r => r.SpellID, r => r.DifficultyID);
-            MiscIndex          = BuildIndex(SpellMisc, r => r.SpellID, r => r.DifficultyID);
-
-            await Task.WhenAll(Task.Run(() =>
-            {
-                foreach (var effect in SpellEffect.Values)
+                for (var i = 0; i < MaxEffectIndex; ++i)
                 {
-                    if (!SpellInfoStore.TryGetValue(effect.SpellID, out var info))
-                    {
-                        logger.Warn($"Spell effect {effect.ID} is referencing unknown spell {effect.SpellID}, ignoring!");
+                    var trigger = spell.EffectTriggerSpell[i];
+                    if (spell.Effect[i] == 0 || trigger == 0)
                         continue;
-                    }
-                    scalingByEffect.TryGetValue(effect.ID, out var scaling);
-                    info.AddEffect(effect, scaling);
-
-                    if (effect.EffectTriggerSpell != 0)
-                    {
-                        if (!SpellTriggerStore.TryGetValue(effect.EffectTriggerSpell, out var set))
-                            SpellTriggerStore[effect.EffectTriggerSpell] = set = new SortedSet<int>();
-                        set.Add(effect.SpellID);
-                    }
+                    if (!SpellTriggerStore.TryGetValue(trigger, out var set))
+                        SpellTriggerStore[trigger] = set = new SortedSet<int>();
+                    set.Add(spell.ID);
                 }
-            }), Task.Run(() =>
-            {
-                foreach (var power in (SpellPower?.Values ?? Enumerable.Empty<SpellPowerEntry>()).OrderBy(p => p.OrderIndex))
-                    if (SpellInfoStore.TryGetValue(power.SpellID, out var info))
-                        info.AddPower(power);
-                    else
-                        logger.Warn($"SpellPower: Unknown spell {power.SpellID} referenced, ignoring!");
-            }));
-        }
+            }
 
-        public static DifficultyIndex<SpellAuraOptionsEntry> AuraOptionsIndex { get; private set; }
-        public static DifficultyIndex<SpellCategoriesEntry> CategoriesIndex { get; private set; }
-        public static DifficultyIndex<SpellCooldownsEntry> CooldownsIndex { get; private set; }
-        public static DifficultyIndex<SpellInterruptsEntry> InterruptsIndex { get; private set; }
-        public static DifficultyIndex<SpellLevelsEntry> LevelsIndex { get; private set; }
-        public static DifficultyIndex<SpellTargetRestrictionsEntry> TargetRestrictionsIndex { get; private set; }
-        public static DifficultyIndex<SpellMiscEntry> MiscIndex { get; private set; }
+            DifficultyResolver = new SpellDifficultyResolver(SpellDifficulty);
+            return Task.CompletedTask;
+        }
 
         /// <summary>Item level used when a caller gives none (the 5.4.8 goldens and the MCP default).</summary>
         public const uint DefaultItemLevel = 463;
