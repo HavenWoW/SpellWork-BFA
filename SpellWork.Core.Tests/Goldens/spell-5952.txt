@@ -1,0 +1,110 @@
+ID - 5952 Throwing Specialization (Rank 1)
+=================================================
+Reduces the energy cost of Shuriken Toss by $s3. 
+
+Increases the range of Shuriken Toss, Throw and Deadly Throw by $s1 yards. 
+
+Your Deadly Throw has a $h% chance to interrupt the target for $51680d.
+Category = 0, SpellIconID = 2910, ActiveIconID = 0, SpellVisualID = 0, 0
+Family SPELLFAMILY_ROGUE (8), flag [0] 0x00000000 [1] 0x00000000 [2] 0x00000000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_NORMAL (1)
+DamageClass = 0 (SPELL_DAMAGE_CLASS_NONE)
+PreventionType = 0 (SPELL_PREVENTION_TYPE_NONE)
+=================================================
+Attributes: 0x000400D0 (SPELL_ATTR0_IS_ABILITY, SPELL_ATTR0_PASSIVE, SPELL_ATTR0_DO_NOT_DISPLAY, SPELL_ATTR0_DO_NOT_SHEATH)
+=================================================
+Skill (Id 38) "Rogue"
+    ReqSkillValue 1, Forward spell = 0, MinMaxValue (0, 0)
+Spell Level = 0, base 0, max 0
+
+Category = 0
+DispelType = 0 (DISPEL_NONE)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 1) "Self Only":
+    MinRange = 0 (hostile), 0 (friendly)
+    MaxRange = 0 (hostile), 0 (friendly)
+Cast Time: (ID 1): 0
+Interrupt Flags: 0x00000000 (0)
+AuraInterrupt Flags: 0x00000000 (0)
+ChannelInterrupt Flags: 0x00000000 (0)
+Proc flag 0x00055510, chance: 50%, charges: 0
+=================================================
+  04 PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS
+  08 PROC_FLAG_DONE_SPELL_RANGED_DMG_CLASS
+  10 PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_POS
+  12 PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG
+  14 PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS
+  16 PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG
+  18 PROC_FLAG_DONE_PERIODIC
+=================================================
+Effect 0: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 4.00
+Targets (1, 0) (TARGET_UNIT_CASTER, 0)
+Aura Id 107 (SPELL_AURA_ADD_FLAT_MODIFIER), value = 4, misc = 5 (SPELLMOD_RANGE), miscB = 0, amplitude = 0, periodic = 0
+SpellClassMask = 00000001 00000001 40000000
+	+ 26679 - Deadly Throw
+	+ 26803 - Deadly Throw
+	+ 26804 - Deadly Throw
+	+ 26805 - Deadly Throw
+	+ 48673 - Deadly Throw
+	+ 48674 - Deadly Throw
+	+ 284570 - Shadow Dagger
+	+ 626679 - Aroy Deadly Throw
+	+ 954835 - Shuriken Toss
+	+ 955223 - Shuriken Toss
+	+ 955224 - Shuriken Toss
+	+ 955225 - Shuriken Toss
+	+ 955226 - Shuriken Toss
+	+ 955227 - Shuriken Toss
+	+ 955228 - Shuriken Toss
+	- 978439 - Throw
+	+ 982466 - Shadow Dagger
+	+ 982499 - Shadow Dagger
+	+ 982500 - Shadow Dagger
+	+ 982501 - Shadow Dagger
+	+ 982502 - Shadow Dagger
+	+ 982503 - Shadow Dagger
+	+ 982504 - Shadow Dagger
+	- 1102764 - Throw
+	+ 1126679 - Deadly Throw
+	+ 1148673 - Deadly Throw
+	+ 1148674 - Deadly Throw
+	- 1587629 - Shadow Dagger
+	- 1587633 - Shadow Dagger
+	+ 2304835 - Shuriken Toss
+DamageMultiplier = 1
+
+Effect 1: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 0.00
+Targets (1, 0) (TARGET_UNIT_CASTER, 0)
+Aura Id 42 (SPELL_AURA_PROC_TRIGGER_SPELL), value = 0, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 0
+   Trigger spell (51680) Throwing Specialization. Chance = 50
+   Description: Increases the range of Throw and Deadly Throw and gives your Deadly Throw a chance to interrupt the target for $51680d.
+DamageMultiplier = 1
+
+Effect 2: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = -5.00
+Targets (1, 0) (TARGET_UNIT_CASTER, 0)
+Aura Id 107 (SPELL_AURA_ADD_FLAT_MODIFIER), value = -5, misc = 14 (SPELLMOD_COST), miscB = 0, amplitude = 0, periodic = 0
+SpellClassMask = 00000000 00000000 40000000
+	+ 284570 - Shadow Dagger
+	+ 954835 - Shuriken Toss
+	+ 955223 - Shuriken Toss
+	+ 955224 - Shuriken Toss
+	+ 955225 - Shuriken Toss
+	+ 955226 - Shuriken Toss
+	+ 955227 - Shuriken Toss
+	+ 955228 - Shuriken Toss
+	+ 982466 - Shadow Dagger
+	+ 982499 - Shadow Dagger
+	+ 982500 - Shadow Dagger
+	+ 982501 - Shadow Dagger
+	+ 982502 - Shadow Dagger
+	+ 982503 - Shadow Dagger
+	+ 982504 - Shadow Dagger
+	- 1587629 - Shadow Dagger
+	- 1587633 - Shadow Dagger
+	+ 2304835 - Shuriken Toss
+DamageMultiplier = 1
+

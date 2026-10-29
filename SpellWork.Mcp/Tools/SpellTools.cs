@@ -355,13 +355,12 @@ namespace SpellWork.Mcp.Tools
             // Diff the serialized documents rather than comparing fields by
             // hand: this covers every field get_spell emits, including ones
             // added later, and cannot drift away from what get_spell returns.
-            // Four of the get_spell sections are left out, each for its own
-            // reason: "context" renders identically on both sides by
-            // construction (it echoes the RenderContext this call itself
-            // chose, not anything about either spell); "items" and "triggers"
-            // describe how each spell relates to the surrounding tables
-            // (equippable items, spells that trigger or are triggered by it)
-            // rather than the spell's own definition -- diffing them would
+            // Three of the get_spell sections are left out, each for its own
+            // reason: "context" describes the render (the RenderContext this
+            // call itself chose, and each spell's own SpellDifficulty row),
+            // not the spell's definition; "triggers" describes how each spell
+            // relates to the surrounding tables (spells that trigger or are
+            // triggered by it) rather than the spell's own definition -- diffing them would
             // make two near-identical spells look different for reasons that
             // have nothing to do with either spell; and "visual" is a
             // deliberate omission rather than an oversight, because a visual
@@ -373,8 +372,8 @@ namespace SpellWork.Mcp.Tools
             // them properly, one spell at a time.
             var sections = new[]
             {
-                "misc", "attributes", "effects", "powers", "targets", "reagents", "aura", "procs",
-                "scaling", "cooldowns", "levels", "interrupts", "shapeshift", "equippedItems", "totems",
+                "general", "attributes", "effects", "powers", "targets", "reagents", "aura", "procs",
+                "cooldowns", "levels", "interrupts", "shapeshift", "equippedItems", "totems",
             };
 
             // Identity stripped before the diff, not filtered out of the

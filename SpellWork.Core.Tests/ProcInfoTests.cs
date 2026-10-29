@@ -11,6 +11,30 @@ namespace SpellWork.Core.Tests
 
         public ProcInfoTests(ClientDataFixture fixture) => _fixture = fixture;
 
+        // 3.3.5: proc flags come from Spell.ProcTypeMask and decode through
+        // the CoA ProcFlags enum (SpellMgr.h), one line per set bit.
+        [Fact]
+        public void DescribeProcFlags_names_each_set_bit_from_the_CoA_enum()
+        {
+            // Omen Clearcasting's mask: bits 4, 8, 10, 12, 14, 16; bit 30 has no member.
+            var lines = ProcInfo.DescribeProcFlags(0x00015510u | (1u << 30))
+                .Split(new[] { "\r\n", "\n" }, System.StringSplitOptions.RemoveEmptyEntries);
+
+            Assert.Equal(new[]
+            {
+                "  04 PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS",
+                "  08 PROC_FLAG_DONE_SPELL_RANGED_DMG_CLASS",
+                "  10 PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_POS",
+                "  12 PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG",
+                "  14 PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS",
+                "  16 PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG",
+                "  30 (unknown bit)",
+            }, lines);
+
+            Assert.Equal("", ProcInfo.DescribeProcFlags(0));
+            Assert.Contains("24 PROC_FLAG_DEATH", ProcInfo.DescribeProcFlags(0x01000000));
+        }
+
         [SkippableFact]
         public void BuildFamilyTree_returns_one_node_per_mask_bit()
         {

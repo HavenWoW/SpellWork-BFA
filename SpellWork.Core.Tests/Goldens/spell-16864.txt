@@ -1,0 +1,91 @@
+ID - 16864 Omen of Clarity (Rank 1)
+=================================================
+Damage, healing and auto attacks have a $h% chance of causing you to enter a Clearcasting state.
+ 
+The Clearcasting state reduces the Mana, Rage or Energy cost of your next damage, healing spell or offensive ability by $16870s1%. @ext:This effect has a 2 second cooldown.:ext@
+ToolTip: Your damage spells, healing spells and auto attacks have a chance of causing you to enter a Clearcasting state.
+Category = 0, SpellIconID = 1754, ActiveIconID = 0, SpellVisualID = 4040, 0
+Family SPELLFAMILY_DRUID (7), flag [0] 0x00000000 [1] 0x00200000 [2] 0x00000000
+Modified by Subtlety (17118)
+Modified by Subtlety (17119)
+Modified by Subtlety (17120)
+Modified by Possess Spirit Immune (40282)
+Modified by Possess Drake Immune (45838)
+Modified by Omen of Fatality (285556)
+Modified by Clarity of the Mind (285561)
+Modified by Subtlety (917118)
+Modified by Subtlety (917119)
+Modified by Subtlety (917120)
+Modified by Set - (Melee Agility) Feral Druid - AQR 3P (962229)
+Modified by Lengthy Nature's Grace (975800)
+Modified by Power of Omens (986266)
+Modified by Subtlety (1117118)
+Modified by Subtlety (1117119)
+Modified by Subtlety (1117120)
+Modified by Owlkin Frenzy (1148391)
+Modified by Lengthy Nature's Grace (1202153)
+Modified by Lengthy Nature's Grace (1204337)
+Modified by Lengthy Nature's Grace (1206528)
+Modified by Lengthy Nature's Grace (1208711)
+Modified by Subtlety (1217118)
+Modified by Subtlety (1217119)
+Modified by Subtlety (1217120)
+Modified by Millhouse Mobility Mixture (1300179)
+Modified by Subtlety (1317120)
+Modified by Clarity of the Mind (1590223)
+Modified by Lengthy Nature's Grace (2175800)
+Modified by Manastorm - Orb of Corruption (2300179)
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_NATURE (8)
+DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
+PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
+=================================================
+Attributes: 0x000000C0 (SPELL_ATTR0_PASSIVE, SPELL_ATTR0_DO_NOT_DISPLAY)
+AttributesEx1: 0x00000020 (SPELL_ATTR1_ALLOW_WHILE_STEALTHED)
+AttributesEx3: 0x04000000 (SPELL_ATTR3_CAN_PROC_FROM_PROCS)
+=================================================
+Skill (Id 134) "Druid"
+    ReqSkillValue 1, Forward spell = 0, MinMaxValue (0, 0)
+Spell Level = 10, base 10, max 26
+
+Category = 0
+DispelType = 1 (DISPEL_MAGIC)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 1) "Self Only":
+    MinRange = 0 (hostile), 0 (friendly)
+    MaxRange = 0 (hostile), 0 (friendly)
+Cast Time: (ID 1): 0
+RecoveryTime: 0 ms, CategoryRecoveryTime: 0 ms
+StartRecoveryCategory = 133, StartRecoveryTime = 1500.00 ms
+Interrupt Flags: 0x00000000 (0)
+AuraInterrupt Flags: 0x00000000 (0)
+ChannelInterrupt Flags: 0x00000000 (0)
+Chance = 6, charges - 0
+=================================================
+Effect 0: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 0.00
+Targets (1, 0) (TARGET_UNIT_CASTER, 0)
+Aura Id 42 (SPELL_AURA_PROC_TRIGGER_SPELL), value = 0, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 0
+   Trigger spell (816871) Omen Clearcasting delay. Chance = 6
+DamageMultiplier = 1
+BonusMultiplier = 1
+
+Effect 1: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 0.00
+Targets (1, 0) (TARGET_UNIT_CASTER, 0)
+Aura Id 79 (SPELL_AURA_MOD_DAMAGE_PERCENT_DONE), value = 0, misc = 127 (127), miscB = 0, amplitude = 0, periodic = 0
+DamageMultiplier = 1
+BonusMultiplier = 1
+
+Effect 2: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 0.00
+Targets (1, 0) (TARGET_UNIT_CASTER, 0)
+Aura Id 136 (SPELL_AURA_MOD_HEALING_DONE_PERCENT), value = 0, misc = 127 (127), miscB = 0, amplitude = 0, periodic = 0
+DamageMultiplier = 1
+
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #4040
+  PrecastKit #36: Nature Precast Hand (LeftHand), Nature Precast Hand (RightHand)
+  CastKit #3054: Nature Cast Hand (LeftHand), Nature Cast Hand (RightHand)
+  ImpactKit #3409: EarthShock Impact Chest (Chest)

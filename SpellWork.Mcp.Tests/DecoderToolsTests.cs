@@ -44,8 +44,10 @@ namespace SpellWork.Mcp.Tests
                 el.TryGetProperty(name, out var v) ? v.GetDouble() : 0;
 
             Assert.Equal(Get(fromSpell, "basePoints"), Get(fromScaling, "base"));
-            Assert.Equal(Get(fromSpell, "valuePerResource"), Get(fromScaling, "perComboPoint"));
-            Assert.Equal(Get(fromSpell, "spellPowerCoefficient"), Get(fromScaling, "spellPowerCoefficient"));
+            Assert.Equal(Get(fromSpell, "pointsPerComboPoint"), Get(fromScaling, "perComboPoint"));
+            // get_spell reports the raw EffectBonusMultiplier; calculate_spell_scaling
+            // reports it as spellPowerCoefficient when it is non-zero.
+            Assert.Equal(Get(fromSpell, "bonusMultiplier"), Get(fromScaling, "spellPowerCoefficient"));
             Assert.Equal(fromSpell.TryGetProperty("basePointsMin", out var smin) ? smin.GetDouble() : Get(fromSpell, "basePoints"), Get(fromScaling, "min"));
             Assert.Equal(fromSpell.TryGetProperty("basePointsMax", out var smax) ? smax.GetDouble() : Get(fromSpell, "basePoints"), Get(fromScaling, "max"));
         }

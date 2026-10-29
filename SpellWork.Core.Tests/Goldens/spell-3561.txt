@@ -1,0 +1,84 @@
+ID - 3561 Teleport: Stormwind
+=================================================
+@req:818045@
+Teleports the caster to Stormwind.
+Category = 0, SpellIconID = 1491, ActiveIconID = 0, SpellVisualID = 263, 0
+Family SPELLFAMILY_MAGE (3), flag [0] 0x80000000 [1] 0x00000000 [2] 0x00000000
+Modified by Arcane Subtlety (11211)
+Modified by Magic Attunement (11247)
+Modified by Magic Attunement (12606)
+Modified by QADebug Instant Cast (27204)
+Modified by Mind Mastery (31584)
+Modified by Mind Mastery (31585)
+Modified by Mind Mastery (31586)
+Modified by Increased Healing - Intellect (32200)
+Modified by Demonic Knowledge (39576)
+Modified by Hasty Traveler - RE (81047)
+Modified by Manacharged Trigger Mana cost reduction (273839)
+Modified by Unfurling Time (283780)
+Modified by Draconic Knowledge (439576)
+Modified by Metamorphosis (454879)
+Modified by Arcane Subtlety (812592)
+Modified by Magic Attunement (912606)
+Modified by Arcane Focus (912839)
+Modified by Arcane Focus (912840)
+Modified by Manacharged Trigger Mana cost reduction (990064)
+Modified by Magic Attunement (1208936)
+Modified by Magic Attunement (1208937)
+Modified by Magic Attunement (1208938)
+Modified by Magic Attunement (1208939)
+Modified by Magic Attunement (1208940)
+Modified by Millhouse Mobility Mixture (1300180)
+Modified by Unfurling Time (1585658)
+Modified by Millhouse Mobility Mixture (2300180)
+Modified by Unfurling Time (9931269)
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_ARCANE (64)
+DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
+PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
+=================================================
+Attributes: 0x10010000 (SPELL_ATTR0_NOT_SHAPESHIFTED, SPELL_ATTR0_NOT_IN_COMBAT_ONLY_PEACEFUL)
+AttributesEx1: 0x00020000 (SPELL_ATTR1_NO_AUTOCAST_AI)
+AttributesEx3: 0x40000000 (SPELL_ATTR3_DO_NOT_DISPLAY_RANGE)
+AttributesEx7: 0x00000200 (SPELL_ATTR7_ALLIANCE_SPECIFIC_SPELL)
+=================================================
+Skill (Id 6) "Mage"
+    ReqSkillValue 1, Forward spell = 0, MinMaxValue (0, 0)
+
+Reagents:  17031 x1
+Spell Level = 1, base 1, max 0
+
+Category = 0
+DispelType = 0 (DISPEL_NONE)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 1) "Self Only":
+    MinRange = 0 (hostile), 0 (friendly)
+    MaxRange = 0 (hostile), 0 (friendly)
+Cast Time: (ID 7): 10000
+RecoveryTime: 0 ms, CategoryRecoveryTime: 0 ms
+StartRecoveryCategory = 133, StartRecoveryTime = 1500.00 ms
+Power POWER_MANA, 8%
+Interrupt Flags: 0x0000000F (SPELL_INTERRUPT_FLAG_MOVEMENT, SPELL_INTERRUPT_FLAG_PUSH_BACK, SPELL_INTERRUPT_FLAG_UNK3, SPELL_INTERRUPT_FLAG_INTERRUPT)
+AuraInterrupt Flags: 0x00000000 (0)
+ChannelInterrupt Flags: 0x00000000 (0)
+Chance = 101, charges - 0
+=================================================
+Effect 0: Id 5 (SPELL_EFFECT_TELEPORT_UNITS)
+BasePoints = 0.00
+Targets (1, 17) (TARGET_UNIT_CASTER, TARGET_DEST_DB)
+EffectAmplitude = 1
+DamageMultiplier = 1
+
+Effect 1: Id 77 (SPELL_EFFECT_SCRIPT_EFFECT)
+BasePoints = 0.00
+Targets (1, 0) (TARGET_UNIT_CASTER, 0)
+DamageMultiplier = 1
+BonusMultiplier = 1
+
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #263
+  PrecastKit #266: Magic PreCast Hand (LeftHand), Magic PreCast Hand (RightHand)
+  CastKit #267: Magic Cast Hand (LeftHand), Magic Cast Hand (RightHand)
+  ImpactKit #3394: Blink Impact Chest (Chest)
+  InstantAreaKit #9159: Blink Impact Chest (Base)

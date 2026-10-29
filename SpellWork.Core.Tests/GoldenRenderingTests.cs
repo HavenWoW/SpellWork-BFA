@@ -7,8 +7,11 @@ using Xunit;
 
 namespace SpellWork.Core.Tests
 {
-    // Requires the 5.4.8 client data (SPELLWORK_DBC_PATH / SPELLWORK_DB2_PATH).
-    // Each golden is a text and a JSON rendering at RenderContext(90, 463, difficulty).
+    // Requires the CoA 3.3.5a reference data (SPELLWORK_DBC_PATH). Each golden
+    // is a text and a JSON rendering at RenderContext(80, 0, difficulty). A
+    // golden with a difficulty renders the way a tool does: the requested id
+    // is resolved through SpellDifficultyView first, the resolved spell is
+    // rendered, and the view is passed to the serializer.
     //
     // To regenerate after an intentional rendering change, set
     // SPELLWORK_REGEN_GOLDENS=1 and run this class; the files are rewritten in
@@ -20,21 +23,22 @@ namespace SpellWork.Core.Tests
 
         public GoldenRenderingTests(ClientDataFixture fixture) => _fixture = fixture;
 
-        // (golden name, spell id, difficulty)
-        private static readonly (string Name, int Id, int Difficulty)[] Cases =
+        // (golden name, spell id, SpellDifficulty mode or null). Spec 8's
+        // coverage list; each was checked by hand against its raw Spell.dbc row.
+        private static readonly (string Name, int Id, int? Difficulty)[] Cases =
         {
-            ("spell-133", 133, 0),
-            ("spell-589", 589, 0),
-            ("spell-116", 116, 0),
-            ("spell-43093-d2", 43093, 2),
-            ("spell-42477", 42477, 0),
-            ("spell-49998", 49998, 0),
-            ("spell-15786", 15786, 0),
-            ("spell-6296", 6296, 0),
-            ("spell-16870", 16870, 0),
-            ("spell-2825", 2825, 0),
-            ("spell-6603", 6603, 0),
-            ("spell-52140", 52140, 0),   // two visual variants (SpellMisc.SpellVisualID[0] and [1])
+            ("spell-133", 133, null),       // direct damage (3 effects on CoA), missile visual
+            ("spell-589", 589, null),       // DoT (periodic damage, 3000 ms)
+            ("spell-16864", 16864, null),   // proc aura (PROC_TRIGGER_SPELL) + trigger spell 816871
+            ("spell-16870", 16870, null),   // proc flags/chance/charges from the row; triggered by 816871
+            ("spell-49998", 49998, null),   // rune cost 797, SpellCategory row 1196
+            ("spell-113-d3", 113, 3),       // SpellDifficulty row 1: mode 3 empty -> mode 1 = 142182
+            ("spell-273123", 273123, null), // two distinct visual variants (SpellVisual 128 and 8253, both resolve)
+            ("spell-2484", 2484, null),     // totem (RequiredTotemCategoryID 2, SUMMON effect)
+            ("spell-8017", 8017, null),     // item enchant (ENCHANT_ITEM_TEMPORARY in effect slot 1 only)
+            ("spell-1459", 1459, null),     // CoA-custom aura 345, radius 27
+            ("spell-3561", 3561, null),     // reagent (17031), no world DB so no item name
+            ("spell-5952", 5952, null),     // effect-major class masks: effects 0 and 2 differ, effect 1 empty
         };
 
         public static IEnumerable<object[]> GoldenFiles() => Cases.Select(c => new object[] { c.Name });
@@ -62,7 +66,7 @@ namespace SpellWork.Core.Tests
             }
         }
 
-        [SkippableTheory(Skip = "coa: Task 6")]
+        [SkippableTheory]
         [MemberData(nameof(GoldenFiles))]
         public void Rendering_matches_the_golden(string goldenName)
         {
@@ -70,13 +74,14 @@ namespace SpellWork.Core.Tests
 
             var c = Cases.Single(x => x.Name == goldenName);
             Assert.True(DBC.DBC.SpellInfoStore.ContainsKey(c.Id), $"spell {c.Id} is missing from this client data");
-            var spell = DBC.DBC.SpellInfoStore[c.Id];
-            var context = new RenderContext(90, 463, c.Difficulty);
+            var view = SpellDifficultyView.For(c.Id, c.Difficulty);
+            var spell = DBC.DBC.SpellInfoStore[view.ResolvedSpellId];
+            var context = new RenderContext(80, 0, c.Difficulty);
 
             var writer = new PlainTextSpellInfoWriter();
             spell.Write(writer, context);
             var text = writer.ToString();
-            var json = SpellInfoJsonSerializer.Serialize(spell, context);
+            var json = SpellInfoJsonSerializer.Serialize(spell, context, null, view);
 
             var dir = Path.Combine(AppContext.BaseDirectory, "Goldens");
             if (Environment.GetEnvironmentVariable("SPELLWORK_REGEN_GOLDENS") == "1")

@@ -11,17 +11,29 @@ namespace SpellWork.Core.Tests
 
         public RenderContextTests(ClientDataFixture fixture) => _fixture = fixture;
 
-        // Default is the documented fallback context (spec D5: level 90, item level 463, base difficulty).
-        
+        // Default is the documented fallback context: max level, default item level, no difficulty.
         [Fact]
-        public void Default_IsMaxLevelDefaultItemLevelBase()
+        public void Default_IsMaxLevelDefaultItemLevelNoDifficulty()
         {
             var context = RenderContext.Default;
 
             Assert.Equal(DBC.DBC.MaxLevel, context.Level);
             Assert.Equal(DBC.DBC.DefaultItemLevel, context.ItemLevel);
-            Assert.Equal(0, context.Difficulty);
+            Assert.Null(context.Difficulty);
         }
+
+        // Difficulty is a SpellDifficulty mode (0-3) or null (spec D4).
+        [Theory]
+        [InlineData(0)]
+        [InlineData(3)]
+        public void Difficulty_AcceptsModes0Through3(int mode) =>
+            Assert.Equal(mode, new RenderContext(80, 0, mode).Difficulty);
+
+        [Theory]
+        [InlineData(-1)]
+        [InlineData(4)]
+        public void Difficulty_RejectsOtherModes(int mode) =>
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new RenderContext(80, 0, mode));
 
         // Contexts carry their own level; two threads rendering at different
         // levels must never see each other's value.

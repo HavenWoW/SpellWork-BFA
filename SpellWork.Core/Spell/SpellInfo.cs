@@ -178,24 +178,6 @@ namespace SpellWork.Spell
         public int[] TotemCategories => Spell.RequiredTotemCategoryID;
         #endregion
 
-        public string ProcInfo => DescribeProcFlags(ProcFlags);
-
-        internal static string DescribeProcFlags(uint procFlags)
-        {
-            var i = 0;
-            var sb = new StringBuilder();
-            var proc = procFlags;
-            while (proc != 0)
-            {
-                if ((proc & 1) != 0)
-                    sb.AppendFormatLine("  {0}", SpellEnums.ProcFlagDesc[i]);
-                ++i;
-                proc >>= 1;
-            }
-
-            return sb.ToString();
-        }
-
         private const string Separator = "=================================================";
 
         public SpellInfo(SpellEntry spell)
@@ -243,6 +225,8 @@ namespace SpellWork.Spell
 
             rtb.AppendFormatLine(Separator);
 
+            WriteDifficulty(rtb, SpellDifficultyView.For(ID, context.Difficulty));
+
             rtb.AppendLine(Description);
             rtb.AppendFormatLineIfNotNull("ToolTip: {0}", Tooltip);
             if (DescriptionVariables != null)
@@ -259,7 +243,7 @@ namespace SpellWork.Spell
             var addline = false;
             if (DBC.DBC.SpellTriggerStore.ContainsKey(ID))
             {
-                foreach (var procSpellId in DBC.DBC.SpellTriggerStore[ID])
+                foreach (var procSpellId in DBC.DBC.SpellTriggerStore[ID].OrderBy(id => id))
                 {
                     var procname = "Spell Not Found";
                     if (DBC.DBC.SpellInfoStore.ContainsKey(procSpellId))
@@ -287,7 +271,7 @@ namespace SpellWork.Spell
 
             #region Modified by ...
             foreach (var eff in
-                    from s in DBC.DBC.SpellInfoStore.Values
+                    from s in DBC.DBC.SpellInfoStore.Values.OrderBy(x => x.ID)
                     where s.SpellFamilyName == SpellFamilyName
                     from eff in s.Effects
                     where eff != null && ((eff.Entry.EffectSpellClassMask[0] & SpellClassMask[0]) != 0 ||
@@ -361,7 +345,7 @@ namespace SpellWork.Spell
                     rtb.AppendFormatLine(@"Skill (Id {0}) ""{1}""", skill.SkillLine, line?.DisplayName);
                     rtb.AppendFormat("    ReqSkillValue {0}", skill.MinSkillLineRank);
 
-                    rtb.AppendFormat(", Forward spell = {0}, MinMaxValue ({1}, {2})", skill.SupercededBySpell,
+                    rtb.AppendFormatLine(", Forward spell = {0}, MinMaxValue ({1}, {2})", skill.SupercededBySpell,
                         skill.TrivialSkillLineRankLow, skill.TrivialSkillLineRankHigh);
                 }
             }
@@ -382,7 +366,7 @@ namespace SpellWork.Spell
 
             rtb.AppendFormatLine("Spell Level = {0}, base {1}, max {2}", SpellLevel, BaseLevel, MaxLevel);
 
-            if (EquippedItemClass != 0)
+            if (EquippedItemClass >= 0)
             {
                 rtb.AppendFormatLine("EquippedItemClass = {0} ({1})", EquippedItemClass, (ItemClass)EquippedItemClass);
 
@@ -409,7 +393,10 @@ namespace SpellWork.Spell
             rtb.AppendLine();
             var dispel = Dispel;
             var mechanic = Mechanic;
-            rtb.AppendFormatLine("Category = {0}", category);
+            if (Category != null)
+                rtb.AppendFormatLine("Category = {0}, flags 0x{1:X2} ({2})", category, Category.Flags, (SpellCategoryFlags)Category.Flags);
+            else
+                rtb.AppendFormatLine("Category = {0}", category);
             rtb.AppendFormatLine("DispelType = {0} ({1})", dispel, (DispelType)dispel);
             rtb.AppendFormatLine("Mechanic = {0} ({1})", mechanic, (Mechanics)mechanic);
 
@@ -545,7 +532,7 @@ namespace SpellWork.Spell
                     procFlags, procChance, procCharges);
                 rtb.SetDefaultStyle();
                 rtb.AppendFormatLine(Separator);
-                rtb.AppendText(DescribeProcFlags(procFlags));
+                rtb.AppendText(ProcInfo.DescribeProcFlags(procFlags));
             }
             else
                 rtb.AppendFormatLine("Chance = {0}, charges - {1}", procChance, procCharges);
@@ -557,6 +544,22 @@ namespace SpellWork.Spell
 
             WriteVisualChain(rtb, SpellVisualChainResolver.ResolveSection(ID));
         }
+
+        /// <summary>
+        /// The SpellDifficulty line(s): printed only when the spell is in a
+        /// SpellDifficulty row or a mode was requested.
+        /// </summary>
+        private static void WriteDifficulty(ISpellInfoWriter rtb, SpellDifficultyView difficulty)
+        {
+            if (difficulty.Variants.Count != 0)
+                rtb.AppendFormatLine("SpellDifficulty variants: {0}", string.Join(", ", difficulty.Variants));
+
+            if (difficulty.Requested.HasValue)
+                rtb.AppendFormatLine("Difficulty mode {0} ({1}) resolves to spell {2}",
+                    difficulty.Requested.Value, DifficultyModeNames[difficulty.Requested.Value], difficulty.ResolvedSpellId);
+        }
+
+        private static readonly string[] DifficultyModeNames = { "10N", "25N", "10H", "25H" };
 
         /// <summary>
         /// The text rendering of the visual chain. Branches on the same
@@ -707,10 +710,6 @@ namespace SpellWork.Spell
                 rtb.AppendFormat(" (includes {0:F} per level)", values.RealPointsPerLevel);
 
             rtb.AppendFormatIfNotNull(" + combo * {0:F}", values.ValuePerResource);
-
-            if (values.SpellPowerCoefficient > 1.0E-5f)
-                rtb.AppendFormat(" + spellPower * {0}", values.SpellPowerCoefficient);
-
             rtb.AppendLine();
 
             rtb.AppendFormatLine("Targets ({0}, {1}) ({2}, {3})",
@@ -726,7 +725,7 @@ namespace SpellWork.Spell
                 rtb.AppendFormatLine("SpellClassMask = {0:X8} {1:X8} {2:X8}", classMask[0], classMask[1], classMask[2]);
 
                 var skillLineAbilities = DBC.DBC.SkillLineAbility?.Values ?? Enumerable.Empty<SkillLineAbilityEntry>();
-                var query = from spell in DBC.DBC.SpellInfoStore.Values
+                var query = from spell in DBC.DBC.SpellInfoStore.Values.OrderBy(x => x.ID)
                             where spell.SpellFamilyName == SpellFamilyName && spell.SpellClassMask.ContainsElement(classMask)
                             join sk in skillLineAbilities on spell.ID equals sk.Spell into temp
                             from skill in temp.DefaultIfEmpty(new SkillLineAbilityEntry())
@@ -771,7 +770,7 @@ namespace SpellWork.Spell
                     {
                         rtb.AppendFormatLine("Charges - {0}", triggerSpell.ProcCharges);
                         rtb.AppendLine(Separator);
-                        rtb.AppendLine(triggerSpell.ProcInfo);
+                        rtb.AppendLine(ProcInfo.DescribeProcFlags(triggerSpell.ProcFlags));
                         rtb.AppendLine(Separator);
                     }
                 }
@@ -786,6 +785,7 @@ namespace SpellWork.Spell
                 rtb.AppendFormatLine("Effect Mechanic = {0} ({1})", effect.EffectMechanic, (Mechanics)effect.EffectMechanic);
 
             rtb.AppendFormatLineIfNotNull("DamageMultiplier = {0}", effect.EffectChainAmplitude);
+            rtb.AppendFormatLineIfNotNull("BonusMultiplier = {0}", effect.EffectBonusCoefficient);
             rtb.AppendLine();
         }
 

@@ -187,6 +187,38 @@ namespace SpellWork.Database
             return result;
         }
 
+        /// <summary>
+        /// item_template names by entry, for reagent names (3.3.5 Item.dbc
+        /// has none). Ids are bound as parameters; an id with no row is
+        /// simply absent from the result.
+        /// </summary>
+        public Dictionary<int, string> SelectItemNames(IEnumerable<int> entries)
+        {
+            var ids = new List<int>(new HashSet<int>(entries ?? new int[0]));
+            ids.RemoveAll(id => id <= 0);
+
+            var names = new Dictionary<int, string>();
+            if (ids.Count == 0)
+                return names;
+
+            var parameters = new (string Name, object Value)[ids.Count];
+            var placeholders = new string[ids.Count];
+            for (var i = 0; i < ids.Count; i++)
+            {
+                placeholders[i] = "@e" + i;
+                parameters[i] = (placeholders[i], ids[i]);
+            }
+
+            var result = SelectRows(
+                "SELECT `entry`, `name` FROM `item_template` WHERE `entry` IN (" + string.Join(", ", placeholders) + ")",
+                ids.Count, parameters);
+
+            foreach (var row in result.Rows)
+                names[Convert.ToInt32(row["entry"])] = row["name"] as string;
+
+            return names;
+        }
+
         private static string UniqueColumnName(List<string> taken, string name)
         {
             if (string.IsNullOrEmpty(name))

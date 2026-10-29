@@ -1,0 +1,53 @@
+ID - 142182 Chains of Ice (Rank 1)
+=================================================
+SpellDifficulty variants: 113, 142182, 369533
+Difficulty mode 3 (25H) resolves to spell 142182
+Forms icy chains around the enemy, locking the target in place for $d.
+ToolTip: Rooted in place.
+Category = 0, SpellIconID = 180, ActiveIconID = 0, SpellVisualID = 14, 0
+Family SPELLFAMILY_GENERIC (0), flag [0] 0x00000000 [1] 0x00000000 [2] 0x00000000
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_FROST (16)
+DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
+PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
+=================================================
+Attributes: 0x40010000 (SPELL_ATTR0_NOT_SHAPESHIFTED, SPELL_ATTR0_HEARTBEAT_RESIST)
+=================================================
+Spell Level = 10, base 10, max 0
+
+Category = 0
+DispelType = 1 (DISPEL_MAGIC)
+Mechanic = 7 (MECHANIC_ROOT)
+SpellRange: (Id 4) "Medium Range":
+    MinRange = 0 (hostile), 0 (friendly)
+    MaxRange = 30 (hostile), 30 (friendly)
+Cast Time: (ID 16): 1500
+RecoveryTime: 0 ms, CategoryRecoveryTime: 0 ms
+StartRecoveryCategory = 133, StartRecoveryTime = 1500.00 ms
+Duration 8000, 0, 8000
+Power POWER_MANA, Base 20
+Interrupt Flags: 0x0000000F (SPELL_INTERRUPT_FLAG_MOVEMENT, SPELL_INTERRUPT_FLAG_PUSH_BACK, SPELL_INTERRUPT_FLAG_UNK3, SPELL_INTERRUPT_FLAG_INTERRUPT)
+AuraInterrupt Flags: 0x00000000 (0)
+ChannelInterrupt Flags: 0x00000000 (0)
+Proc flag 0x000A22A8, chance: 100%, charges: 0
+=================================================
+  03 PROC_FLAG_TAKEN_MELEE_AUTO_ATTACK
+  05 PROC_FLAG_TAKEN_SPELL_MELEE_DMG_CLASS
+  07 PROC_FLAG_TAKEN_RANGED_AUTO_ATTACK
+  09 PROC_FLAG_TAKEN_SPELL_RANGED_DMG_CLASS
+  13 PROC_FLAG_TAKEN_SPELL_NONE_DMG_CLASS_NEG
+  17 PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG
+  19 PROC_FLAG_TAKEN_PERIODIC
+=================================================
+Effect 0: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 0.00
+Targets (6, 0) (TARGET_UNIT_TARGET_ENEMY, 0)
+Aura Id 26 (SPELL_AURA_MOD_ROOT), value = 0, misc = 0 (0), miscB = 0, amplitude = 0, periodic = 0
+DamageMultiplier = 1
+
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #14
+  PrecastKit #195: Ice Precast Low Hand (LeftHand), Ice Precast Low Hand (RightHand)
+  CastKit #203: Ice Precast Low Hand (LeftHand), Ice Precast Low Hand (RightHand)
+  StateKit #73: Ice Precast Uber Head (Head), Frost Nova state (Base)

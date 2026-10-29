@@ -1,0 +1,94 @@
+ID - 2484 Earthbind Totem
+=================================================
+Summons an Earthbind Totem with $s1 health at the feet of the caster for $d that slows the movement speed of enemies within $3600a1 yards.@ext:This ability is usable while shapeshifted.:ext@
+Category = 0, SpellIconID = 686, ActiveIconID = 0, SpellVisualID = 264, 0
+Family SPELLFAMILY_SHAMAN (11), flag [0] 0x20000000 [1] 0x00000000 [2] 0x00000020
+Modified by Earth's Grasp (16043)
+Modified by Earth's Grasp (16130)
+Modified by Totemic Focus (16173)
+Modified by Totemic Focus (16222)
+Modified by Totemic Focus (16223)
+Modified by Totemic Focus (16224)
+Modified by Totemic Focus (16225)
+Modified by Ancestral Knowledge (17485)
+Modified by Ancestral Knowledge (17486)
+Modified by Ancestral Knowledge (17487)
+Modified by Totemic Energy (28818)
+Modified by Cataclysm Ele Shaman T5 4 set bonus (37237)
+Modified by Earth's Grasp (916043)
+Modified by Earth's Grasp (916130)
+Modified by Totemic Focus (916173)
+Modified by Totemic Focus (916222)
+Modified by Earth's Grasp (1116043)
+Modified by Earth's Grasp (1116130)
+Modified by Totemic Focus (1116173)
+Modified by Totemic Focus (1116222)
+Modified by Totemic Focus (1116223)
+Modified by Totemic Focus (1116224)
+Modified by Totemic Focus (1116225)
+Modified by Totemic Energy (1128818)
+Modified by Mental Quickness (1130812)
+Modified by Mental Quickness (1130813)
+Modified by Mental Quickness (1130814)
+Modified by Earth's Grasp (1209216)
+Modified by Earth's Grasp (1209217)
+Modified by Earth's Grasp (1209218)
+Modified by Earth's Grasp (1209219)
+Modified by Earth's Grasp (1209220)
+Modified by Totemic Focus (1209226)
+Modified by Totemic Focus (1209227)
+Modified by Totemic Focus (1209228)
+Modified by Totemic Focus (1209229)
+Modified by Totemic Focus (1209230)
+Modified by Earth's Grasp (1216043)
+Modified by Earth's Grasp (1216130)
+Modified by Totemic Focus (1216173)
+Modified by Totemic Focus (1216222)
+Modified by Totemic Focus (1216223)
+Modified by Totemic Focus (1216224)
+Modified by Totemic Focus (1216225)
+Modified by Millhouse Mobility Mixture (1300185)
+Modified by Earth's Grasp (1316130)
+Modified by Totemic Focus (1316225)
+Modified by Millhouse Mobility Mixture (2300185)
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_NORMAL (1)
+DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
+PreventionType = 0 (SPELL_PREVENTION_TYPE_NONE)
+=================================================
+AttributesEx2: 0x40000000 (SPELL_ATTR2_ACTIVE_THREAT)
+AttributesEx6: 0x02000000 (SPELL_ATTR6_DOESNT_RESET_SWING_TIMER_IF_INSTANT)
+AttributesEx7: 0x00000020 (SPELL_ATTR7_CAN_BE_MULTI_CAST)
+=================================================
+Skill (Id 373) "Shaman"
+    ReqSkillValue 1, Forward spell = 0, MinMaxValue (0, 0)
+Totems: TotemCategory [2, 0], Totem (item) [0, 0]
+Spell Level = 10, base 6, max 0
+
+Category = 0
+DispelType = 0 (DISPEL_NONE)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 1) "Self Only":
+    MinRange = 0 (hostile), 0 (friendly)
+    MaxRange = 0 (hostile), 0 (friendly)
+Cast Time: (ID 1): 0
+RecoveryTime: 15000 ms, CategoryRecoveryTime: 0 ms
+StartRecoveryCategory = 133, StartRecoveryTime = 1000.00 ms
+Duration 45000, 0, 45000
+Power POWER_MANA, 5%
+Interrupt Flags: 0x00000000 (0)
+AuraInterrupt Flags: 0x00000000 (0)
+ChannelInterrupt Flags: 0x00000000 (0)
+Chance = 101, charges - 0
+=================================================
+Effect 0: Id 28 (SPELL_EFFECT_SUMMON)
+BasePoints = 5.00
+Targets (41, 0) (TARGET_DEST_CASTER_FRONT_RIGHT, 0)
+EffectMiscValueA = 2630
+EffectMiscValueB = 81
+DamageMultiplier = 1
+
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #264
+  CastKit #352: (no effects)

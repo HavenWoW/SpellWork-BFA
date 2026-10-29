@@ -44,7 +44,7 @@ namespace SpellWork.Mcp.Tools
 
             // Clamp to the client's level range.
             var clampedLevel = Math.Min(Math.Max(level, 1u), (uint)SpellWork.DBC.DBC.MaxLevel);
-            var context = new SpellWork.Spell.RenderContext(clampedLevel, itemLevel, (int)(difficulty ?? 0));
+            var context = new SpellWork.Spell.RenderContext(clampedLevel, itemLevel, (int?)difficulty);
 
             var effects = new List<object>();
             foreach (var resolved in spell.Effects)

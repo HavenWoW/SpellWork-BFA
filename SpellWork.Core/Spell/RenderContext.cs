@@ -10,12 +10,15 @@ namespace SpellWork.Spell
     public sealed class RenderContext
     {
         /// <param name="difficulty">
-        /// A Difficulty.dbc id; 0 is the base difficulty (no Difficulty row).
+        /// The requested SpellDifficulty mode (0 = 10N, 1 = 25N, 2 = 10H,
+        /// 3 = 25H), or null for no difficulty resolution (spec D4).
         /// </param>
-        public RenderContext(uint level, uint itemLevel, int difficulty)
+        public RenderContext(uint level, uint itemLevel, int? difficulty = null)
         {
-            // Spec 5.5: levels clamp to 1..MaxLevel so gtSpellScaling keys never
-            // spill into a neighbouring class row.
+            if (difficulty.HasValue && (difficulty.Value < 0 || difficulty.Value >= DBC.SpellDifficultyResolver.ModeCount))
+                throw new ArgumentOutOfRangeException(nameof(difficulty), difficulty, "SpellDifficulty mode is 0-3 (10N, 25N, 10H, 25H).");
+
+            // Levels clamp to 1..MaxLevel (CoA MAX_LEVEL 100).
             Level = Math.Min(Math.Max(level, 1u), (uint)DBC.DBC.MaxLevel);
             ItemLevel = itemLevel;
             Difficulty = difficulty;
@@ -23,10 +26,12 @@ namespace SpellWork.Spell
 
         public uint Level { get; }
         public uint ItemLevel { get; }
-        public int Difficulty { get; }
 
-        /// <summary>Max level, <see cref="DBC.DBC.DefaultItemLevel"/>, base difficulty.</summary>
+        /// <summary>The requested SpellDifficulty mode (0-3), or null when none was requested.</summary>
+        public int? Difficulty { get; }
+
+        /// <summary>Max level, <see cref="DBC.DBC.DefaultItemLevel"/>, no difficulty.</summary>
         public static RenderContext Default =>
-            new RenderContext(DBC.DBC.MaxLevel, DBC.DBC.DefaultItemLevel, 0);
+            new RenderContext(DBC.DBC.MaxLevel, DBC.DBC.DefaultItemLevel);
     }
 }

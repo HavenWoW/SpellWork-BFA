@@ -1,133 +1,434 @@
-ID - 16870 Clearcasting
+ID - 16870 Omen Clearcasting
 =================================================
-Your next cast-time Druid class damaging or healing spell or offensive feral ability has its Mana, Rage or Energy cost reduced by $s1%. Does not affect Nourish.
-ToolTip: Your next cast-time Druid class damaging or healing spell or offensive feral ability has its Mana, Rage or Energy cost reduced by $s1%.
+The Druid's damage spells, healing spells and auto attacks have a chance of causing the caster to enter a Clearcasting state.  The Clearcasting state reduces the Mana, Rage or Energy cost of your next damage spell, healing spell or offensive ability by $16870s1%.
+ToolTip: Your next damage or healing spell or offensive ability has its mana, rage or energy cost reduced by $s1%.
 Triggered by spell: (64752) Item - Druid T8 Feral 2P Bonus
-Triggered by spell: (113043) Omen of Clarity
+Triggered by spell: (270815) clearcasting charge removal
+Triggered by spell: (816862) Omen of Clarity
+Triggered by spell: (816863) Omen of Clarity
+Triggered by spell: (816864) Omen of Clarity
+Triggered by spell: (816866) Omen of Clarity
+Triggered by spell: (816871) Omen Clearcasting delay
+Triggered by spell: (909063) Combat Clarity SLS
+Triggered by spell: (1568088) clearcasting charge removal
 =================================================
-Category = 0, SpellIconID = 212, ActiveIconID = 0, SpellVisualID = 2736
-Family SPELLFAMILY_DRUID (7), flag [0] 0x00000000 [1] 0x00000000 [2] 0x00000000 [3] 0x00040000
+Category = 0, SpellIconID = 212, ActiveIconID = 0, SpellVisualID = 2736, 0
+Family SPELLFAMILY_DRUID (7), flag [0] 0x00000040 [1] 0x00200000 [2] 0x00000000
+Modified by Tree of Life (5420)
+Modified by Moonglow (16845)
+Modified by Moonglow (16846)
+Modified by Moonglow (16847)
+Modified by Nature's Bounty (17074)
+Modified by Nature's Bounty (17075)
+Modified by Nature's Bounty (17076)
+Modified by Nature's Bounty (17077)
+Modified by Nature's Bounty (17078)
+Modified by Natural Alacrity (17116)
+Modified by Subtlety (17118)
+Modified by Subtlety (17119)
+Modified by Subtlety (17120)
+Modified by Barkskin (22812)
+Modified by Nimble Healing Touch (24542)
+Modified by Dreamwalker (28743)
+Modified by Regrowth (28744)
+Modified by Corrupted Mind (29195)
+Modified by Nature's Swiftness (29274)
+Modified by Unstable Power (29275)
+Modified by Nature's Rejuvenation (33886)
+Modified by Nature's Rejuvenation (33887)
+Modified by Nature's Rejuvenation (33888)
+Modified by Tree of Life (34123)
+Modified by Nurture (37316)
+Modified by Mend (37325)
+Modified by Healing Trance (37721)
+Modified by Reduced Regrowth Cost (37737)
+Modified by Blessing of Lower City (37878)
+Modified by Improved Party Auras (39926)
+Modified by Possess Spirit Immune (40282)
+Modified by Druid Tier 6 Trinket (40442)
+Modified by Ron's Test Buff (40803)
+Modified by Possess Drake Immune (45838)
+Modified by Moonkin Starfire Bonus (46832)
+Modified by Restoration Regrowth Bonus (46834)
+Modified by Master Shapeshifter (48422)
+Modified by Maelstrom Weapon (53819)
+Modified by Glyph of Regrowth (54743)
+Modified by Nature's Splendor (57865)
+Modified by Nature's Splendor (57865)
+Modified by Healing Trance (60512)
+Modified by Tree of Life Healing Boost (62111)
+Modified by Predator's Swiftness (69369)
+Modified by Barkskin (81011)
+Modified by Regenerative Regrowth - RE (81045)
+Modified by Regenerative Regrowth - RE (81045)
+Modified by Regenerative Regrowth - RE (81045)
+Modified by Tree of Wrath (86436)
+Modified by Steady Regrowth (92955)
+Modified by Glyph of Regrowth (118006)
+Modified by Nature's Bounty (217078)
+Modified by Nature's Bounty (217079)
+Modified by Reduced Regrowth Cost (237737)
+Modified by Words of Healing SLS Druid (270529)
+Modified by Tidecaller's Boon (271817)
+Modified by Blooming Strength (272217)
+Modified by Seed of Life (273346)
+Modified by Predator's Swiftness (275762)
+Modified by Predator's Swiftness (275762)
+Modified by Grove Ranger (276891)
+Modified by Grove Ranger (276930)
+Modified by Natural Synergy (283326)
+Modified by Natural Synergy (283326)
+Modified by Seeded Shield (283327)
+Modified by Seeded Shield (283327)
+Modified by Omen of Fatality (285556)
+Modified by Clarity of the Mind (285561)
+Modified by Rampant Regrowth (285799)
+Modified by Reduced Regrowth Cost (337737)
+Modified by Barkskin (354123)
+Modified by Celestial Focus (411132)
+Modified by Copious Power (414016)
+Modified by Nature's Blessing (430867)
+Modified by Nature's Blessing (430868)
+Modified by Nature's Blessing (430869)
+Modified by Aroy Natural Alacrity (617116)
+Modified by Flourish (760174)
+Modified by Naturalist (Character Creation) (809897)
+Modified by Genesis (857810)
+Modified by Nature's Splendor (857865)
+Modified by Nature's Splendor (857865)
+Modified by Nature's Splendor (857866)
+Modified by Nature's Splendor capstone sls (857867)
+Modified by Shield Nerf: Druid (874994)
+Modified by Meditation Druid SLS (914776)
+Modified by Moonglow (916845)
+Modified by Moonglow (916846)
+Modified by Moonglow (916847)
+Modified by Nature's Focus (917063)
+Modified by Nature's Focus (917065)
+Modified by Nature's Focus (917066)
+Modified by Nature's Bounty (917074)
+Modified by Nature's Bounty (917075)
+Modified by Nature's Bounty (917076)
+Modified by Nature's Bounty (917077)
+Modified by Nature's Bounty (917078)
+Modified by Gift of Nature (917104)
+Modified by Gift of Nature (917104)
+Modified by Subtlety (917118)
+Modified by Subtlety (917118)
+Modified by Subtlety (917119)
+Modified by Subtlety (917119)
+Modified by Subtlety (917120)
+Modified by Subtlety (917120)
+Modified by Fallow Soil (920271)
+Modified by Gift of Nature (924943)
+Modified by Gift of Nature (924943)
+Modified by Gift of Nature (924944)
+Modified by Gift of Nature (924944)
+Modified by Gift of Nature (924945)
+Modified by Gift of Nature (924945)
+Modified by Gift of Nature (924946)
+Modified by Gift of Nature (924946)
+Modified by Empowered Rejuvenation (933887)
+Modified by Empowered Rejuvenation (933888)
+Modified by Empowered Rejuvenation (933889)
+Modified by Empowered Rejuvenation (933890)
+Modified by Natural Synergy (954039)
+Modified by Natural Synergy (954039)
+Modified by Natural Synergy Regrowth Crit (954040)
+Modified by Graceful Recovery (954143)
+Modified by Redeeming Power (954168)
+Modified by Genesis (957810)
+Modified by Genesis (957811)
+Modified by Genesis (957812)
+Modified by Genesis (957813)
+Modified by Genesis (957814)
+Modified by Nature's Splendor (957865)
+Modified by Nature's Splendor regrowth sls (957866)
+Modified by Nature's Splendor regrowth sls (957866)
+Modified by Nature's Splendor regrowth sls (957867)
+Modified by Nature's Splendor regrowth sls (957867)
+Modified by Nature's Splendor regrowth sls (957868)
+Modified by Nature's Splendor regrowth sls (957868)
+Modified by Set - (Melee Agility) Feral Druid - AQR 3P (962229)
+Modified by Will of Elune (965211)
+Modified by Will of Elune (965213)
+Modified by Seed of Life (965937)
+Modified by Seed of Life (965937)
+Modified by Blooming Life (966754)
+Modified by Druidic Rites (970065)
+Modified by Druidic Rites (970066)
+Modified by Druidic Rites (970067)
+Modified by Druidic Rites (970068)
+Modified by Druidic Rites (970069)
+Modified by Staff Mastery: Druid (974994)
+Modified by Lengthy Nature's Grace (975800)
+Modified by Spring of Life (977721)
+Modified by Tidecaller's Boon (977911)
+Modified by Flow of Life (977962)
+Modified by Nightmare SLS (978516)
+Modified by Nightmare SLS (978516)
+Modified by Contemplating Growth (978532)
+Modified by Contemplating Growth (978532)
+Modified by Contemplating Growth (978532)
+Modified by Predatory Nature (979055)
+Modified by Predatory Nature (979056)
+Modified by Predatory Nature (979057)
+Modified by Words of Healing SLS Druid (979780)
+Modified by Predator's Swiftness (982819)
+Modified by Predator's Swiftness (982819)
+Modified by Staff Mastery: Druid (984834)
+Modified by Tidal Waves CH SLS (986133)
+Modified by Blooming Power (986153)
+Modified by Power of Omens (986266)
+Modified by Decayed Growth (986278)
+Modified by Tidecaller's Gift (990119)
+Modified by Grove Ranger (997542)
+Modified by Rejuvenation (1100774)
+Modified by Rejuvenation (1101058)
+Modified by Rejuvenation (1101430)
+Modified by Rejuvenation (1102090)
+Modified by Rejuvenation (1102091)
+Modified by Rejuvenation (1103627)
+Modified by Tree of Life (1105420)
+Modified by Rejuvenation (1108910)
+Modified by Rejuvenation (1109839)
+Modified by Rejuvenation (1109840)
+Modified by Rejuvenation (1109841)
+Modified by Moonglow (1116845)
+Modified by Moonglow (1116846)
+Modified by Moonglow (1116847)
+Modified by Clearcasting (1116870)
+Modified by Clearcasting (1116870)
+Modified by Clearcasting (1116870)
+Modified by Nature's Focus (1117063)
+Modified by Nature's Focus (1117065)
+Modified by Nature's Focus (1117066)
+Modified by Nature's Bounty (1117074)
+Modified by Nature's Bounty (1117075)
+Modified by Nature's Bounty (1117076)
+Modified by Nature's Bounty (1117077)
+Modified by Nature's Bounty (1117078)
+Modified by Gift of Nature (1117104)
+Modified by Gift of Nature (1117104)
+Modified by Nature's Swiftness (1117116)
+Modified by Subtlety (1117118)
+Modified by Subtlety (1117118)
+Modified by Subtlety (1117119)
+Modified by Subtlety (1117119)
+Modified by Subtlety (1117120)
+Modified by Subtlety (1117120)
+Modified by Faster Regrowth Cast (1121872)
+Modified by Barkskin (1122812)
+Modified by Nimble Healing Touch (1124542)
+Modified by Gift of Nature (1124943)
+Modified by Gift of Nature (1124943)
+Modified by Gift of Nature (1124944)
+Modified by Gift of Nature (1124944)
+Modified by Gift of Nature (1124945)
+Modified by Gift of Nature (1124945)
+Modified by Gift of Nature (1124946)
+Modified by Gift of Nature (1124946)
+Modified by Rejuvenation (1125299)
+Modified by Rejuvenation (1126981)
+Modified by Rejuvenation (1126982)
+Modified by Dreamwalker (1128743)
+Modified by Regrowth (1128744)
+Modified by Corrupted Mind (1129195)
+Modified by Nature's Swiftness (1129274)
+Modified by Empowered Rejuvenation (1133886)
+Modified by Empowered Rejuvenation (1133887)
+Modified by Empowered Rejuvenation (1133888)
+Modified by Empowered Rejuvenation (1133889)
+Modified by Empowered Rejuvenation (1133890)
+Modified by Restoration Mastery (1134978)
+Modified by Restoration Mastery (1134978)
+Modified by Regrowth Bonus (1137313)
+Modified by Feral Regrowth Bonus (1137315)
+Modified by Nurture (1137316)
+Modified by Moonkin Regrowth Bonus (1137324)
+Modified by Mend (1137325)
+Modified by Healing Trance (1137721)
+Modified by Reduced Regrowth Cost (1137737)
+Modified by Blessing of Lower City (1137878)
+Modified by Improved Party Auras (1139926)
+Modified by Druid Tier 6 Trinket (1140442)
+Modified by Ron's Test Buff (1140803)
+Modified by Moonkin Starfire Bonus (1146832)
+Modified by Restoration Regrowth Bonus (1146834)
+Modified by Owlkin Frenzy (1148391)
+Modified by Master Shapeshifter (1148422)
+Modified by Rejuvenation (1148440)
+Modified by Rejuvenation (1148441)
+Modified by Glyph of Regrowth (1154743)
+Modified by Glyph of Regrowth (1154743)
+Modified by Genesis (1157810)
+Modified by Genesis (1157811)
+Modified by Genesis (1157812)
+Modified by Genesis (1157813)
+Modified by Genesis (1157814)
+Modified by Improved Insect Swarm (1157849)
+Modified by Improved Insect Swarm (1157850)
+Modified by Improved Insect Swarm (1157851)
+Modified by Nature's Splendor (1157865)
+Modified by Healing Trance (1160512)
+Modified by Tree of Life Healing Boost (1162111)
+Modified by Predator's Swiftness (1169369)
+Modified by Symbiotic Nature (1180790)
+Modified by Lengthy Nature's Grace (1202153)
+Modified by Lengthy Nature's Grace (1204337)
+Modified by Tree of Life (1205420)
+Modified by Lengthy Nature's Grace (1206528)
+Modified by Lengthy Nature's Grace (1208711)
+Modified by Moonglow (1209291)
+Modified by Moonglow (1209292)
+Modified by Moonglow (1209293)
+Modified by Moonglow (1209294)
+Modified by Moonglow (1209295)
+Modified by Nature's Bounty (1209346)
+Modified by Nature's Bounty (1209347)
+Modified by Nature's Bounty (1209348)
+Modified by Nature's Bounty (1209349)
+Modified by Nature's Bounty (1209350)
+Modified by Gift of Nature (1209351)
+Modified by Gift of Nature (1209351)
+Modified by Gift of Nature (1209352)
+Modified by Gift of Nature (1209352)
+Modified by Gift of Nature (1209353)
+Modified by Gift of Nature (1209353)
+Modified by Gift of Nature (1209354)
+Modified by Gift of Nature (1209354)
+Modified by Gift of Nature (1209355)
+Modified by Gift of Nature (1209355)
+Modified by Genesis (1210155)
+Modified by Genesis (1210156)
+Modified by Genesis (1210157)
+Modified by Genesis (1210158)
+Modified by Genesis (1210159)
+Modified by Will of Elune (1210220)
+Modified by Will of Elune (1210221)
+Modified by Will of Elune (1210222)
+Modified by Will of Elune (1210223)
+Modified by Will of Elune (1210224)
+Modified by Druidic Rites (1210380)
+Modified by Druidic Rites (1210381)
+Modified by Druidic Rites (1210382)
+Modified by Druidic Rites (1210383)
+Modified by Druidic Rites (1210384)
+Modified by Moonglow (1216845)
+Modified by Moonglow (1216846)
+Modified by Moonglow (1216847)
+Modified by Clearcasting (1216870)
+Modified by Nature's Grace (1216886)
+Modified by Nature's Focus (1217063)
+Modified by Nature's Focus (1217065)
+Modified by Nature's Focus (1217066)
+Modified by Nature's Bounty (1217074)
+Modified by Nature's Bounty (1217075)
+Modified by Nature's Bounty (1217076)
+Modified by Nature's Bounty (1217077)
+Modified by Nature's Bounty (1217078)
+Modified by Gift of Nature (1217104)
+Modified by Gift of Nature (1217104)
+Modified by Nature's Swiftness (1217116)
+Modified by Subtlety (1217118)
+Modified by Subtlety (1217118)
+Modified by Subtlety (1217119)
+Modified by Subtlety (1217119)
+Modified by Subtlety (1217120)
+Modified by Subtlety (1217120)
+Modified by Gift of Nature (1224943)
+Modified by Gift of Nature (1224943)
+Modified by Gift of Nature (1224944)
+Modified by Gift of Nature (1224944)
+Modified by Gift of Nature (1224945)
+Modified by Gift of Nature (1224945)
+Modified by Gift of Nature (1224946)
+Modified by Gift of Nature (1224946)
+Modified by Empowered Rejuvenation (1233886)
+Modified by Empowered Rejuvenation (1233887)
+Modified by Empowered Rejuvenation (1233888)
+Modified by Empowered Rejuvenation (1233889)
+Modified by Empowered Rejuvenation (1233890)
+Modified by Genesis (1257810)
+Modified by Genesis (1257811)
+Modified by Genesis (1257812)
+Modified by Genesis (1257813)
+Modified by Genesis (1257814)
+Modified by Improved Insect Swarm (1257849)
+Modified by Improved Insect Swarm (1257850)
+Modified by Improved Insect Swarm (1257851)
+Modified by Nature's Splendor (1257865)
+Modified by Predator's Swiftness (1269369)
+Modified by Millhouse Mobility Mixture (1300179)
+Modified by Moonglow (1316847)
+Modified by Nature's Focus (1317066)
+Modified by Subtlety (1317120)
+Modified by Subtlety (1317120)
+Modified by Reduced Regrowth Cost (1337737)
+Modified by Genesis (1357814)
+Modified by Nature's Splendor (1357865)
+Modified by Ironfur (1398180)
+Modified by Stonebark (1567851)
+Modified by Tree of Life (1568372)
+Modified by Tree of Wrath Removal (1568397)
+Modified by Tidecaller's Boon (1569303)
+Modified by Blooming Power (1570131)
+Modified by Seed of Life (1571863)
+Modified by Grove Ranger (1578221)
+Modified by Clarity of the Mind (1590223)
+Modified by Flourish (2110174)
+Modified by Lengthy Nature's Grace (2175800)
+Modified by Manastorm - Orb of Corruption (2300179)
 
 SpellSchoolMask = SPELL_SCHOOL_MASK_NATURE (8)
 DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
 PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
 =================================================
-Attributes: 0x00040000 (SPELL_ATTR0_DONT_AFFECT_SHEATH_STATE)
-AttributesEx1: 0x00000400 (SPELL_ATTR1_NO_THREAT)
-AttributesEx2: 0x00000004 (SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS)
-AttributesEx3: 0x40030000 (SPELL_ATTR3_CANT_TRIGGER_PROC, SPELL_ATTR3_NO_INITIAL_AGGRO, SPELL_ATTR3_DONT_DISPLAY_RANGE)
-AttributesEx4: 0x00008000 (SPELL_ATTR4_UNK15)
-AttributesEx6: 0x00000040 (SPELL_ATTR6_USE_SPELL_CAST_EVENT)
-AttributesEx12: 0x00000001 (SPELL_ATTR12_UNK0)
+Attributes: 0x00040000 (SPELL_ATTR0_DO_NOT_SHEATH)
+AttributesEx1: 0x00000020 (SPELL_ATTR1_ALLOW_WHILE_STEALTHED)
+AttributesEx2: 0x00000004 (SPELL_ATTR2_IGNORE_LINE_OF_SIGHT)
+AttributesEx3: 0x40020000 (SPELL_ATTR3_SUPPRESS_TARGET_PROCS, SPELL_ATTR3_DO_NOT_DISPLAY_RANGE)
 =================================================
-Skill (Id 798) "Druid"
-    ReqSkillValue 0, Forward spell = 0, MinMaxValue (0, 0)Spell Level = 10, base 10, max 0
+Spell Level = 10, base 10, max 0
 
 Category = 0
 DispelType = 1 (DISPEL_MAGIC)
 Mechanic = 0 (MECHANIC_NONE)
 SpellRange: (Id 6) "Vision Range":
-    MinRangeNegative = 0, MinRangePositive = 0
-    MaxRangeNegative = 100, MaxRangePositive = 100
+    MinRange = 0 (hostile), 0 (friendly)
+    MaxRange = 100 (hostile), 100 (friendly)
 Cast Time: (ID 1): 0
 Duration 15000, 0, 15000
-Proc flag 0x00015550, chance: 100%, charges: 1, cooldown: 0
+Interrupt Flags: 0x00000000 (0)
+AuraInterrupt Flags: 0x00000000 (0)
+ChannelInterrupt Flags: 0x00000000 (0)
+Proc flag 0x00015510, chance: 100%, charges: 1
 =================================================
-  04 Successful attack by Spell that use melee weapon
-  06 Successful Ranged attack(and wand spell cast)
-  08 Successful Ranged attack by Spell that use ranged weapon
-  10 Successful positive spell hit
-  12 Successful negative spell cast
-  14 Successful cast positive magic spell
-  16 Successful damage from harmful magic spell cast
+  04 PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS
+  08 PROC_FLAG_DONE_SPELL_RANGED_DMG_CLASS
+  10 PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_POS
+  12 PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG
+  14 PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS
+  16 PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG
 =================================================
 Effect 0: Id 6 (SPELL_EFFECT_APPLY_AURA)
-Difficulty: Id 0 (DIFFICULTY_NONE)
 BasePoints = -100.00
 Targets (1, 0) (TARGET_UNIT_CASTER, 0)
-Aura Id 108 (SPELL_AURA_ADD_PCT_MODIFIER), value = -100, misc = 14 (SPELLMOD_COST), miscB = 0, amplitude = 0, periodic = 0
-SpellClassMask = 0083B865 001007C0 13C40400 00000000
-	+ 779 - Swipe
-	- 1079 - Rip
-	+ 1822 - Rake
-	- 2912 - Starfire
-	+ 5176 - Wrath
-	+ 5185 - Healing Touch
-	- 5211 - Mighty Bash
-	- 5221 - Shred
-	- 6785 - Ravage
-	+ 6807 - Maul
-	- 8936 - Regrowth
-	+ 9005 - Pounce
-	+ 9007 - Pounce Bleed
-	- 21668 - Starfire
-	+ 22568 - Ferocious Bite
-	+ 22570 - Maim
-	- 24187 - Claw
-	- 24331 - Rake
-	- 24332 - Rake
-	- 27554 - Swipe
-	- 27555 - Shred
-	- 27556 - Rake
-	- 27557 - Ferocious Bite
-	- 27638 - Rake
-	- 31041 - Mangle
-	- 31289 - Claw
-	+ 33745 - Lacerate
-	- 33831 - Force of Nature
-	+ 33876 - Mangle
-	+ 33878 - Mangle
-	- 35243 - Starfire
-	- 36332 - Rake
-	- 37124 - Starfall
-	- 38935 - Starfire
-	- 39449 - Pounce
-	- 40344 - Starfire
-	- 41349 - L4 Arcane Charge
-	- 41357 - L1 Arcane Charge
-	- 41360 - L5 Arcane Charge
-	- 51772 - Claw
-	- 53498 - Swipe
-	- 57657 - Mangle
-	- 59988 - Mangle
-	+ 62078 - Swipe
-	- 71925 - Mangle
-	- 74811 - Swipe
-	+ 77758 - Thrash
-	- 77761 - Stampeding Roar
-	- 77764 - Stampeding Roar
-	- 78674 - Starsurge
-	+ 78777 - Wild Mushroom: Detonate
-	- 79823 - Starfall
-	- 79828 - Mangle
-	- 88073 - Starfall
-	- 88747 - Wild Mushroom
-	+ 97993 - Stampeding Roar Root Clear
-	+ 102545 - Ravage!
-	+ 102546 - Pounce
-	- 102693 - Force of Nature
-	- 102703 - Force of Nature
-	- 102706 - Force of Nature
-	+ 102792 - Wild Mushroom: Bloom
-	+ 106830 - Thrash
-	- 106839 - Skull Bash
-	- 110691 - Wrath
-	- 113769 - Wrath
-	- 113801 - Bash
-	- 113830 - Taunt
-	- 114236 - Shred!
-	- 115871 - Rake
-	- 120560 - Rake
-	- 142431 - Fixate
-	- 144598 - Obsidian Cage
-	- 145205 - Wild Mushroom
-	- 147349 - Wild Mushroom
-	- 147395 - Claw
-	- 147396 - Rake
-	- 149460 - Starfall
-	- 150017 - Rake
+Aura Id 72 (SPELL_AURA_MOD_POWER_COST_SCHOOL_PCT), value = -100, misc = 127 (127), miscB = 0, amplitude = 0, periodic = 0
+
+Effect 1: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 0.00
+Targets (1, 0) (TARGET_UNIT_CASTER, 0)
+Aura Id 79 (SPELL_AURA_MOD_DAMAGE_PERCENT_DONE), value = 0, misc = 127 (127), miscB = 0, amplitude = 0, periodic = 0
+DamageMultiplier = 1
+
+Effect 2: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 0.00
+Targets (1, 0) (TARGET_UNIT_CASTER, 0)
+Aura Id 136 (SPELL_AURA_MOD_HEALING_DONE_PERCENT), value = 0, misc = 127 (127), miscB = 0, amplitude = 0, periodic = 0
+DamageMultiplier = 1
 
 =================================================
 Spell visual:
 Visual (slot 0): SpellVisual #2736
-  ImpactKit #9548: Spells\Clearcasting_Impact_Chest.mdx (Chest)
+  ImpactKit #9548: Clearcasting Impact Chest (Chest)

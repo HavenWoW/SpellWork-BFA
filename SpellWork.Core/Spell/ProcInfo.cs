@@ -23,10 +23,36 @@ namespace SpellWork.Spell
         public List<ProcTreeNode> Children { get; } = new List<ProcTreeNode>();
     }
 
+    /// <summary>
+    /// 3.3.5 proc data. A spell's proc flags, chance and charges are the
+    /// ProcTypeMask/ProcChance/ProcCharges columns of its Spell row (there is
+    /// no SpellAuraOptions table); bits decode through the CoA
+    /// <see cref="ProcFlags"/> enum (SpellMgr.h).
+    /// </summary>
     public static class ProcInfo
     {
         public static SpellInfo SpellProc { get; set; }
         public static bool Update = true;
+
+        /// <summary>
+        /// One line per set bit, "  NN NAME" with NN the bit position; a bit
+        /// with no <see cref="ProcFlags"/> member reads "  NN (unknown bit)".
+        /// </summary>
+        public static string DescribeProcFlags(uint procFlags)
+        {
+            var sb = new StringBuilder();
+            for (var bit = 0; bit < 32; ++bit)
+            {
+                var mask = 1u << bit;
+                if ((procFlags & mask) == 0)
+                    continue;
+
+                var name = System.Enum.GetName(typeof(ProcFlags), unchecked((int)mask)) ?? "(unknown bit)";
+                sb.AppendFormatLine("  {0:D2} {1}", bit, name);
+            }
+
+            return sb.ToString();
+        }
 
         public static List<ProcTreeNode> BuildFamilyTree(SpellFamilyNames spellfamily)
         {

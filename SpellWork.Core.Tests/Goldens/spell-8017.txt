@@ -1,0 +1,64 @@
+ID - 8017 Rockbiter Weapon (Rank 1)
+=================================================
+Imbue your weapon, increasing attack power by 20. The attack power granted is doubled for two-handed weapons. @ext:You only gain 33% of the attack power while your Primary Stat is Intellect or Spirit. This effect lasts for 2 hours.:ext@
+Category = 0, SpellIconID = 688, ActiveIconID = 0, SpellVisualID = 8693, 0
+Family SPELLFAMILY_SHAMAN (11), flag [0] 0x00400000 [1] 0x00000000 [2] 0x00000000
+Modified by Ancestral Knowledge (17485)
+Modified by Ancestral Knowledge (17486)
+Modified by Ancestral Knowledge (17487)
+Modified by Astral Shift (51474)
+Modified by Astral Shift (51478)
+Modified by Astral Shift (51479)
+Modified by Mental Quickness (1130812)
+Modified by Mental Quickness (1130813)
+Modified by Mental Quickness (1130814)
+Modified by Astral Shift (1151474)
+Modified by Astral Shift (1151478)
+Modified by Astral Shift (1151479)
+Modified by Astral Shift (1251474)
+Modified by Astral Shift (1251478)
+Modified by Millhouse Mobility Mixture (1300185)
+Modified by Millhouse Mobility Mixture (2300185)
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_NATURE (8)
+DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
+PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
+=================================================
+Attributes: 0x00040200 (SPELL_ATTR0_HELD_ITEM_ONLY, SPELL_ATTR0_DO_NOT_SHEATH)
+AttributesEx1: 0x00020010 (SPELL_ATTR1_NO_SKILL_INCREASE, SPELL_ATTR1_NO_AUTOCAST_AI)
+AttributesEx2: 0x00000008 (SPELL_ATTR2_ALLOW_LOW_LEVEL_BUFF)
+AttributesEx6: 0x02000000 (SPELL_ATTR6_DOESNT_RESET_SWING_TIMER_IF_INSTANT)
+=================================================
+Targets Mask = 0x00000010 (TARGET_FLAG_ITEM)
+Skill (Id 373) "Shaman"
+    ReqSkillValue 1, Forward spell = 0, MinMaxValue (0, 0)
+Spell Level = 6, base 6, max 0
+EquippedItemClass = 2 (WEAPON)
+    SubClass mask 0x0002A5F3 (AXE, AXE2, MACE, MACE2, POLEARM, SWORD, SWORD2, STAFF, FIST, DAGGER, SPEAR)
+
+Category = 0
+DispelType = 0 (DISPEL_NONE)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 1) "Self Only":
+    MinRange = 0 (hostile), 0 (friendly)
+    MaxRange = 0 (hostile), 0 (friendly)
+Cast Time: (ID 1): 0
+RecoveryTime: 0 ms, CategoryRecoveryTime: 0 ms
+StartRecoveryCategory = 133, StartRecoveryTime = 1000.00 ms
+Power POWER_MANA, 8%
+Interrupt Flags: 0x00000000 (0)
+AuraInterrupt Flags: 0x00000000 (0)
+ChannelInterrupt Flags: 0x00000000 (0)
+Chance = 101, charges - 0
+=================================================
+Effect 1: Id 54 (SPELL_EFFECT_ENCHANT_ITEM_TEMPORARY)
+BasePoints = 2.00
+Targets (0, 0) (0, 0)
+EffectMiscValueA = 29
+DamageMultiplier = 1
+
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #8693
+  PrecastKit #7434: Nature Precast Hand (LeftHand), Nature Precast Hand (RightHand)
+  CastKit #7435: Nature Cast Hand (LeftHand), Nature Cast Hand (RightHand)

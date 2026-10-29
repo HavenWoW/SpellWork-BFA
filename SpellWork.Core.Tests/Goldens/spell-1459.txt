@@ -1,0 +1,116 @@
+ID - 1459 Arcane Intellect (Rank 1)
+=================================================
+Increases the target's Intellect by $s1 and spell power by $s2 for $d.
+
+@ext:Does not stack with other similar effects.:ext@
+ToolTip: Increases Intellect by $s1 and spell power by $s2.
+Triggered by spell: (1472) Arcane Intellect
+=================================================
+Category = 0, SpellIconID = 125, ActiveIconID = 0, SpellVisualID = 158, 0
+Family SPELLFAMILY_MAGE (3), flag [0] 0x00000400 [1] 0x00000000 [2] 0x00000008
+Modified by Arcane Subtlety (11210)
+Modified by Arcane Subtlety (11211)
+Modified by Magic Attunement (11247)
+Modified by Arcane Subtlety (12592)
+Modified by Magic Attunement (12606)
+Modified by Improved Arcane Intellect (21088)
+Modified by Mind Mastery (31584)
+Modified by Mind Mastery (31585)
+Modified by Mind Mastery (31586)
+Modified by Increased Healing - Intellect (32200)
+Modified by Demonic Knowledge (39576)
+Modified by Glyph of Arcane Intellect (57924)
+Modified by Empowered Mana Shield (102224)
+Modified by Empowered Mana Shield (102225)
+Modified by Empowered Mana Shield (102226)
+Modified by Cauterizing Fire (271211)
+Modified by Manacharged Trigger Mana cost reduction (273839)
+Modified by Prophet of Wrath (275427)
+Modified by Draconic Knowledge (439576)
+Modified by Metamorphosis (454879)
+Modified by Gigantic Living Bomb (782736)
+Modified by Necrotic Living Bomb (783036)
+Modified by Arcane Subtlety (812592)
+Modified by Molten Shields (911094)
+Modified by Magic Attunement (912606)
+Modified by Fragmented Glacier Damage (953314)
+Modified by Prophet of Wrath (979796)
+Modified by Stop, Drop and Burn (982000)
+Modified by Warm Welcome (982027)
+Modified by Thawed Out (982033)
+Modified by Pyrobreath (982078)
+Modified by Bathe in Blood (Inactive) (983093)
+Modified by Manacharged Trigger Mana cost reduction (990064)
+Modified by Fel Hunger (990075)
+Modified by Fel Hunger (990075)
+Modified by Arcane Subtlety (1111210)
+Modified by Magic Attunement (1111247)
+Modified by Arcane Subtlety (1112592)
+Modified by Magic Attunement (1112606)
+Modified by Improved Arcane Intellect (1121088)
+Modified by Arcane Mage arcane blast mana (1122351)
+Modified by Improved Arcane Intellect (1124489)
+Modified by Glyph of Arcane Intellect (1157924)
+Modified by Magic Attunement (1208936)
+Modified by Magic Attunement (1208937)
+Modified by Magic Attunement (1208938)
+Modified by Magic Attunement (1208939)
+Modified by Magic Attunement (1208940)
+Modified by Arcane Subtlety (1211210)
+Modified by Arcane Subtlety (1212592)
+Modified by Millhouse Mobility Mixture (1300180)
+Modified by Arcane Subtlety (1312592)
+Modified by Magic Attunement (1312606)
+Modified by Cauterizing Fire (1568449)
+Modified by Prophet of Wrath (1575145)
+Modified by Stay Frosty (1583520)
+Modified by Millhouse Mobility Mixture (2300180)
+
+SpellSchoolMask = SPELL_SCHOOL_MASK_ARCANE (64)
+DamageClass = 1 (SPELL_DAMAGE_CLASS_MAGIC)
+PreventionType = 1 (SPELL_PREVENTION_TYPE_SILENCE)
+=================================================
+Attributes: 0x00010000 (SPELL_ATTR0_NOT_SHAPESHIFTED)
+AttributesEx2: 0x40000000 (SPELL_ATTR2_ACTIVE_THREAT)
+AttributesEx6: 0x06000000 (SPELL_ATTR6_DOESNT_RESET_SWING_TIMER_IF_INSTANT, SPELL_ATTR6_VEHICLE_IMMUNITY_CATEGORY)
+AttributesEx7: 0x10000000 (SPELL_ATTR7_DO_NOT_COUNT_FOR_PVP_SCOREBOARD)
+=================================================
+Skill (Id 6) "Mage"
+    ReqSkillValue 1, Forward spell = 0, MinMaxValue (0, 0)
+Spell Level = 1, base 1, max 10
+
+Category = 0
+DispelType = 1 (DISPEL_MAGIC)
+Mechanic = 0 (MECHANIC_NONE)
+SpellRange: (Id 4) "Medium Range":
+    MinRange = 0 (hostile), 0 (friendly)
+    MaxRange = 30 (hostile), 30 (friendly)
+Cast Time: (ID 1): 0
+RecoveryTime: 0 ms, CategoryRecoveryTime: 0 ms
+StartRecoveryCategory = 133, StartRecoveryTime = 1000.00 ms
+Duration 1800000, 0, 1800000
+Power POWER_MANA, 31%
+Interrupt Flags: 0x00000008 (SPELL_INTERRUPT_FLAG_INTERRUPT)
+AuraInterrupt Flags: 0x00000000 (0)
+ChannelInterrupt Flags: 0x00000000 (0)
+Chance = 101, charges - 0
+=================================================
+Effect 0: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 2.00
+Targets (21, 33) (TARGET_UNIT_TARGET_ALLY, TARGET_UNIT_SRC_AREA_PARTY)
+Aura Id 29 (SPELL_AURA_MOD_STAT), value = 2, misc = 3 (UNIT_MOD_STAT_INTELLECT), miscB = 0, amplitude = 0, periodic = 0
+Radius (Id 27) 50.00 (Max: 50.00)
+DamageMultiplier = 1
+
+Effect 1: Id 6 (SPELL_EFFECT_APPLY_AURA)
+BasePoints = 2.00
+Targets (21, 33) (TARGET_UNIT_TARGET_ALLY, TARGET_UNIT_SRC_AREA_PARTY)
+Aura Id 345 (SPELL_AURA_ASCENSION_MOD_SPELL_POWER_FLAT), value = 2, misc = 127 (127), miscB = 0, amplitude = 0, periodic = 0
+Radius (Id 27) 50.00 (Max: 50.00)
+DamageMultiplier = 1
+
+=================================================
+Spell visual:
+Visual (slot 0): SpellVisual #158
+  CastKit #267: Magic Cast Hand (LeftHand), Magic Cast Hand (RightHand)
+  ImpactKit #254: ArcaneIntellect Impact Base (Head)

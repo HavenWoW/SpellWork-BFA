@@ -45,7 +45,7 @@ namespace SpellWork.Mcp.Tests
 
             using var json = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(43093, difficulty: 2));
             Assert.True(json.RootElement.GetProperty("ok").GetBoolean());
-            Assert.Equal(2, json.RootElement.GetProperty("result").GetProperty("difficulty").GetInt32());
+            Assert.Equal(2, json.RootElement.GetProperty("result").GetProperty("difficulty").GetProperty("requested").GetInt32());
 
             using var text = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(43093, format: "text", difficulty: 2));
             Assert.True(text.RootElement.GetProperty("ok").GetBoolean());
