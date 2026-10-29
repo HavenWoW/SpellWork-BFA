@@ -30,12 +30,19 @@ namespace SpellWork.Database
             }
         }
 
-        private string GetSpellName(uint id)
+        /// <summary>Name for a spell_proc_event entry. The entry is a signed
+        /// int whose bit pattern <paramref name="id"/> carries: a negative
+        /// entry means every rank of spell |entry|, so the name comes from
+        /// |entry| and the row is never queued as a stale DELETE.</summary>
+        internal string GetSpellName(uint id)
         {
-            if (DBC.DBC.SpellInfoStore.ContainsKey((int)id))
-                return DBC.DBC.SpellInfoStore[(int)id].Name;
+            var signed = unchecked((int)id);
+            var key = signed == int.MinValue ? int.MaxValue : Math.Abs(signed);
+            if (DBC.DBC.SpellInfoStore.TryGetValue(key, out var info))
+                return info.Name;
 
-            Dropped.Add($"DELETE FROM `spell_proc_event` WHERE `entry` IN ({id.ToUInt32()});\r\n");
+            if (signed > 0)
+                Dropped.Add($"DELETE FROM `spell_proc_event` WHERE `entry` IN ({signed});\r\n");
             return string.Empty;
         }
 

@@ -7,6 +7,22 @@ namespace SpellWork.Core.Tests
     public class WorldDatabaseTests
     {
         [Fact]
+        public void GetSpellName_QueuesNoDeleteForNegativeAllRanksEntries()
+        {
+            var database = new WorldDatabase(new SpellWorkConfig { UseDatabase = false });
+            DBC.DBC.SpellInfoStore.Clear();
+
+            // spell id absent from the store: a stale positive entry is queued,
+            // a negative (all ranks) entry never is, and neither throws.
+            Assert.Equal(string.Empty, database.GetSpellName(unchecked((uint)-2147000)));
+            Assert.Empty(database.Dropped);
+
+            Assert.Equal(string.Empty, database.GetSpellName(2147000));
+            Assert.Single(database.Dropped);
+            Assert.Contains("IN (2147000)", database.Dropped[0]);
+        }
+
+        [Fact]
         public void TestConnection_reports_not_configured_without_an_error()
         {
             var database = new WorldDatabase(new SpellWorkConfig { UseDatabase = false });
