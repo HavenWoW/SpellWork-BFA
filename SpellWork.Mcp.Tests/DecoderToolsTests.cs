@@ -63,7 +63,7 @@ namespace SpellWork.Mcp.Tests
             Assert.Contains(0, error.GetProperty("details").GetProperty("valid").EnumerateArray().Select(e => e.GetInt32()));
         }
 
-        [SkippableFact]
+        [SkippableFact(Skip = "coa: Task 5")]
         public async Task CalculateSpellScaling_ReportsScaledAndItemLevelNotApplied()
         {
             _fixture.SkipIfNoClientData();

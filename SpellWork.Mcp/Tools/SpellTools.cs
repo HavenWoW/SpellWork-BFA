@@ -585,15 +585,16 @@ namespace SpellWork.Mcp.Tools
                 (int)difficulty);
 
         // Shared by get_spell and calculate_spell_scaling: null when the
-        // difficulty is 0 or a Difficulty.dbc row, else the error response.
+        // difficulty is a SpellDifficulty mode (0-3, spec D4), else the error
+        // response. Task 8 settles the tool contract.
         internal static string ValidateDifficulty(uint difficulty)
         {
-            if (difficulty == 0 || (SpellWork.DBC.DBC.Difficulty != null && SpellWork.DBC.DBC.Difficulty.ContainsKey((int)difficulty)))
+            if (difficulty < SpellWork.DBC.SpellDifficultyResolver.ModeCount)
                 return null;
 
-            return ToolResponse.Error("unknown_difficulty", $"No Difficulty.dbc row {difficulty}.", new Dictionary<string, object>
+            return ToolResponse.Error("unknown_difficulty", $"Difficulty {difficulty} is not a SpellDifficulty mode (0-3).", new Dictionary<string, object>
             {
-                ["valid"] = (SpellWork.DBC.DBC.Difficulty?.Keys ?? Enumerable.Empty<int>()).OrderBy(k => k).Prepend(0).ToList()
+                ["valid"] = Enumerable.Range(0, SpellWork.DBC.SpellDifficultyResolver.ModeCount).ToList()
             });
         }
 

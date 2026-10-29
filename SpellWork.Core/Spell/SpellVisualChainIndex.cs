@@ -24,13 +24,9 @@ namespace SpellWork.Spell
 
         public IReadOnlyDictionary<int, SpellVisualEntry> SpellVisual { get; private set; }
         public IReadOnlyDictionary<int, SpellVisualKitEntry> SpellVisualKit { get; private set; }
-        public IReadOnlyDictionary<int, SpellVisualMissileEntry> SpellVisualMissile { get; private set; }
         public IReadOnlyDictionary<int, SpellVisualEffectNameEntry> SpellVisualEffectName { get; private set; }
         public IReadOnlyDictionary<int, SpellVisualKitModelAttachEntry> SpellVisualKitModelAttach { get; private set; }
         public IReadOnlyDictionary<int, SpellMissileMotionEntry> SpellMissileMotion { get; private set; }
-
-        /// <summary>SpellVisualMissile rows keyed by <c>SpellVisualMissileSetID</c>, ordered by ID within a set.</summary>
-        public ILookup<int, SpellVisualMissileEntry> MissilesBySet { get; private set; }
 
         /// <summary>SpellVisualKitModelAttach rows keyed by <c>ParentSpellVisualKitID</c>, ordered by ID within a kit.</summary>
         public ILookup<int, SpellVisualKitModelAttachEntry> AttachmentsByKit { get; private set; }
@@ -59,7 +55,6 @@ namespace SpellWork.Spell
                 snapshot = BuildFrom(
                     DBC.DBC.SpellVisual,
                     DBC.DBC.SpellVisualKit,
-                    DBC.DBC.SpellVisualMissile,
                     DBC.DBC.SpellVisualEffectName,
                     DBC.DBC.SpellVisualKitModelAttach,
                     DBC.DBC.SpellMissileMotion);
@@ -73,7 +68,6 @@ namespace SpellWork.Spell
         internal bool MatchesCurrentStores() =>
             ReferenceEquals(SpellVisual, DBC.DBC.SpellVisual) &&
             ReferenceEquals(SpellVisualKit, DBC.DBC.SpellVisualKit) &&
-            ReferenceEquals(SpellVisualMissile, DBC.DBC.SpellVisualMissile) &&
             ReferenceEquals(SpellVisualEffectName, DBC.DBC.SpellVisualEffectName) &&
             ReferenceEquals(SpellVisualKitModelAttach, DBC.DBC.SpellVisualKitModelAttach) &&
             ReferenceEquals(SpellMissileMotion, DBC.DBC.SpellMissileMotion);
@@ -83,7 +77,6 @@ namespace SpellWork.Spell
         internal static SpellVisualChainIndex BuildFrom(
             IReadOnlyDictionary<int, SpellVisualEntry> spellVisual,
             IReadOnlyDictionary<int, SpellVisualKitEntry> spellVisualKit,
-            IReadOnlyDictionary<int, SpellVisualMissileEntry> spellVisualMissile,
             IReadOnlyDictionary<int, SpellVisualEffectNameEntry> spellVisualEffectName,
             IReadOnlyDictionary<int, SpellVisualKitModelAttachEntry> spellVisualKitModelAttach,
             IReadOnlyDictionary<int, SpellMissileMotionEntry> spellMissileMotion)
@@ -91,7 +84,6 @@ namespace SpellWork.Spell
             var missing = new List<string>();
             if (spellVisual == null) missing.Add("SpellVisual");
             if (spellVisualKit == null) missing.Add("SpellVisualKit");
-            if (spellVisualMissile == null) missing.Add("SpellVisualMissile");
             if (spellVisualEffectName == null) missing.Add("SpellVisualEffectName");
             if (spellVisualKitModelAttach == null) missing.Add("SpellVisualKitModelAttach");
 
@@ -99,12 +91,9 @@ namespace SpellWork.Spell
             {
                 SpellVisual = spellVisual,
                 SpellVisualKit = spellVisualKit,
-                SpellVisualMissile = spellVisualMissile,
                 SpellVisualEffectName = spellVisualEffectName,
                 SpellVisualKitModelAttach = spellVisualKitModelAttach,
                 SpellMissileMotion = spellMissileMotion,
-                MissilesBySet = (spellVisualMissile?.Values ?? Enumerable.Empty<SpellVisualMissileEntry>())
-                    .OrderBy(m => m.ID).ToLookup(m => m.SpellVisualMissileSetID),
                 AttachmentsByKit = (spellVisualKitModelAttach?.Values ?? Enumerable.Empty<SpellVisualKitModelAttachEntry>())
                     .OrderBy(a => a.ID).ToLookup(a => a.ParentSpellVisualKitID),
                 MissingStores = missing,

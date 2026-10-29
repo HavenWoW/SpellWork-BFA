@@ -169,9 +169,8 @@ namespace SpellWork.Mcp.Tools
             // the client's (DBC Spell.MiscID, when client data is loaded) plus
             // the repack's own (spell_dbc.SpellMiscId for this spell).
             try { await _data.GetAsync(); } catch (Exception) { /* client data is optional here */ }
+            // 3.3.5a has no SpellMisc table, so the client contributes no id (Task 9 reworks this tool).
             int? clientMiscId = null;
-            if (DBC.DBC.Spell != null && DBC.DBC.Spell.TryGetValue(id, out var clientSpell))
-                clientMiscId = clientSpell.MiscID;
 
             var spellDbcMiscIds = new List<int>();
             if (tables.TryGetValue("spell_dbc", out var spellDbcRows))

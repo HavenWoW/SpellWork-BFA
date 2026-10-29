@@ -40,7 +40,7 @@ namespace SpellWork.Mcp.Tools
             var context = new SpellWork.Spell.RenderContext(clampedLevel, itemLevel, (int)difficulty);
 
             var effects = new List<object>();
-            foreach (var resolved in spell.EffectsFor((int)difficulty))
+            foreach (var resolved in spell.Effects)
             {
                 var effect = resolved?.Entry;
                 if (effect == null)

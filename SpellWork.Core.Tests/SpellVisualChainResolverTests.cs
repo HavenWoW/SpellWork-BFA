@@ -6,16 +6,17 @@ using Xunit;
 
 namespace SpellWork.Core.Tests
 {
-    // The 5.4.8 chain: SpellMisc.SpellVisualID[0..1] -> SpellVisual -> kits,
-    // missiles, effect names, model attachments (spec §6). The data anchors
-    // were read off the reference client data.
+    // The chain: Spell.SpellVisualID[0..1] -> SpellVisual -> kits, missile
+    // model, effect names, model attachments (spec section 5). The data
+    // anchors below are still the 5.4.8 ones; Task 7 re-reads them off the
+    // CoA reference data.
     public class SpellVisualChainResolverTests : IClassFixture<ClientDataFixture>
     {
         private readonly ClientDataFixture _fixture;
 
         public SpellVisualChainResolverTests(ClientDataFixture fixture) => _fixture = fixture;
 
-        [SkippableFact]
+        [SkippableFact(Skip = "coa: Task 7")]
         public void FireballChain()
         {
             _fixture.SkipIfNoClientData();
@@ -36,7 +37,7 @@ namespace SpellWork.Core.Tests
             Assert.Contains("visual 67 (slot 0) PrecastKit", precast.ReachedVia);
         }
 
-        [SkippableFact]
+        [SkippableFact(Skip = "coa: Task 7")]
         public void FrostboltMissile()
         {
             _fixture.SkipIfNoClientData();
@@ -57,7 +58,7 @@ namespace SpellWork.Core.Tests
         public void SpellWithoutVisualHasNoVariants()
         {
             _fixture.SkipIfNoClientData();
-            var id = DBC.DBC.SpellInfoStore.Values.First(s => s.Misc != null && s.Misc.SpellVisualID[0] == 0 && s.Misc.SpellVisualID[1] == 0).ID;
+            var id = DBC.DBC.SpellInfoStore.Values.First(s => s.Spell.SpellVisualID[0] == 0 && s.Spell.SpellVisualID[1] == 0).ID;
             var section = SpellVisualChainResolver.ResolveSection(id);
             Assert.Empty(section.MissingStores);
             Assert.Empty(section.Chain.Variants);
@@ -68,7 +69,6 @@ namespace SpellWork.Core.Tests
         private static SpellVisualChainIndex InMemoryIndex(
             IEnumerable<SpellVisualEntry> visuals,
             IEnumerable<SpellVisualKitEntry> kits,
-            IEnumerable<SpellVisualMissileEntry> missiles = null,
             IEnumerable<SpellVisualEffectNameEntry> effectNames = null,
             IEnumerable<SpellVisualKitModelAttachEntry> attachments = null,
             IEnumerable<SpellMissileMotionEntry> motions = null)
@@ -76,7 +76,6 @@ namespace SpellWork.Core.Tests
             return SpellVisualChainIndex.BuildFrom(
                 visuals.ToDictionary(v => v.ID),
                 kits.ToDictionary(k => k.ID),
-                (missiles ?? Enumerable.Empty<SpellVisualMissileEntry>()).ToDictionary(m => m.ID),
                 (effectNames ?? Enumerable.Empty<SpellVisualEffectNameEntry>()).ToDictionary(e => e.ID),
                 (attachments ?? Enumerable.Empty<SpellVisualKitModelAttachEntry>()).ToDictionary(a => a.ID),
                 (motions ?? Enumerable.Empty<SpellMissileMotionEntry>()).ToDictionary(m => m.ID));
@@ -139,30 +138,23 @@ namespace SpellWork.Core.Tests
             Assert.Equal(new[] { "SpellVisualEffectName#8 (from SpellVisualKit#10.Special1)" }, chain.UnresolvedReferences);
         }
 
+        // Interim 3.3.5 mapping until Task 7 verifies the columns on data:
+        // the missile is SpellVisual.MissileModel, MissileMotion is raw.
         [Fact]
-        public void MissilesAndMotionsResolveOrAreReported()
+        public void MissileModelResolvesAndMissileMotionIsRaw()
         {
             var index = InMemoryIndex(
-                new[] { new SpellVisualEntry { ID = 1, SpellVisualMissileSetID = 4, Unk14MissileMotion = 77 } },
+                new[] { new SpellVisualEntry { ID = 1, MissileModel = 7, MissileMotion = 77 } },
                 new SpellVisualKitEntry[0],
-                missiles: new[]
-                {
-                    new SpellVisualMissileEntry { ID = 21, SpellVisualMissileSetID = 4, SpellVisualEffectNameID = 7, SpellMissileMotionID = 2 },
-                    new SpellVisualMissileEntry { ID = 20, SpellVisualMissileSetID = 4, SpellVisualEffectNameID = 7 },
-                    new SpellVisualMissileEntry { ID = 22, SpellVisualMissileSetID = 4, SpellMissileMotionID = 9 },
-                },
                 effectNames: new[] { new SpellVisualEffectNameEntry { ID = 7, Name = "bolt.mdx" } },
-                motions: new[] { new SpellMissileMotionEntry { ID = 2, Name = "Spiral" } });
+                motions: new[] { new SpellMissileMotionEntry { ID = 77, Name = "Spiral" } });
 
             var chain = SpellVisualChainResolver.Resolve(index, 5, new[] { 1, 0 }, 500);
 
             var v = Assert.Single(chain.Variants);
-            Assert.Equal(new[] { 20, 21, 22 }, v.Missiles.Select(m => m.ID));
-            Assert.Equal("Spiral", v.Missiles[1].MotionName);
-            Assert.Equal("bolt.mdx", v.Missiles[0].Name);
-            // Column 14 is reported raw: never resolved, never listed as unresolved.
+            Assert.Equal("bolt.mdx", Assert.Single(v.Missiles).Name);
             Assert.Equal(77, v.Unk14MissileMotion);
-            Assert.Equal(new[] { "SpellMissileMotion#9 (from SpellVisualMissile#22.SpellMissileMotionID)" }, chain.UnresolvedReferences);
+            Assert.Empty(chain.UnresolvedReferences);
         }
 
         [Fact]
@@ -185,10 +177,10 @@ namespace SpellWork.Core.Tests
         }
 
         [Fact]
-        public void UnresolvedVisualAndEmptyMissileSetAreReported()
+        public void UnresolvedVisualAndMissileModelAreReported()
         {
             var index = InMemoryIndex(
-                new[] { new SpellVisualEntry { ID = 1, SpellVisualMissileSetID = 4 } },
+                new[] { new SpellVisualEntry { ID = 1, MissileModel = 4 } },
                 new SpellVisualKitEntry[0]);
 
             var chain = SpellVisualChainResolver.Resolve(index, 5, new[] { 1, 2 }, 500);
@@ -197,7 +189,7 @@ namespace SpellWork.Core.Tests
             Assert.False(chain.Variants[1].VisualResolved);
             Assert.Equal(new[]
             {
-                "SpellVisualMissile set#4 (from SpellVisual#1.SpellVisualMissileSetID)",
+                "SpellVisualEffectName#4 (from SpellVisual#1.MissileModel)",
                 "SpellVisual#2 (from Spell#5.SpellVisualID[1])",
             }, chain.UnresolvedReferences);
         }
@@ -205,7 +197,6 @@ namespace SpellWork.Core.Tests
         [Theory]
         [InlineData(0, "SpellVisual")]
         [InlineData(1, "SpellVisualKit")]
-        [InlineData(2, "SpellVisualMissile")]
         [InlineData(3, "SpellVisualEffectName")]
         [InlineData(4, "SpellVisualKitModelAttach")]
         public void EachGatedStoreIsReportedWhenMissing(int which, string expected)
@@ -213,7 +204,6 @@ namespace SpellWork.Core.Tests
             var index = SpellVisualChainIndex.BuildFrom(
                 which == 0 ? null : new Dictionary<int, SpellVisualEntry>(),
                 which == 1 ? null : new Dictionary<int, SpellVisualKitEntry>(),
-                which == 2 ? null : new Dictionary<int, SpellVisualMissileEntry>(),
                 which == 3 ? null : new Dictionary<int, SpellVisualEffectNameEntry>(),
                 which == 4 ? null : new Dictionary<int, SpellVisualKitModelAttachEntry>(),
                 null);
@@ -230,7 +220,6 @@ namespace SpellWork.Core.Tests
             var index = SpellVisualChainIndex.BuildFrom(
                 new Dictionary<int, SpellVisualEntry>(),
                 new Dictionary<int, SpellVisualKitEntry>(),
-                new Dictionary<int, SpellVisualMissileEntry>(),
                 new Dictionary<int, SpellVisualEffectNameEntry>(),
                 new Dictionary<int, SpellVisualKitModelAttachEntry>(),
                 null);

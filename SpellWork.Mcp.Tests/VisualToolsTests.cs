@@ -27,7 +27,7 @@ namespace SpellWork.Mcp.Tests
             Assert.Equal(new[] { "id" }, parameters);
         }
 
-        [SkippableFact]
+        [SkippableFact(Skip = "coa: Task 7")]
         public async Task GetSpellVisualChain_Fireball_ReturnsTheChain()
         {
             _fixture.SkipIfNoClientData();

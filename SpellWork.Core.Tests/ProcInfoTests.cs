@@ -18,10 +18,11 @@ namespace SpellWork.Core.Tests
 
             var nodes = ProcInfo.BuildFamilyTree(SpellFamilyNames.SPELLFAMILY_MAGE);
 
-            Assert.Equal(128, nodes.Count);
+            // 3.3.5 family masks are 96 bits.
+            Assert.Equal(96, nodes.Count);
             Assert.All(nodes, n => Assert.Equal(ProcTreeNodeKind.FamilyMask, n.Kind));
-            Assert.Equal("0x00000000 00000000 00000000 00000001", nodes[0].Text);
-            Assert.Equal("0x80000000 00000000 00000000 00000000", nodes[127].Text);
+            Assert.Equal("0x00000000 00000000 00000001", nodes[0].Text);
+            Assert.Equal("0x80000000 00000000 00000000", nodes[95].Text);
         }
 
         [SkippableFact]
@@ -32,7 +33,7 @@ namespace SpellWork.Core.Tests
             var nodes = ProcInfo.BuildFamilyTree(SpellFamilyNames.SPELLFAMILY_MAGE);
             var spells = nodes.SelectMany(n => n.Children).ToList();
 
-            // The 128 mask nodes exist whether or not the join found anything,
+            // The 96 mask nodes exist whether or not the join found anything,
             // so asserting on `nodes` alone would pass against an empty family.
             // These assertions fail if the traversal stops finding spells.
             Assert.NotEmpty(spells);
@@ -40,7 +41,7 @@ namespace SpellWork.Core.Tests
             // Kind is checked against SkillLineAbility data below, not against
             // itself: `s.Kind == Skill || s.Kind == Spell` is true of every
             // child that could possibly exist and catches nothing.
-            var skillSpells = new HashSet<int>(DBC.DBC.SkillLineAbility.Values.Select(s => (int)s.SpellId));
+            var skillSpells = new HashSet<int>(DBC.DBC.SkillLineAbility.Values.Select(s => s.Spell));
 
             Assert.All(spells, s =>
             {
@@ -68,7 +69,7 @@ namespace SpellWork.Core.Tests
             // ProcInfo.cs, or an off-by-one/reversal in the parent index,
             // both passed the old assertions. Checking both presence (bit
             // set => child present) and absence (bit clear => child absent)
-            // across all 128 positions is what catches a deleted filter --
+            // across all 96 positions is what catches a deleted filter --
             // presence alone still passes if every spell attaches everywhere.
             var probe = DBC.DBC.SpellInfoStore.Values.FirstOrDefault(s =>
                 s.SpellFamilyName == (uint)SpellFamilyNames.SPELLFAMILY_MAGE &&
@@ -79,7 +80,7 @@ namespace SpellWork.Core.Tests
             var nodes = ProcInfo.BuildFamilyTree(SpellFamilyNames.SPELLFAMILY_MAGE);
             var key = probe.ID.ToString();
 
-            for (var i = 0; i < 128; ++i)
+            for (var i = 0; i < 96; ++i)
             {
                 var expected = (probe.SpellClassMask[i / 32] & (1U << (i % 32))) != 0;
                 Assert.Equal(expected, nodes[i].Children.Any(c => c.Key == key));

@@ -1,3 +1,4 @@
+using System.Linq;
 using SpellWork.DBC;
 using SpellWork.Spell;
 using Xunit;
@@ -29,8 +30,12 @@ namespace SpellWork.Core.Tests
         {
             _fixture.SkipIfNoClientData();
 
-            var spell = DBC.DBC.SpellInfoStore[133];
-            var effect = spell.EffectsFor(0)[0];
+            // Any spell whose first effect grows per level across 10..90
+            // (3.3.5 values scale through RealPointsPerLevel only).
+            var spell = DBC.DBC.SpellInfoStore.Values.First(s =>
+                s.Effects.Count > 0 && s.Effects[0].Entry.EffectRealPointsPerLevel >= 1f &&
+                s.BaseLevel <= 10 && s.SpellLevel <= 10 && (s.MaxLevel == 0 || s.MaxLevel >= 90));
+            var effect = spell.Effects[0];
             var low = new RenderContext(10, 0, 0);
             var high = new RenderContext(90, 0, 0);
             var expectedLow = spell.GetEffectValues(effect, low).BaseValue;

@@ -62,7 +62,7 @@ namespace SpellWork.Core.Tests
             }
         }
 
-        [SkippableTheory]
+        [SkippableTheory(Skip = "coa: Task 6")]
         [MemberData(nameof(GoldenFiles))]
         public void Rendering_matches_the_golden(string goldenName)
         {

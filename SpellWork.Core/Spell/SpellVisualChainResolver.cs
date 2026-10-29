@@ -50,13 +50,13 @@ namespace SpellWork.Spell
         /// <summary>
         /// The section every host renders from: the gated stores that are
         /// missing, or the resolved chain. Visual ids come from the spell's
-        /// difficulty-0 SpellMisc row (D4: visuals are not per difficulty).
+        /// own Spell row, SpellVisualID[0..1] (spec section 5).
         /// </summary>
         public static SpellVisualSection ResolveSection(int spellId, int maxKits = DefaultMaxKits)
         {
             int[] visualIds = null;
             if (DBC.DBC.SpellInfoStore != null && DBC.DBC.SpellInfoStore.TryGetValue(spellId, out var spell))
-                visualIds = spell.Misc?.SpellVisualID;
+                visualIds = spell.Spell.SpellVisualID;
 
             return ResolveSection(SpellVisualChainIndex.Current(), spellId, visualIds ?? new int[2], maxKits);
         }
@@ -154,27 +154,22 @@ namespace SpellWork.Spell
                 }
                 variant.KitSlots = kitSlots;
 
-                // Raw and unresolved by design: column 14's meaning is
-                // unverified (see SpellVisualEntry.Unk14MissileMotion), so it is
-                // neither followed nor listed as an unresolved reference.
-                variant.Unk14MissileMotion = visual.Unk14MissileMotion;
+                // Interim 3.3.5 mapping (Task 7 verifies the columns on data):
+                // MissileMotion is reported raw and not followed, and the
+                // missile is the SpellVisual row's own MissileModel.
+                variant.Unk14MissileMotion = visual.MissileMotion;
 
-                if (visual.SpellVisualMissileSetID != 0)
+                if (visual.MissileModel != 0)
                 {
-                    var rows = index.MissilesBySet[visual.SpellVisualMissileSetID].ToList();
-                    if (rows.Count == 0)
-                        unresolved.Add($"SpellVisualMissile set#{visual.SpellVisualMissileSetID} (from SpellVisual#{visualId}.SpellVisualMissileSetID)");
-
-                    variant.Missiles = rows.Select(m => new SpellVisualMissileInfo
+                    variant.Missiles = new List<SpellVisualMissileInfo>
                     {
-                        ID = m.ID,
-                        EffectNameID = m.SpellVisualEffectNameID,
-                        Name = EffectName(index, m.SpellVisualEffectNameID, $"SpellVisualMissile#{m.ID}.SpellVisualEffectNameID", unresolved),
-                        MotionID = m.SpellMissileMotionID,
-                        MotionName = m.SpellMissileMotionID == 0
-                            ? null
-                            : MotionName(index, m.SpellMissileMotionID, $"SpellVisualMissile#{m.ID}.SpellMissileMotionID", unresolved),
-                    }).ToList();
+                        new SpellVisualMissileInfo
+                        {
+                            ID = visualId,
+                            EffectNameID = visual.MissileModel,
+                            Name = EffectName(index, visual.MissileModel, $"SpellVisual#{visualId}.MissileModel", unresolved),
+                        },
+                    };
                 }
             }
 

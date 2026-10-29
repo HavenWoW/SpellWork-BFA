@@ -111,11 +111,9 @@ namespace SpellWork.Spell
             AddIfNotEmpty(root, "description", spell.Description);
             AddIfNotEmpty(root, "nameSubtext", spell.Spell?.NameSubtext);
             AddIfNotEmpty(root, "auraDescription", spell.Spell?.AuraDescription);
-            if (spell.EffectDifficulties.Count > 0)
-                root["effectDifficulties"] = spell.EffectDifficulties.ToList();
 
             if (Wants("misc"))
-                AddIfNotEmpty(root, "misc", BuildMisc(spell, context.Difficulty));
+                AddIfNotEmpty(root, "misc", BuildMisc(spell));
 
             // Emitted at the root rather than inside "misc": search_spells
             // filters on family, and burying the filter key one level deep
@@ -130,7 +128,7 @@ namespace SpellWork.Spell
 
             if (Wants("misc"))
             {
-                var rootSchoolMask = spell.MiscFor(context.Difficulty)?.SchoolMask ?? 0;
+                var rootSchoolMask = spell.SchoolMask;
                 if (rootSchoolMask != 0)
                     root["schoolMask"] = BuildRawAndFlags(rootSchoolMask, typeof(SpellSchoolMask));
 
@@ -139,10 +137,9 @@ namespace SpellWork.Spell
                 {
                     root["runeCost"] = new Dictionary<string, object>
                     {
-                        ["blood"] = rune.Blood,
-                        ["unholy"] = rune.Unholy,
-                        ["frost"] = rune.Frost,
-                        ["chromatic"] = rune.Chromatic,
+                        ["blood"] = rune.RuneCost[0],
+                        ["unholy"] = rune.RuneCost[1],
+                        ["frost"] = rune.RuneCost[2],
                         ["runicPower"] = rune.RunicPower,
                     };
                 }
@@ -150,49 +147,46 @@ namespace SpellWork.Spell
 
             if (Wants("attributes"))
             {
-                root["attributes"] = BuildAttributes(spell, context.Difficulty);
+                root["attributes"] = BuildAttributes(spell);
             }
 
             if (Wants("effects"))
                 AddIfNotEmpty(root, "effects", BuildEffects(spell, context));
 
-            if (Wants("powers") && spell.Powers.Count > 0)
-                root["powers"] = BuildPowers(spell);
+            if (Wants("powers"))
+                AddIfNotEmpty(root, "powers", BuildPowers(spell));
 
-            if (Wants("targets") && spell.TargetRestrictionsFor(context.Difficulty) != null)
-                root["targets"] = BuildTargets(spell, context);
+            if (Wants("targets"))
+                AddIfNotEmpty(root, "targets", BuildTargets(spell));
 
             if (Wants("reagents"))
                 AddIfNotEmpty(root, "reagents", BuildReagents(spell));
 
             if (Wants("aura"))
-                AddIfNotEmpty(root, "aura", BuildAura(spell, context.Difficulty));
+                AddIfNotEmpty(root, "aura", BuildAura(spell));
 
             if (Wants("procs"))
-                AddIfNotEmpty(root, "procs", BuildProcs(spell, context.Difficulty));
-
-            if (Wants("scaling") && spell.Scaling != null)
-                AddIfNotEmpty(root, "scaling", BuildScaling(spell.Scaling));
+                AddIfNotEmpty(root, "procs", BuildProcs(spell));
 
             if (Wants("cooldowns"))
-                AddIfNotEmpty(root, "cooldowns", BuildCooldowns(spell, context.Difficulty));
+                AddIfNotEmpty(root, "cooldowns", BuildCooldowns(spell));
 
             if (Wants("levels"))
-                AddIfNotEmpty(root, "levels", BuildLevels(spell, context.Difficulty));
+                AddIfNotEmpty(root, "levels", BuildLevels(spell));
 
             if (Wants("interrupts"))
-                AddIfNotEmpty(root, "interrupts", BuildInterrupts(spell, context.Difficulty));
+                AddIfNotEmpty(root, "interrupts", BuildInterrupts(spell));
 
             if (Wants("shapeshift"))
                 AddIfNotEmpty(root, "shapeshift", BuildShapeshift(spell));
 
-            if (Wants("totems") && spell.Totems != null)
+            if (Wants("totems"))
             {
                 var totems = new Dictionary<string, object>();
-                if (spell.Totems.TotemCategory.Any(c => c != 0))
-                    totems["totemCategory"] = spell.Totems.TotemCategory;
-                if (spell.Totems.Totem.Any(t => t != 0))
-                    totems["totem"] = spell.Totems.Totem;
+                if (spell.TotemCategories.Any(c => c != 0))
+                    totems["totemCategory"] = spell.TotemCategories;
+                if (spell.Totems.Any(t => t != 0))
+                    totems["totem"] = spell.Totems;
                 AddIfNotEmpty(root, "totems", totems);
             }
 
@@ -215,44 +209,27 @@ namespace SpellWork.Spell
             return JsonSerializer.Serialize(root, SerializerOptions);
         }
 
-        // SpellMisc and SpellCategories are both keyed by (spell, difficulty):
-        // read the rows at the requested difficulty, falling back to the base
-        // row, never the difficulty-0 convenience properties.
-        private static Dictionary<string, object> BuildMisc(SpellInfo spell, int difficulty)
+        private static Dictionary<string, object> BuildMisc(SpellInfo spell)
         {
-            var row = spell.MiscFor(difficulty);
-            var categories = spell.CategoriesFor(difficulty);
             var misc = new Dictionary<string, object>();
-            AddIfNonZero(misc, "speed", row?.Speed ?? 0f);
+            AddIfNonZero(misc, "speed", spell.Speed);
 
+            // CastingTimeIndex/RangeIndex are indices, not values: resolved
+            // to an object with the id plus the row's values, or omitted.
+            AddIfNotEmpty(misc, "castingTimeIndex", BuildCastTime(spell.CastingTimeIndex));
+            AddIfNotEmpty(misc, "rangeIndex", BuildRange(spell));
 
-            // CastingTimeIndex/RangeIndex are indices, not values -- the same
-            // trap note (e) already flagged for the radius fields. Resolve
-            // them the way BuildRadius resolves EffectRadiusIndex, and keep
-            // its shape: an object with the id plus the resolved values, or
-            // the key omitted when there is no such row.
-            AddIfNotEmpty(misc, "castingTimeIndex", BuildCastTime(row?.CastingTimeIndex ?? 0));
-            AddIfNotEmpty(misc, "rangeIndex", BuildRange(spell, difficulty));
+            AddIfNonZero(misc, "spellIconID", spell.SpellIconID);
+            AddIfNonZero(misc, "activeIconID", spell.ActiveIconID);
+            AddIfNonZero(misc, "category", spell.CategoryID);
+            AddIfNonZero(misc, "startRecoveryCategory", spell.StartRecoveryCategory);
 
-            AddIfNonZero(misc, "spellIconID", row?.SpellIconID ?? 0);
-            AddIfNonZero(misc, "activeIconID", row?.ActiveIconID ?? 0);
-            AddIfNonZero(misc, "category", categories?.Category ?? 0);
-            AddIfNonZero(misc, "startRecoveryCategory", categories?.StartRecoveryCategory ?? 0);
-
-            // MECHANIC_NONE is 0 and meaningful -- same reasoning as
-            // damageClass/dispel above, so this is emitted unconditionally
-            // rather than through AddIfNonZero.
-            misc["mechanic"] = BuildRawAndName(categories?.Mechanic ?? 0, typeof(Mechanics));
-
-            // damageClass, dispel and preventionType are emitted even when
-            // zero: SPELL_DAMAGE_CLASS_NONE, DISPEL_NONE and
-            // SPELL_PREVENTION_TYPE_NONE are real values the text render
-            // prints unconditionally, and omitting them at zero would make
-            // "none" indistinguishable from "this field never got
-            // serialised". Every other field here keeps the omit-zero rule.
-            misc["damageClass"] = BuildRawAndName(categories?.DefenseType ?? 0, typeof(SpellDmgClass));
-            misc["dispel"] = BuildRawAndName(categories?.DispelType ?? 0, typeof(DispelType));
-            misc["preventionType"] = BuildRawAndFlags(categories?.PreventionType ?? 0, typeof(SpellPreventionType));
+            // MECHANIC_NONE, SPELL_DAMAGE_CLASS_NONE, DISPEL_NONE and
+            // SPELL_PREVENTION_TYPE_NONE are real values: emitted even at 0.
+            misc["mechanic"] = BuildRawAndName(spell.Mechanic, typeof(Mechanics));
+            misc["damageClass"] = BuildRawAndName(spell.DamageClass, typeof(SpellDmgClass));
+            misc["dispel"] = BuildRawAndName(spell.Dispel, typeof(DispelType));
+            misc["preventionType"] = BuildRawAndFlags(spell.PreventionType, typeof(SpellPreventionType));
 
             return misc;
         }
@@ -273,28 +250,27 @@ namespace SpellWork.Spell
             return new Dictionary<string, object>
             {
                 ["id"] = castingTimeIndex,
-                ["base"] = castTime.CastTime,
-                ["perLevel"] = castTime.CastTimePerLevel,
-                ["minimum"] = castTime.MinCastTime,
+                ["base"] = castTime.Base,
+                ["perLevel"] = castTime.PerLevel,
+                ["minimum"] = castTime.Minimum,
             };
         }
 
-        // RangeIndex is likewise an index, read off the SpellMisc row at the
-        // requested difficulty and resolved through SpellInfo.RangeFor.
-        private static Dictionary<string, object> BuildRange(SpellInfo spell, int difficulty)
+        // RangeIndex is likewise an index, resolved through SpellInfo.Range.
+        private static Dictionary<string, object> BuildRange(SpellInfo spell)
         {
-            var range = spell.RangeFor(difficulty);
+            var range = spell.Range;
             if (range == null)
                 return null;
 
             return new Dictionary<string, object>
             {
-                ["id"] = spell.MiscFor(difficulty).RangeIndex,
-                ["displayName"] = range.Name,
-                ["minRangeNegative"] = range.MinRangeNegative,
-                ["minRangePositive"] = range.MinRangePositive,
-                ["maxRangeNegative"] = range.MaxRangeNegative,
-                ["maxRangePositive"] = range.MaxRangePositive,
+                ["id"] = spell.RangeIndex,
+                ["displayName"] = range.DisplayName,
+                ["minRangeHostile"] = range.RangeMin[0],
+                ["minRangeFriendly"] = range.RangeMin[1],
+                ["maxRangeHostile"] = range.RangeMax[0],
+                ["maxRangeFriendly"] = range.RangeMax[1],
             };
         }
 
@@ -314,15 +290,12 @@ namespace SpellWork.Spell
         // alone) because attributes spans eight different enums sharing
         // one array; a bare bit position would be ambiguous about which
         // group's enum it failed to match against.
-        private static List<object> BuildAttributes(SpellInfo spell, int difficulty)
+        private static List<object> BuildAttributes(SpellInfo spell)
         {
-            // The SpellMisc row at the requested difficulty (base fallback).
-            // The 5.4.8-shaped accessor returns 14 words (Task 4 narrows it to 8); only the first 8 have enums and are emitted, indexed by word number.
-            var groups = spell.AttributesFor(difficulty);
+            // The 8 attribute words of the Spell row (CoA words 0-7).
+            var groups = spell.Attributes;
 
             var result = new List<object>();
-            // CoA has 8 attribute words; the 5.4.8-shaped SpellInfo still hands over
-            // 14 (Task 4 changes that), so words past the last enum are not decoded.
             for (var group = 0; group < Math.Min(groups.Length, AttributeEnumTypes.Length); group++)
             {
                 var flags = BuildFlagList(AttributeEnumTypes[group], groups[group], out var unmatched);
@@ -346,7 +319,7 @@ namespace SpellWork.Spell
         private static List<object> BuildEffects(SpellInfo spell, RenderContext context)
         {
             var result = new List<object>();
-            foreach (var resolved in spell.EffectsFor(context.Difficulty))
+            foreach (var resolved in spell.Effects)
             {
                 var effect = resolved?.Entry;
                 if (effect == null)
@@ -387,16 +360,6 @@ namespace SpellWork.Spell
                     entry["basePointsMax"] = baseValue + delta;
                 }
 
-                if (resolved.Scaling != null)
-                {
-                    entry["scaling"] = new Dictionary<string, object>
-                    {
-                        ["coefficient"] = resolved.Scaling.Coefficient,
-                        ["variance"] = resolved.Scaling.Variance,
-                        ["resourceCoefficient"] = resolved.Scaling.ResourceCoefficient,
-                    };
-                }
-
                 // Each omitted on exactly the condition the text path uses to
                 // suppress it -- see CalculateEffectValues, which zeroes a
                 // field out whenever AppendEffectInfo would not have printed it.
@@ -416,13 +379,9 @@ namespace SpellWork.Spell
                     ["name"] = GetEnumName(typeof(Targets), unchecked((uint)effect.ImplicitTarget[1])),
                 };
 
-                var radius = BuildRadius(effect.EffectRadiusIndex[0]);
+                var radius = BuildRadius(effect.EffectRadiusIndex);
                 if (radius != null)
                     entry["radius"] = radius;
-
-                var maxRadius = BuildRadius(effect.EffectRadiusIndex[1]);
-                if (maxRadius != null)
-                    entry["maxRadius"] = maxRadius;
 
                 AddIfNonZero(entry, "chainTargets", effect.EffectChainTargets);
 
@@ -449,7 +408,7 @@ namespace SpellWork.Spell
                     entry["mechanic"] = BuildRawAndName((uint)effect.EffectMechanic, typeof(Mechanics));
 
                 var effectClassMask = effect.EffectSpellClassMask;
-                if (effectClassMask[0] != 0 || effectClassMask[1] != 0 || effectClassMask[2] != 0 || effectClassMask[3] != 0)
+                if (effectClassMask[0] != 0 || effectClassMask[1] != 0 || effectClassMask[2] != 0)
                     entry["spellClassMask"] = effectClassMask;
 
                 result.Add(entry);
@@ -472,56 +431,44 @@ namespace SpellWork.Spell
             {
                 ["id"] = radiusIndex,
                 ["radius"] = radius.Radius,
-                ["maxRadius"] = radius.MaxRadius,
+                ["maxRadius"] = radius.RadiusMax,
             };
         }
 
+        // 3.3.5 has one power cost per spell, on the Spell row.
         private static List<object> BuildPowers(SpellInfo spell)
         {
             var result = new List<object>();
-            foreach (var power in spell.Powers)
-            {
-                var entry = new Dictionary<string, object>
-                {
-                    ["orderIndex"] = power.OrderIndex,
-                    ["powerType"] = BuildRawAndName(power.PowerType, typeof(Powers)),
-                };
-                AddIfNonZero(entry, "manaCost", power.ManaCost);
-                AddIfNonZero(entry, "manaCostPerLevel", power.ManaCostPerLevel);
-                AddIfNonZero(entry, "manaPerSecond", power.ManaPerSecond);
-                AddIfNonZero(entry, "powerCostPct", power.PowerCostPct);
-                AddIfNonZero(entry, "powerPctPerSecond", power.PowerPctPerSecond);
-                result.Add(entry);
-            }
+            var row = spell.Spell;
+            if (row.ManaCost == 0 && row.ManaCostPct == 0 && row.ManaCostPerLevel == 0 && row.ManaPerSecond == 0 && row.ManaPerSecondPerLevel == 0)
+                return result;
 
+            var entry = new Dictionary<string, object>
+            {
+                ["powerType"] = BuildRawAndName(unchecked((uint)row.PowerType), typeof(Powers)),
+            };
+            AddIfNonZero(entry, "manaCost", row.ManaCost);
+            AddIfNonZero(entry, "manaCostPerLevel", row.ManaCostPerLevel);
+            AddIfNonZero(entry, "manaPerSecond", row.ManaPerSecond);
+            AddIfNonZero(entry, "manaPerSecondPerLevel", row.ManaPerSecondPerLevel);
+            AddIfNonZero(entry, "powerCostPct", row.ManaCostPct);
+            result.Add(entry);
             return result;
         }
 
-        private static List<object> BuildTargets(SpellInfo spell, RenderContext context)
+        private static Dictionary<string, object> BuildTargets(SpellInfo spell)
         {
-            var result = new List<object>();
-            var target = spell.TargetRestrictionsFor(context.Difficulty);
-            if (target != null)
-            {
-                var entry = new Dictionary<string, object>
-                {
-                    ["difficultyId"] = target.DifficultyID,
-                };
+            var row = spell.Spell;
+            var entry = new Dictionary<string, object>();
+            if (row.Targets != 0)
+                entry["targets"] = BuildRawAndFlags(row.Targets, typeof(SpellCastTargetFlags));
 
-                if (target.Targets != 0)
-                    entry["targets"] = BuildRawAndFlags(target.Targets, typeof(SpellCastTargetFlags));
+            if (row.TargetCreatureType != 0)
+                entry["targetCreatureType"] = BuildRawAndFlags((int)row.TargetCreatureType, typeof(CreatureTypeMask));
 
-                if (target.TargetCreatureType != 0)
-                    entry["targetCreatureType"] = BuildRawAndFlags((int)target.TargetCreatureType, typeof(CreatureTypeMask));
-
-                AddIfNonZero(entry, "maxTargets", target.MaxTargets);
-                AddIfNonZero(entry, "maxTargetLevel", target.MaxTargetLevel);
-                AddIfNonZero(entry, "coneDegrees", target.ConeAngle);
-                AddIfNonZero(entry, "width", target.Width);
-                result.Add(entry);
-            }
-
-            return result;
+            AddIfNonZero(entry, "maxTargets", row.MaxTargets);
+            AddIfNonZero(entry, "maxTargetLevel", row.MaxTargetLevel);
+            return entry;
         }
 
         // 5.4.8 has no SpellReagentsCurrency table; items are the only reagents.
@@ -529,24 +476,11 @@ namespace SpellWork.Spell
         {
             var result = new Dictionary<string, object>();
 
-            if (spell.Reagents != null)
-            {
-                var items = new List<object>();
-                for (var i = 0; i < spell.Reagents.Count.Length; i++)
-                {
-                    if (spell.Reagents.Count[i] == 0 || spell.Reagents.ItemId[i] == 0)
-                        continue;
-
-                    items.Add(new Dictionary<string, object>
-                    {
-                        ["itemId"] = spell.Reagents.ItemId[i],
-                        ["count"] = spell.Reagents.Count[i],
-                    });
-                }
-
-                if (items.Count > 0)
-                    result["items"] = items;
-            }
+            var items = spell.Reagents
+                .Select(r => (object)new Dictionary<string, object> { ["itemId"] = r.Item, ["count"] = r.Count })
+                .ToList();
+            if (items.Count > 0)
+                result["items"] = items;
 
             return result;
         }
@@ -556,31 +490,22 @@ namespace SpellWork.Spell
         // "procs", not "aura" -- see the mapping table in the task brief. That
         // leaves CumulativeAura and the duration scalars as the only members of
         // "aura" itself.
-        private static Dictionary<string, object> BuildAura(SpellInfo spell, int difficulty)
+        private static Dictionary<string, object> BuildAura(SpellInfo spell)
         {
             var aura = new Dictionary<string, object>();
-            var duration = spell.DurationFor(difficulty);
-            AddIfNonZero(aura, "cumulativeAura", spell.AuraOptionsFor(difficulty)?.CumulativeAura ?? 0);
-            AddIfNonZero(aura, "duration", duration?.Duration ?? 0);
-            AddIfNonZero(aura, "durationPerLevel", duration?.Unknown2 ?? 0);
-            AddIfNonZero(aura, "maxDuration", duration?.MaxDuration ?? 0);
+            AddIfNonZero(aura, "cumulativeAura", spell.CumulativeAura);
+            AddIfNonZero(aura, "duration", spell.Duration);
+            AddIfNonZero(aura, "durationPerLevel", spell.DurationPerLevel);
+            AddIfNonZero(aura, "maxDuration", spell.MaxDuration);
             return aura;
         }
 
-        private static Dictionary<string, object> BuildProcs(SpellInfo spell, int difficulty)
+        private static Dictionary<string, object> BuildProcs(SpellInfo spell)
         {
             var procs = new Dictionary<string, object>();
-            var options = spell.AuraOptionsFor(difficulty);
-            var ppm = spell.ProcsPerMinuteFor(difficulty);
-
-            AddFlagsWithUnmatched(procs, "procFlags", typeof(ProcFlags), (uint)(options?.ProcTypeMask ?? 0));
-
-            AddIfNonZero(procs, "procChance", options?.ProcChance ?? 0);
-            AddIfNonZero(procs, "procCharges", options?.ProcCharges ?? 0);
-            AddIfNonZero(procs, "procCooldown", options?.ProcCategoryRecovery ?? 0);
-            AddIfNonZero(procs, "baseProcRate", ppm?.BaseProcRate ?? 0f);
-            AddIfNonZero(procs, "procsPerMinuteFlags", ppm?.Flags ?? 0);
-
+            AddFlagsWithUnmatched(procs, "procFlags", typeof(ProcFlags), spell.ProcFlags);
+            AddIfNonZero(procs, "procChance", spell.ProcChance);
+            AddIfNonZero(procs, "procCharges", spell.ProcCharges);
             return procs;
         }
 
@@ -638,61 +563,39 @@ namespace SpellWork.Spell
             return result;
         }
 
-        private static Dictionary<string, object> BuildScaling(SpellScalingEntry scaling) =>
-            new Dictionary<string, object>
-            {
-                ["class"] = scaling.Class,
-                ["castTimeMin"] = scaling.CastTimeMin,
-                ["castTimeMax"] = scaling.CastTimeMax,
-                ["castTimeMaxLevel"] = scaling.CastTimeMaxLevel,
-                ["nerfFactor"] = scaling.NerfFactor,
-                ["nerfMaxLevel"] = scaling.NerfMaxLevel,
-                ["maxScalingLevel"] = scaling.MaxScalingLevel,
-                ["scalesFromItemLevel"] = scaling.ScalesFromItemLevel,
-            };
-
-        private static Dictionary<string, object> BuildCooldowns(SpellInfo spell, int difficulty)
+        private static Dictionary<string, object> BuildCooldowns(SpellInfo spell)
         {
             var result = new Dictionary<string, object>();
-            var cooldowns = spell.CooldownsFor(difficulty);
-            AddIfNonZero(result, "recoveryTime", cooldowns?.RecoveryTime ?? 0);
-            AddIfNonZero(result, "categoryRecoveryTime", cooldowns?.CategoryRecoveryTime ?? 0);
-            AddIfNonZero(result, "startRecoveryTime", cooldowns?.StartRecoveryTime ?? 0);
+            AddIfNonZero(result, "recoveryTime", spell.RecoveryTime);
+            AddIfNonZero(result, "categoryRecoveryTime", spell.CategoryRecoveryTime);
+            AddIfNonZero(result, "startRecoveryTime", spell.StartRecoveryTime);
             return result;
         }
 
-        private static Dictionary<string, object> BuildLevels(SpellInfo spell, int difficulty)
+        private static Dictionary<string, object> BuildLevels(SpellInfo spell)
         {
             var result = new Dictionary<string, object>();
-            var levels = spell.LevelsFor(difficulty);
-            if (levels == null)
-                return result;
-
-            AddIfNonZero(result, "baseLevel", levels.BaseLevel);
-            AddIfNonZero(result, "spellLevel", levels.SpellLevel);
-            AddIfNonZero(result, "maxLevel", levels.MaxLevel);
+            AddIfNonZero(result, "baseLevel", spell.BaseLevel);
+            AddIfNonZero(result, "spellLevel", spell.SpellLevel);
+            AddIfNonZero(result, "maxLevel", spell.MaxLevel);
             return result;
         }
 
-        private static Dictionary<string, object> BuildInterrupts(SpellInfo spell, int difficulty)
+        private static Dictionary<string, object> BuildInterrupts(SpellInfo spell)
         {
             var result = new Dictionary<string, object>();
-            var interrupts = spell.InterruptsFor(difficulty);
-            if (interrupts == null)
-                return result;
-
-            if (interrupts.InterruptFlags != 0)
-                result["interruptFlags"] = BuildRawAndFlags((uint)interrupts.InterruptFlags, typeof(SpellInterruptFlags));
-            if (interrupts.AuraInterruptFlags[0] != 0)
-                result["auraInterruptFlags"] = BuildRawAndFlags((uint)interrupts.AuraInterruptFlags[0], typeof(SpellAuraInterruptFlags));
+            if (spell.InterruptFlags != 0)
+                result["interruptFlags"] = BuildRawAndFlags(spell.InterruptFlags, typeof(SpellInterruptFlags));
+            if (spell.AuraInterruptFlags != 0)
+                result["auraInterruptFlags"] = BuildRawAndFlags(spell.AuraInterruptFlags, typeof(SpellAuraInterruptFlags));
 
             // Channel interrupt flags decode through their own enum, not
             // SpellAuraInterruptFlags -- SpellInfo.cs's text path casts
             // ChannelInterruptFlags to SpellChannelInterruptFlags; reusing
             // SpellAuraInterruptFlags here would decode the same bits against
             // the wrong bit-to-name table.
-            if (interrupts.ChannelInterruptFlags[0] != 0)
-                result["channelInterruptFlags"] = BuildRawAndFlags((uint)interrupts.ChannelInterruptFlags[0], typeof(SpellChannelInterruptFlags));
+            if (spell.ChannelInterruptFlags != 0)
+                result["channelInterruptFlags"] = BuildRawAndFlags(spell.ChannelInterruptFlags, typeof(SpellChannelInterruptFlags));
             return result;
         }
 
@@ -707,13 +610,10 @@ namespace SpellWork.Spell
         private static Dictionary<string, object> BuildEquippedItems(SpellInfo spell)
         {
             var result = new Dictionary<string, object>();
-            if (spell.EquippedItems == null)
-                return result;
-
-            AddIfNonZero(result, "equippedItemSubClassMask", spell.EquippedItems.EquippedItemSubClassMask);
-            AddIfNonZero(result, "equippedItemInventoryTypeMask", spell.EquippedItems.EquippedItemInventoryTypeMask);
-            if (spell.EquippedItems.EquippedItemClass >= 0)
-                result["equippedItemClass"] = BuildRawAndName((uint)spell.EquippedItems.EquippedItemClass, typeof(ItemClass));
+            AddIfNonZero(result, "equippedItemSubClassMask", spell.EquippedItemSubclass);
+            AddIfNonZero(result, "equippedItemInventoryTypeMask", spell.EquippedItemInvTypes);
+            if (spell.EquippedItemClass >= 0)
+                result["equippedItemClass"] = BuildRawAndName((uint)spell.EquippedItemClass, typeof(ItemClass));
             return result;
         }
 
@@ -725,7 +625,7 @@ namespace SpellWork.Spell
         // filtered out".
         private static Dictionary<string, object> BuildTriggers(SpellInfo spell, RenderContext context)
         {
-            var triggers = spell.EffectsFor(context.Difficulty)
+            var triggers = spell.Effects
                 .Where(effect => effect != null && effect.Entry.EffectTriggerSpell != 0)
                 .Select(effect => effect.Entry.EffectTriggerSpell)
                 .Distinct()
@@ -744,30 +644,9 @@ namespace SpellWork.Spell
             };
         }
 
-        // Mirrors SpellInfo.AppendItemInfo: 5.4.8 has no ItemEffect table, so
-        // an item uses a spell when one of Item-sparse.db2's five SpellId
-        // columns names it.
-        private static List<object> BuildItems(SpellInfo spell)
-        {
-            var result = new List<object>();
-
-            // ItemSparse is a Storage<T> property that stays null until
-            // DBC.LoadAsync runs; section validation needs no data, so guard
-            // rather than crash on a spell built without a load.
-            if (DBC.DBC.ItemSparse == null)
-                return result;
-
-            foreach (var item in DBC.DBC.ItemSparse.Values.Where(i => i.SpellId.Contains(spell.ID)))
-            {
-                result.Add(new Dictionary<string, object>
-                {
-                    ["id"] = item.ID,
-                    ["name"] = item.Name,
-                });
-            }
-
-            return result;
-        }
+        // 3.3.5 Item.dbc has no spell columns; the items using a spell come
+        // from item_template (world DB), which Task 6 wires in. Empty until then.
+        private static List<object> BuildItems(SpellInfo spell) => new List<object>();
 
         // Re-boxes a raw value as whichever integral type actually backs the
         // enum, regardless of its underlying integral type --
