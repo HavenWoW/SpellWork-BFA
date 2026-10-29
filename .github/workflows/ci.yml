@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches: [main, 5.4.8, coa]
-    tags: ['v548-*']
+    tags: ['v548-*', 'vcoa-*']
   pull_request:
     branches: [main, 5.4.8, coa]
   workflow_dispatch:
@@ -57,17 +57,17 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
           dotnet publish SpellWork.Mcp\SpellWork.Mcp.csproj -c $env:CONFIGURATION -o mcp-publish --nologo
-          Compress-Archive -Path mcp-publish\* -DestinationPath dist\SpellWork.Mcp.zip -Force
+          Compress-Archive -Path mcp-publish\* -DestinationPath dist\SpellWork.Mcp-coa.zip -Force
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: SpellWork.Mcp-5.4.8
+          name: SpellWork.Mcp-coa
           path: dist/*.zip
           if-no-files-found: error
 
       - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/v548-')
+        if: startsWith(github.ref, 'refs/tags/vcoa-')
         uses: softprops/action-gh-release@v3
         with:
           files: dist/*.zip
@@ -77,9 +77,14 @@ jobs:
 
             | Archive | What it is | Needs |
             | --- | --- | --- |
-            | `SpellWork.Mcp.zip` | The read-only MCP server for AI agents | .NET 9 runtime |
+            | `SpellWork.Mcp-coa.zip` | The read-only MCP server for AI agents | .NET 9 runtime |
 
-            Client data is not included and is not redistributable — extract
-            the `dbc` and `db2` folders yourself and point SpellWork at them. This build parses **5.4.8** data.
+            This build parses **CoA 3.3.5a (12340)** DBC data. Client data is not
+            included and is not redistributable — point `SPELLWORK_DBC_PATH` at your
+            CoA client `dbc` folder (for a CoA server checkout:
+            `<azerothcore-wotlk-coa>/env/dist/data/dbc`). There is no `db2` folder
+            for this build.
 
-            MCP registration and configuration: [docs/mcp-server.md](https://github.com/HavenWoW/SpellWork/blob/5.4.8/docs/mcp-server.md)
+            Register with Claude Code: [README — Register with Claude Code](https://github.com/HavenWoW/SpellWork/blob/coa/README.md#register-with-claude-code)
+
+            Configuration and tool reference: [docs/mcp-server.md](https://github.com/HavenWoW/SpellWork/blob/coa/docs/mcp-server.md)

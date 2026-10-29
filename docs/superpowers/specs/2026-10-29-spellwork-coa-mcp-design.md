@@ -41,7 +41,7 @@ model (single fat `Spell.dbc`), plus both test projects; publish to
 | D1 | Branch from `5.4.8`, not `main` or `upstream/master` | 5.4.8 already has WDBC reading, field+record-size layout verification, and a visual chain rooted in the spell row. 3.3.5 is closer to it than to 8.3.7. |
 | D2 | Structures follow the CoA `DBCfmt.h`/`DBCStructure.h`, names from WoWDBDefs 3.3.5.12340, sizes from the reference headers | The CoA fork may diverge from stock; its own loader is the truth. |
 | D3 | All spell data comes from one `SpellEntry` (234 fields, 936 bytes) | 3.3.5 has no SpellMisc/SpellEffect split. Effects are the 3 indexed column groups. |
-| D4 | `difficulty` = SpellDifficulty mode index 0–3 (10N, 25N, 10H, 25H); resolves to the variant spell id via `Spell.SpellDifficultyId` → `SpellDifficulty.dbc`, falling back to the requested spell | That is how 3.3.5 servers resolve per-difficulty spells. JSON reports the resolved id and all variants. |
+| D4 | `difficulty` = SpellDifficulty mode index 0–3 (10N, 25N, 10H, 25H), **optional on every tool** (omitted = the id as given, no resolution). Given, it resolves to the variant spell id through the `SpellDifficulty.dbc` row **that lists the spell** (row membership, as the CoA server builds its lookup; rows lacking mode 0 or 1 skipped, ids absent from Spell.dbc treated as empty), with the server's heroic fallback (mode 2→0, 3→1), then the requested spell. *Corrected during implementation:* the original text resolved via `Spell.SpellDifficultyId`, which the server does not read and which, on the reference data, names a row not listing the spell for 1912 of 2100 spells; a defaulted mode 0 would also have silently mapped 25N ids to 10N | That is how the CoA server resolves per-difficulty spells (`SpellMgr::GetSpellIdForDifficulty`). JSON reports the requested mode, the resolved id and all variants. |
 | D5 | Enums generated from the CoA headers (TOTAL_AURAS 367, TOTAL_SPELL_EFFECTS 199, attributes 0–7, classes incl. CoA classes 12+, families) | CoA adds ~50 auras and ~34 effects over stock; upstream SpellWork enums would mislabel them. |
 | D6 | Locale = Spell.dbc string slot (enUS = 0); `SPELLWORK_LOCALE` picks the slot, default enUS | 3.3.5 stores 16 locale strings per row in one file; there are no locale folders. |
 | D7 | Layout verification = field count + record size (unchanged from 5.4.8) | WDBC has no layout hash. |
@@ -158,6 +158,19 @@ Override tables (columns from the CoA `db_world` base SQL):
 | `spell_required` | `spell_id` |
 
 Missing tables report as absent; 500-row cap per table stays.
+
+*Corrected during implementation:* matching follows each table's CoA loader,
+not the plain id alone. `spell_proc`, `spell_proc_event` and
+`spell_script_names` also match `-firstRank` (all ranks); `spell_group` also
+matches the first rank (only first ranks are listed); `spell_linked_spell`
+also matches `-id` (on aura removal). The first rank comes from
+`spell_ranks.first_spell_id`. Every row reports `matchedBy`: `exact`,
+`allRanks`, `firstRank` or `onRemoval`.
+
+§5 note: the 3.3.5 missile is `SpellVisual.MissileModel`/`MissileMotion`, not a
+row of its own, so a `missiles` entry has no `id` (5.4.8 had one) and carries
+the effect name's `fileName`. `SpellChainEffects` (§4.1, §9) loads with zero
+layout mismatches on the reference data.
 
 ## 7. Configuration and registration
 
