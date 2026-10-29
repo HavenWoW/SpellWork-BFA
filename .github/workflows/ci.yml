@@ -2,10 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main, 5.4.8]
+    branches: [main, 5.4.8, coa]
     tags: ['v548-*']
   pull_request:
-    branches: [main, 5.4.8]
+    branches: [main, 5.4.8, coa]
   workflow_dispatch:
 
 env:

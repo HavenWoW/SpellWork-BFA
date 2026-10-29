@@ -13,10 +13,12 @@ namespace SpellWork.DBC
 {
     public static class DBC
     {
-        public const string Version = "SpellWork 5.4.8 (18414)";
-        public const uint MaxLevel = 90;
+        public const string Version = "SpellWork CoA 3.3.5a (12340)";
+        public const uint MaxLevel = 100;
         public const uint MaxItemLevel = 600;
-        public const int MaxClasses = 12;
+        public const int MaxClasses = 33;
+        public const int MaxEffectIndex = 3;
+        public const int AttributeWords = 8;
 
         // ReSharper disable MemberCanBePrivate.Global
         // ReSharper disable CollectionNeverUpdated.Global

@@ -28,7 +28,7 @@ namespace SpellWork.Mcp.Tests
     public sealed class McpClientDataFixture
     {
         public const string SkipReason =
-            "Set SPELLWORK_DBC_PATH (and optionally SPELLWORK_DB2_PATH and SPELLWORK_LOCALE) to the extracted 5.4.8 client data directories.";
+            "Set SPELLWORK_DBC_PATH (and optionally SPELLWORK_DB2_PATH and SPELLWORK_LOCALE) to the extracted CoA 3.3.5a client data directories.";
 
         // The one modelled store deliberately absent from the partial-load
         // temp directory, and two that are present in it. All three are
