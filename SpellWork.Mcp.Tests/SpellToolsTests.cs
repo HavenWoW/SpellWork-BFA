@@ -207,6 +207,33 @@ namespace SpellWork.Mcp.Tests
             Assert.Equal(0, result.GetProperty("limit").GetInt32());
         }
 
+        // Review Focus 4: a broad name query over every Spell row (209,510 on
+        // the reference data) answers in under 2 s and honours the row cap.
+        // The data load is awaited first so only the search itself is timed.
+        [SkippableFact]
+        public async Task SearchSpells_BroadName_IsFastAndCapped()
+        {
+            _fixture.SkipIfNoClientData();
+            await _fixture.LoadedService.GetAsync();
+
+            foreach (var limit in new int?[] { null, 10000 })
+            {
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                var json = limit.HasValue
+                    ? await _fixture.SpellTools.SearchSpells(name: "a", limit: limit.Value)
+                    : await _fixture.SpellTools.SearchSpells(name: "a");
+                stopwatch.Stop();
+
+                using var doc = JsonDocument.Parse(json);
+                var result = doc.RootElement.GetProperty("result");
+                Assert.True(stopwatch.Elapsed < System.TimeSpan.FromSeconds(2),
+                    $"search_spells(name: \"a\", limit: {limit?.ToString() ?? "default"}) took {stopwatch.ElapsedMilliseconds} ms");
+                Assert.True(result.GetProperty("totalMatches").GetInt32() > ToolResponse.MaxRows, "the query must be broad enough to hit the cap");
+                Assert.True(result.GetProperty("rows").GetArrayLength() <= ToolResponse.MaxRows);
+                Assert.True(result.GetProperty("truncated").GetBoolean());
+            }
+        }
+
         // The cap is a hard server-side limit, not a suggestion: a model that
         // asks for 10000 rows must not be able to flood its own context.
         [SkippableFact]

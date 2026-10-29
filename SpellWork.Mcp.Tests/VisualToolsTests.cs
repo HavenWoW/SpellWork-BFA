@@ -27,7 +27,7 @@ namespace SpellWork.Mcp.Tests
             Assert.Equal(new[] { "id" }, parameters);
         }
 
-        [SkippableFact(Skip = "coa: Task 7")]
+        [SkippableFact]
         public async Task GetSpellVisualChain_Fireball_ReturnsTheChain()
         {
             _fixture.SkipIfNoClientData();
@@ -43,12 +43,14 @@ namespace SpellWork.Mcp.Tests
             Assert.Equal(0, variant.GetProperty("slot").GetInt32());
             Assert.Equal(67, variant.GetProperty("spellVisualId").GetInt32());
             Assert.True(variant.GetProperty("visualResolved").GetBoolean());
-            Assert.False(variant.TryGetProperty("unk14MissileMotion", out _), "omitted when the column is 0");
-            Assert.False(variant.TryGetProperty("missileMotion", out _));
+            Assert.False(variant.TryGetProperty("unk14MissileMotion", out _), "the 5.4.8 raw column is gone");
             Assert.Contains(variant.GetProperty("kitSlots").EnumerateArray(),
                 k => k.GetProperty("slot").GetString() == "PrecastKit" && k.GetProperty("kitId").GetInt32() == 30);
-            Assert.Equal(@"Spells\Fireball_Missile_Low.mdx",
-                variant.GetProperty("missiles")[0].GetProperty("name").GetString());
+            var missile = variant.GetProperty("missiles")[0];
+            Assert.Equal(365, missile.GetProperty("effectNameId").GetInt32());
+            Assert.Equal("Fireball Missile Low", missile.GetProperty("name").GetString());
+            Assert.Equal(@"Spells\Fireball_Missile_Low.mdx", missile.GetProperty("fileName").GetString());
+            Assert.Equal(0, missile.GetProperty("motionId").GetInt32());
             Assert.NotEqual(0, result.GetProperty("kits").GetArrayLength());
             Assert.False(result.GetProperty("truncated").GetBoolean());
             Assert.Equal(JsonValueKind.Array, result.GetProperty("unresolvedReferences").ValueKind);

@@ -32,8 +32,8 @@ namespace SpellWork.Spell
         public ILookup<int, SpellVisualKitModelAttachEntry> AttachmentsByKit { get; private set; }
 
         /// <summary>
-        /// The gated stores (spec §6) that are not loaded, in chain order.
-        /// SpellMissileMotion is read but not gated: ids it cannot resolve are
+        /// The gated stores (spec §5) that are not loaded, in chain order.
+        /// SpellMissileMotion (SpellVisual.MissileMotion) is read but not gated: ids it cannot resolve are
         /// listed in <see cref="SpellVisualChain.UnresolvedReferences"/>.
         /// </summary>
         public IReadOnlyList<string> MissingStores { get; private set; }

@@ -5,7 +5,7 @@ using SpellWork.DBC.Structures;
 namespace SpellWork.Spell
 {
     /// <summary>
-    /// Walks the 5.4.8 visual chain (spec §6). Every non-zero reference either
+    /// Walks the CoA 3.3.5a visual chain (spec §5). Every non-zero reference either
     /// resolves or is listed in <see cref="SpellVisualChain.UnresolvedReferences"/>;
     /// an id that does not resolve is never reported as though it were a row.
     /// </summary>
@@ -154,23 +154,8 @@ namespace SpellWork.Spell
                 }
                 variant.KitSlots = kitSlots;
 
-                // Interim 3.3.5 mapping (Task 7 verifies the columns on data):
-                // MissileMotion is reported raw and not followed, and the
-                // missile is the SpellVisual row's own MissileModel.
-                variant.Unk14MissileMotion = visual.MissileMotion;
-
-                if (visual.MissileModel != 0)
-                {
-                    variant.Missiles = new List<SpellVisualMissileInfo>
-                    {
-                        new SpellVisualMissileInfo
-                        {
-                            ID = visualId,
-                            EffectNameID = visual.MissileModel,
-                            Name = EffectName(index, visual.MissileModel, $"SpellVisual#{visualId}.MissileModel", unresolved),
-                        },
-                    };
-                }
+                if (visual.MissileModel != 0 || visual.MissileMotion != 0)
+                    variant.Missiles = new List<SpellVisualMissileInfo> { ResolveMissile(index, visual, unresolved) };
             }
 
             return new SpellVisualChain
@@ -183,6 +168,28 @@ namespace SpellWork.Spell
             };
         }
 
+        // Column checks on the CoA reference data (Task 7): MissileModel > 0
+        // resolves in SpellVisualEffectName for 3474 of 3480 rows; the 636
+        // negative values (-1..-5) are sentinels, not ids. MissileMotion
+        // resolves in SpellMissileMotion for 2027 of 2066 non-zero rows.
+        private static SpellVisualMissileInfo ResolveMissile(SpellVisualChainIndex index, SpellVisualEntry visual, UnresolvedReferenceSet unresolved)
+        {
+            var model = visual.MissileModel > 0
+                ? EffectName(index, visual.MissileModel, $"SpellVisual#{visual.ID}.MissileModel", unresolved)
+                : null;
+
+            return new SpellVisualMissileInfo
+            {
+                EffectNameID = visual.MissileModel,
+                Name = model?.Name,
+                FileName = model?.FileName,
+                MotionID = visual.MissileMotion,
+                MotionName = visual.MissileMotion == 0
+                    ? null
+                    : MotionName(index, visual.MissileMotion, $"SpellVisual#{visual.ID}.MissileMotion", unresolved),
+            };
+        }
+
         private static List<KitEffectRef> ResolveKitEffects(SpellVisualChainIndex index, SpellVisualKitEntry kit, UnresolvedReferenceSet unresolved)
         {
             var effects = new List<KitEffectRef>();
@@ -192,34 +199,39 @@ namespace SpellWork.Spell
                 if (id == 0)
                     continue;
 
+                var row = EffectName(index, id, $"SpellVisualKit#{kit.ID}.{slot}", unresolved);
                 effects.Add(new KitEffectRef
                 {
                     Slot = slot,
                     EffectNameID = id,
-                    Name = EffectName(index, id, $"SpellVisualKit#{kit.ID}.{slot}", unresolved),
+                    Name = row?.Name,
+                    FileName = row?.FileName,
                 });
             }
             return effects;
         }
 
         private static List<KitModelAttachInfo> ResolveAttachments(SpellVisualChainIndex index, int kitId, UnresolvedReferenceSet unresolved) =>
-            index.AttachmentsByKit[kitId].Select(a => new KitModelAttachInfo
+            index.AttachmentsByKit[kitId].Select(a =>
             {
-                ID = a.ID,
-                AttachmentID = a.AttachmentID,
-                EffectNameID = a.SpellVisualEffectNameID,
-                Name = a.SpellVisualEffectNameID == 0
-                    ? null
-                    : EffectName(index, a.SpellVisualEffectNameID, $"SpellVisualKitModelAttach#{a.ID}.SpellVisualEffectNameID", unresolved),
+                var row = EffectName(index, a.SpellVisualEffectNameID, $"SpellVisualKitModelAttach#{a.ID}.SpellVisualEffectNameID", unresolved);
+                return new KitModelAttachInfo
+                {
+                    ID = a.ID,
+                    AttachmentID = a.AttachmentID,
+                    EffectNameID = a.SpellVisualEffectNameID,
+                    Name = row?.Name,
+                    FileName = row?.FileName,
+                };
             }).ToList();
 
         // Null for 0 (no reference) and for an id with no row (listed as unresolved).
-        private static string EffectName(SpellVisualChainIndex index, int id, string from, UnresolvedReferenceSet unresolved)
+        private static SpellVisualEffectNameEntry EffectName(SpellVisualChainIndex index, int id, string from, UnresolvedReferenceSet unresolved)
         {
             if (id == 0)
                 return null;
             if (index.SpellVisualEffectName.TryGetValue(id, out var row))
-                return row.Name;
+                return row;
             unresolved.Add($"SpellVisualEffectName#{id} (from {from})");
             return null;
         }

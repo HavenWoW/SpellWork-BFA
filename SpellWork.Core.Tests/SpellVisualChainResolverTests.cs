@@ -7,16 +7,16 @@ using Xunit;
 namespace SpellWork.Core.Tests
 {
     // The chain: Spell.SpellVisualID[0..1] -> SpellVisual -> kits, missile
-    // model, effect names, model attachments (spec section 5). The data
-    // anchors below are still the 5.4.8 ones; Task 7 re-reads them off the
-    // CoA reference data.
+    // (MissileModel -> SpellVisualEffectName, MissileMotion ->
+    // SpellMissileMotion), effect names, model attachments (spec section 5).
+    // Data anchors are read off the CoA 3.3.5a reference data.
     public class SpellVisualChainResolverTests : IClassFixture<ClientDataFixture>
     {
         private readonly ClientDataFixture _fixture;
 
         public SpellVisualChainResolverTests(ClientDataFixture fixture) => _fixture = fixture;
 
-        [SkippableFact(Skip = "coa: Task 7")]
+        [SkippableFact]
         public void FireballChain()
         {
             _fixture.SkipIfNoClientData();
@@ -30,20 +30,53 @@ namespace SpellWork.Core.Tests
             Assert.Contains(v.KitSlots, k => k.Slot == "CastKit" && k.KitID == 38);
             Assert.Contains(v.KitSlots, k => k.Slot == "ImpactKit" && k.KitID == 286);
             var missile = Assert.Single(v.Missiles);
-            Assert.Equal(88, missile.ID);
-            Assert.Equal(@"Spells\Fireball_Missile_Low.mdx", missile.Name);
+            Assert.Equal(365, missile.EffectNameID);
+            Assert.Equal("Fireball Missile Low", missile.Name);
+            Assert.Equal(@"Spells\Fireball_Missile_Low.mdx", missile.FileName);
+            Assert.Equal(0, missile.MotionID);
+            Assert.Null(missile.MotionName);
             var precast = chain.Kits.Single(k => k.KitID == 30);
-            Assert.Contains(precast.Effects, e => e.Name == @"Spells\Fire_Precast_Hand.mdx");
+            Assert.Contains(precast.Effects, e => e.Name == "Fire Precast Hand" && e.FileName == @"Spells\Fire_Precast_Hand.mdx");
             Assert.Contains("visual 67 (slot 0) PrecastKit", precast.ReachedVia);
+            Assert.Empty(chain.UnresolvedReferences);
         }
 
-        [SkippableFact(Skip = "coa: Task 7")]
+        [SkippableFact]
         public void FrostboltMissile()
         {
             _fixture.SkipIfNoClientData();
             var v = Assert.Single(SpellVisualChainResolver.ResolveSection(116).Chain.Variants);
             Assert.Equal(13, v.SpellVisualID);
-            Assert.Equal(@"Spells\Frostbolt.mdx", Assert.Single(v.Missiles).Name);
+            var missile = Assert.Single(v.Missiles);
+            Assert.Equal("Frost Bolt Missile", missile.Name);
+            Assert.Equal(@"Spells\Frostbolt.mdx", missile.FileName);
+        }
+
+        // SpellVisual 272 (spell 29473): MissileModel 365, MissileMotion 13.
+        [SkippableFact]
+        public void MissileMotionResolvesOnData()
+        {
+            _fixture.SkipIfNoClientData();
+            var v = Assert.Single(SpellVisualChainResolver.ResolveSection(29473).Chain.Variants);
+            Assert.Equal(272, v.SpellVisualID);
+            var missile = Assert.Single(v.Missiles);
+            Assert.Equal(13, missile.MotionID);
+            Assert.Equal("Parabola", missile.MotionName);
+            Assert.Equal("Fireball Missile Low", missile.Name);
+        }
+
+        // SpellVisual 436 (spell 280570): MissileModel -1, a sentinel, not an id.
+        [SkippableFact]
+        public void NegativeMissileModelOnDataIsRawAndNotListed()
+        {
+            _fixture.SkipIfNoClientData();
+            var chain = SpellVisualChainResolver.ResolveSection(280570).Chain;
+            var v = Assert.Single(chain.Variants);
+            Assert.Equal(436, v.SpellVisualID);
+            var missile = Assert.Single(v.Missiles);
+            Assert.Equal(-1, missile.EffectNameID);
+            Assert.Null(missile.Name);
+            Assert.DoesNotContain(chain.UnresolvedReferences, r => r.StartsWith("SpellVisualEffectName#-"));
         }
 
         [SkippableFact]
@@ -138,42 +171,141 @@ namespace SpellWork.Core.Tests
             Assert.Equal(new[] { "SpellVisualEffectName#8 (from SpellVisualKit#10.Special1)" }, chain.UnresolvedReferences);
         }
 
-        // Interim 3.3.5 mapping until Task 7 verifies the columns on data:
-        // the missile is SpellVisual.MissileModel, MissileMotion is raw.
         [Fact]
-        public void MissileModelResolvesAndMissileMotionIsRaw()
+        public void MissileModelAndMotionResolve()
         {
             var index = InMemoryIndex(
                 new[] { new SpellVisualEntry { ID = 1, MissileModel = 7, MissileMotion = 77 } },
                 new SpellVisualKitEntry[0],
-                effectNames: new[] { new SpellVisualEffectNameEntry { ID = 7, Name = "bolt.mdx" } },
+                effectNames: new[] { new SpellVisualEffectNameEntry { ID = 7, Name = "Bolt", FileName = @"Spells\Bolt.mdx" } },
                 motions: new[] { new SpellMissileMotionEntry { ID = 77, Name = "Spiral" } });
 
             var chain = SpellVisualChainResolver.Resolve(index, 5, new[] { 1, 0 }, 500);
 
-            var v = Assert.Single(chain.Variants);
-            Assert.Equal("bolt.mdx", Assert.Single(v.Missiles).Name);
-            Assert.Equal(77, v.Unk14MissileMotion);
+            var missile = Assert.Single(Assert.Single(chain.Variants).Missiles);
+            Assert.Equal(7, missile.EffectNameID);
+            Assert.Equal("Bolt", missile.Name);
+            Assert.Equal(@"Spells\Bolt.mdx", missile.FileName);
+            Assert.Equal(77, missile.MotionID);
+            Assert.Equal("Spiral", missile.MotionName);
             Assert.Empty(chain.UnresolvedReferences);
         }
 
         [Fact]
-        public void Unk14MissileMotionIsEmittedRawOnlyWhenNonZero()
+        public void MotionWithoutModelIsStillAMissile()
         {
-            var withColumn = SpellVisualChainJson.Describe(new SpellVisualVariant
-            {
-                Slot = 0, SpellVisualID = 1, VisualResolved = true, Unk14MissileMotion = 77,
-                KitSlots = new List<KitSlotRef>(), Missiles = new List<SpellVisualMissileInfo>(),
-            });
-            var without = SpellVisualChainJson.Describe(new SpellVisualVariant
+            var index = InMemoryIndex(
+                new[] { new SpellVisualEntry { ID = 1, MissileMotion = 77 } },
+                new SpellVisualKitEntry[0],
+                motions: new[] { new SpellMissileMotionEntry { ID = 77, Name = "Spiral" } });
+
+            var missile = Assert.Single(Assert.Single(SpellVisualChainResolver.Resolve(index, 5, new[] { 1, 0 }, 500).Variants).Missiles);
+            Assert.Equal(0, missile.EffectNameID);
+            Assert.Null(missile.Name);
+            Assert.Equal("Spiral", missile.MotionName);
+        }
+
+        [Fact]
+        public void VisualWithoutMissileColumnsHasNoMissile()
+        {
+            var index = InMemoryIndex(new[] { new SpellVisualEntry { ID = 1 } }, new SpellVisualKitEntry[0]);
+            Assert.Empty(Assert.Single(SpellVisualChainResolver.Resolve(index, 5, new[] { 1, 0 }, 500).Variants).Missiles);
+        }
+
+        [Fact]
+        public void UnresolvedMissileMotionIsListed()
+        {
+            var index = InMemoryIndex(
+                new[] { new SpellVisualEntry { ID = 1, MissileMotion = 78 } },
+                new SpellVisualKitEntry[0]);
+
+            var chain = SpellVisualChainResolver.Resolve(index, 5, new[] { 1, 0 }, 500);
+
+            Assert.Null(Assert.Single(Assert.Single(chain.Variants).Missiles).MotionName);
+            Assert.Equal(new[] { "SpellMissileMotion#78 (from SpellVisual#1.MissileMotion)" }, chain.UnresolvedReferences);
+        }
+
+        // Negative MissileModel values (-1..-5 on the reference data) are not
+        // SpellVisualEffectName ids: reported raw, never resolved or listed.
+        [Fact]
+        public void NegativeMissileModelIsRawAndNotListed()
+        {
+            var index = InMemoryIndex(
+                new[] { new SpellVisualEntry { ID = 1, MissileModel = -1 } },
+                new SpellVisualKitEntry[0]);
+
+            var chain = SpellVisualChainResolver.Resolve(index, 5, new[] { 1, 0 }, 500);
+
+            var missile = Assert.Single(Assert.Single(chain.Variants).Missiles);
+            Assert.Equal(-1, missile.EffectNameID);
+            Assert.Null(missile.Name);
+            Assert.Empty(chain.UnresolvedReferences);
+        }
+
+        [Fact]
+        public void MissileJsonCarriesModelAndMotion_AndNoRawColumn14()
+        {
+            var json = SpellVisualChainJson.Describe(new SpellVisualVariant
             {
                 Slot = 0, SpellVisualID = 1, VisualResolved = true,
-                KitSlots = new List<KitSlotRef>(), Missiles = new List<SpellVisualMissileInfo>(),
+                KitSlots = new List<KitSlotRef>(),
+                Missiles = new List<SpellVisualMissileInfo>
+                {
+                    new SpellVisualMissileInfo { EffectNameID = 7, Name = "Bolt", FileName = "b.mdx", MotionID = 77, MotionName = "Spiral" },
+                },
             });
 
-            Assert.Equal(77, withColumn["unk14MissileMotion"]);
-            Assert.False(without.ContainsKey("unk14MissileMotion"));
-            Assert.False(withColumn.ContainsKey("missileMotion"));
+            Assert.False(json.ContainsKey("unk14MissileMotion"));
+            var missile = Assert.Single((List<Dictionary<string, object>>)json["missiles"]);
+            Assert.Equal(new[] { "effectNameId", "name", "fileName", "motionId", "motionName" }, missile.Keys);
+            Assert.Equal("b.mdx", missile["fileName"]);
+            Assert.Equal("Spiral", missile["motionName"]);
+        }
+
+        [Fact]
+        public void ModelAttachmentsAreFoundByParentKitOnly()
+        {
+            var index = InMemoryIndex(
+                new[] { new SpellVisualEntry { ID = 1, PrecastKit = 10 } },
+                new[] { new SpellVisualKitEntry { ID = 10 }, new SpellVisualKitEntry { ID = 11 } },
+                effectNames: new[] { new SpellVisualEffectNameEntry { ID = 7, Name = "Glow", FileName = "glow.mdx" } },
+                attachments: new[]
+                {
+                    new SpellVisualKitModelAttachEntry { ID = 5, ParentSpellVisualKitID = 10, AttachmentID = 2, SpellVisualEffectNameID = 7 },
+                    new SpellVisualKitModelAttachEntry { ID = 4, ParentSpellVisualKitID = 10, AttachmentID = 1, SpellVisualEffectNameID = 9 },
+                    new SpellVisualKitModelAttachEntry { ID = 6, ParentSpellVisualKitID = 11, AttachmentID = 1, SpellVisualEffectNameID = 7 },
+                });
+
+            var chain = SpellVisualChainResolver.Resolve(index, 5, new[] { 1, 0 }, 500);
+
+            var kit = Assert.Single(chain.Kits);
+            Assert.Equal(new[] { 4, 5 }, kit.ModelAttachments.Select(a => a.ID));
+            Assert.Equal("glow.mdx", kit.ModelAttachments[1].FileName);
+            Assert.Equal(new[] { "SpellVisualEffectName#9 (from SpellVisualKitModelAttach#4.SpellVisualEffectNameID)" }, chain.UnresolvedReferences);
+        }
+
+        [Fact]
+        public void DefaultKitCapIs500_AndTheCapAppliesAcrossBothVariants()
+        {
+            Assert.Equal(500, SpellVisualChainResolver.DefaultMaxKits);
+
+            // 24 distinct kits across two variants, cap 20: the first 20 are reported.
+            var visuals = new[]
+            {
+                new SpellVisualEntry { ID = 1, PrecastKit = 1, CastKit = 2, ImpactKit = 3, StateKit = 4, StateDoneKit = 5, ChannelKit = 6,
+                    CasterImpactKit = 7, TargetImpactKit = 8, MissileTargetingKit = 9, InstantAreaKit = 10, ImpactAreaKit = 11, PersistentAreaKit = 12 },
+                new SpellVisualEntry { ID = 2, PrecastKit = 13, CastKit = 14, ImpactKit = 15, StateKit = 16, StateDoneKit = 17, ChannelKit = 18,
+                    CasterImpactKit = 19, TargetImpactKit = 20, MissileTargetingKit = 21, InstantAreaKit = 22, ImpactAreaKit = 23, PersistentAreaKit = 24 },
+            };
+            var index = InMemoryIndex(visuals, Enumerable.Range(1, 24).Select(i => new SpellVisualKitEntry { ID = i }));
+
+            var capped = SpellVisualChainResolver.Resolve(index, 5, new[] { 1, 2 }, 20);
+            Assert.Equal(Enumerable.Range(1, 20), capped.Kits.Select(k => k.KitID));
+            Assert.True(capped.Truncated);
+
+            var full = SpellVisualChainResolver.Resolve(index, 5, new[] { 1, 2 }, SpellVisualChainResolver.DefaultMaxKits);
+            Assert.Equal(24, full.Kits.Count);
+            Assert.False(full.Truncated);
         }
 
         [Fact]

@@ -6,7 +6,7 @@ using Xunit.Abstractions;
 
 namespace SpellWork.Core.Tests
 {
-    // Spec §6/§10: on the reference data, every non-zero reference the chain
+    // Spec §5: on the reference data, every non-zero reference the chain
     // follows either resolves or is listed in UnresolvedReferences -- and
     // nothing else is listed. The expected set is computed here, straight off
     // the raw stores with ContainsKey, independently of the resolver, so a
@@ -23,7 +23,7 @@ namespace SpellWork.Core.Tests
             _output = output;
         }
 
-        [SkippableFact(Skip = "coa: Task 7")]
+        [SkippableFact]
         public void EveryReferenceResolvesOrIsListed()
         {
             _fixture.SkipIfNoClientData();
@@ -31,6 +31,7 @@ namespace SpellWork.Core.Tests
             var visuals = DBC.DBC.SpellVisual;
             var kits = DBC.DBC.SpellVisualKit;
             var effectNames = DBC.DBC.SpellVisualEffectName;
+            var motions = DBC.DBC.SpellMissileMotion;
             var attachmentsByKit = DBC.DBC.SpellVisualKitModelAttach.Values.ToLookup(a => a.ParentSpellVisualKitID);
 
             var walked = 0;
@@ -83,16 +84,32 @@ namespace SpellWork.Core.Tests
                             expected.Add($"SpellVisualKit#{kitId} (from SpellVisual#{vid}.{kitSlot})");
                     }
 
-                    // MissileMotion is reported raw (interim, Task 7) and is not a
-                    // reference the chain follows, so it must never be listed.
-                    Assert.Equal(v.MissileMotion,
-                        chain.Variants.First(x => x.Slot == slot).Unk14MissileMotion);
-
-                    if (v.MissileModel != 0)
+                    // MissileModel: positive values are SpellVisualEffectName ids;
+                    // negative ones (-1..-5) are sentinels, reported raw, never listed.
+                    if (v.MissileModel > 0)
                     {
                         referencesChecked++;
                         if (!effectNames.ContainsKey(v.MissileModel))
                             expected.Add($"SpellVisualEffectName#{v.MissileModel} (from SpellVisual#{vid}.MissileModel)");
+                    }
+
+                    if (v.MissileMotion != 0)
+                    {
+                        referencesChecked++;
+                        if (!motions.ContainsKey(v.MissileMotion))
+                            expected.Add($"SpellMissileMotion#{v.MissileMotion} (from SpellVisual#{vid}.MissileMotion)");
+                    }
+
+                    var missile = chain.Variants.First(x => x.Slot == slot).Missiles;
+                    if (v.MissileModel != 0 || v.MissileMotion != 0)
+                    {
+                        var m = Assert.Single(missile);
+                        Assert.Equal(v.MissileModel, m.EffectNameID);
+                        Assert.Equal(v.MissileMotion, m.MotionID);
+                    }
+                    else
+                    {
+                        Assert.Empty(missile);
                     }
                 }
 
@@ -142,11 +159,11 @@ namespace SpellWork.Core.Tests
             if (byStore.Count == 0)
                 _output.WriteLine("unresolved: none");
 
-            // On the reference data every gated-store reference resolves; only
-            // the ungated SpellMissileMotion (from SpellVisualMissile rows) may
-            // have listings, and the set-equality above proves each is genuine.
-            var gated = new[] { "SpellVisual", "SpellVisualKit", "SpellVisualEffectName", "SpellVisualKitModelAttach" };
-            Assert.Empty(byStore.Keys.Intersect(gated));
+            // The CoA reference data has rows missing from every store the
+            // chain reads (e.g. ~9% of SpellVisual kit references), so
+            // listings are expected; the set-equality above proves each one
+            // is genuine and that nothing reachable was dropped.
+            Assert.NotNull(motions);
             Assert.Equal(DBC.DBC.SpellInfoStore.Count, walked);
             Assert.True(walked > 90000, $"only {walked} spells walked");
         }

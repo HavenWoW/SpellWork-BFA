@@ -613,16 +613,16 @@ namespace SpellWork.Spell
                             attach.Name ?? "#" + attach.EffectNameID + " unresolved");
                 }
 
-                if (variant.Unk14MissileMotion != 0)
-                    rtb.AppendFormatLine("  Unk14MissileMotion: {0} (unverified column, raw value)", variant.Unk14MissileMotion);
-
                 foreach (var missile in variant.Missiles)
                 {
                     var motion = missile.MotionID == 0
                         ? string.Empty
                         : $" (motion #{missile.MotionID} {missile.MotionName ?? "unresolved"})";
-                    rtb.AppendFormatLine("  Missile #{0}: {1}{2}", missile.ID,
-                        missile.Name ?? (missile.EffectNameID == 0 ? "no model" : "#" + missile.EffectNameID + " unresolved"), motion);
+                    var model = missile.Name != null ? $"#{missile.EffectNameID} {missile.Name}"
+                        : missile.EffectNameID == 0 ? "no model"
+                        : missile.EffectNameID < 0 ? $"{missile.EffectNameID} (raw, not an effect name id)"
+                        : $"#{missile.EffectNameID} unresolved";
+                    rtb.AppendFormatLine("  Missile: {0}{1}", model, motion);
                 }
             }
 

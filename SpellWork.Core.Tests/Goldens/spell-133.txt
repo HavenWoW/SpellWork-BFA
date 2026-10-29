@@ -552,4 +552,4 @@ Visual (slot 0): SpellVisual #67
   PrecastKit #30: Fire Precast Hand (LeftHand), Fire Precast Hand (RightHand)
   CastKit #38: Fire Cast Hand (LeftHand), Fire Cast Hand (RightHand)
   ImpactKit #286: MoltenBlast Impact Chest (Chest)
-  Missile #67: Fireball Missile Low
+  Missile: #365 Fireball Missile Low

@@ -40,7 +40,7 @@ namespace SpellWork.Spell
 
         public static Dictionary<string, object> Describe(SpellVisualVariant variant)
         {
-            var dict = new Dictionary<string, object>
+            return new Dictionary<string, object>
             {
                 ["slot"] = variant.Slot,
                 ["spellVisualId"] = variant.SpellVisualID,
@@ -52,19 +52,13 @@ namespace SpellWork.Spell
                 }).ToList(),
                 ["missiles"] = variant.Missiles.Select(m => new Dictionary<string, object>
                 {
-                    ["id"] = m.ID,
                     ["effectNameId"] = m.EffectNameID,
                     ["name"] = m.Name,
+                    ["fileName"] = m.FileName,
                     ["motionId"] = m.MotionID,
                     ["motionName"] = m.MotionName,
                 }).ToList(),
             };
-
-            // SpellVisual column 14, raw and unverified; omitted when 0.
-            if (variant.Unk14MissileMotion != 0)
-                dict["unk14MissileMotion"] = variant.Unk14MissileMotion;
-
-            return dict;
         }
 
         public static Dictionary<string, object> Describe(SpellVisualKitRef kit) => new Dictionary<string, object>
@@ -76,6 +70,7 @@ namespace SpellWork.Spell
                 ["slot"] = e.Slot,
                 ["effectNameId"] = e.EffectNameID,
                 ["name"] = e.Name,
+                ["fileName"] = e.FileName,
             }).ToList(),
             ["modelAttachments"] = kit.ModelAttachments.Select(a => new Dictionary<string, object>
             {
@@ -83,6 +78,7 @@ namespace SpellWork.Spell
                 ["attachmentId"] = a.AttachmentID,
                 ["effectNameId"] = a.EffectNameID,
                 ["name"] = a.Name,
+                ["fileName"] = a.FileName,
             }).ToList(),
         };
     }

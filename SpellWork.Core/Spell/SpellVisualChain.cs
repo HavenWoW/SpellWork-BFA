@@ -3,10 +3,10 @@ using System.Collections.Generic;
 namespace SpellWork.Spell
 {
     /// <summary>
-    /// The 5.4.8 visual chain for one spell (spec §6):
-    /// <c>SpellMisc.SpellVisualID[0..1]</c> → <c>SpellVisual</c> → kits,
-    /// missiles, effect names and model attachments. Visuals are not per
-    /// difficulty (D4); the difficulty-0 SpellMisc row is the source.
+    /// The CoA 3.3.5a visual chain for one spell (spec §5):
+    /// <c>Spell.SpellVisualID[0..1]</c> → <c>SpellVisual</c> → kits, the
+    /// missile, effect names and model attachments. Visuals are not per
+    /// difficulty; the requested Spell row is the source.
     /// </summary>
     public sealed class SpellVisualChain
     {
@@ -26,22 +26,17 @@ namespace SpellWork.Spell
 
     public sealed class SpellVisualVariant
     {
-        /// <summary>0 or 1: the index into <c>SpellMisc.SpellVisualID</c>.</summary>
+        /// <summary>0 or 1: the index into <c>Spell.SpellVisualID</c>.</summary>
         public int Slot { get; set; }
         public int SpellVisualID { get; set; }
         public bool VisualResolved { get; set; }
 
         /// <summary>Every non-zero kit column of the SpellVisual row, resolved or not.</summary>
         public IReadOnlyList<KitSlotRef> KitSlots { get; set; }
-        public IReadOnlyList<SpellVisualMissileInfo> Missiles { get; set; }
 
-        /// <summary>
-        /// SpellVisual column 14 (WoWDBDefs "MissileMotion"), raw. Its meaning
-        /// is unverified -- almost none of its values are SpellMissileMotion
-        /// ids -- so it is reported as-is, never resolved and never listed in
-        /// UnresolvedReferences. 0 when the column is 0.
-        /// </summary>
-        public int Unk14MissileMotion { get; set; }
+        /// <summary>The SpellVisual row's own missile: one entry when
+        /// MissileModel or MissileMotion is non-zero, else empty.</summary>
+        public IReadOnlyList<SpellVisualMissileInfo> Missiles { get; set; }
     }
 
     public sealed class KitSlotRef
@@ -69,6 +64,9 @@ namespace SpellWork.Spell
 
         /// <summary>Null when the effect name id does not resolve.</summary>
         public string Name { get; set; }
+
+        /// <summary>The model path (SpellVisualEffectName.FileName); null when unresolved.</summary>
+        public string FileName { get; set; }
     }
 
     public sealed class KitModelAttachInfo
@@ -77,13 +75,22 @@ namespace SpellWork.Spell
         public int AttachmentID { get; set; }
         public int EffectNameID { get; set; }
         public string Name { get; set; }
+        public string FileName { get; set; }
     }
 
+    /// <summary>
+    /// SpellVisual.MissileModel and MissileMotion. A positive MissileModel is a
+    /// SpellVisualEffectName id; a negative one (-1..-5 on the reference data)
+    /// is not an id and is kept raw with a null Name, never listed as unresolved.
+    /// </summary>
     public sealed class SpellVisualMissileInfo
     {
-        public int ID { get; set; }
+        /// <summary>SpellVisual.MissileModel, raw.</summary>
         public int EffectNameID { get; set; }
         public string Name { get; set; }
+        public string FileName { get; set; }
+
+        /// <summary>SpellVisual.MissileMotion, a SpellMissileMotion id; 0 for none.</summary>
         public int MotionID { get; set; }
         public string MotionName { get; set; }
     }
