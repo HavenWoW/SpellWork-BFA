@@ -1636,6 +1636,7 @@ namespace SpellWork.Spell
         RACE_GNOME         = 7, // TITLE Gnome
         RACE_TROLL         = 8, // TITLE Troll
         RACE_BLOODELF      = 10, // TITLE Blood Elf
+        RACE_DRAENEI       = 11, // TITLE Draenei
     }
 
     // CoA: azerothcore-wotlk-coa SpellInfo.h SpellCustomAttributes

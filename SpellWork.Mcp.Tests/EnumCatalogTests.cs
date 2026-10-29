@@ -45,6 +45,8 @@ namespace SpellWork.Mcp.Tests
         [InlineData("Classes", 12, "CLASS_BARBARIAN")]
         [InlineData("Classes", 13, "CLASS_WITCH_DOCTOR")]
         [InlineData("Classes", 32, "CLASS_SPIRIT_MAGE")]
+        [InlineData("Races", 10, "RACE_BLOODELF")]
+        [InlineData("Races", 11, "RACE_DRAENEI")]
         public void CoaEnumValues(string enumName, int id, string name)
         {
             var t = EnumType(enumName);

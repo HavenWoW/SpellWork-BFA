@@ -311,13 +311,13 @@ namespace SpellWork.Spell
         // per-bit decomposition loops in this file cannot drift apart on what
         // "unmatched" means. Each entry carries "group" as well as "bit"
         // (unlike BuildFlagList's flat unmatchedBits list of bit positions
-        // alone) because attributes spans fourteen different enums sharing
+        // alone) because attributes spans eight different enums sharing
         // one array; a bare bit position would be ambiguous about which
         // group's enum it failed to match against.
         private static List<object> BuildAttributes(SpellInfo spell, int difficulty)
         {
             // The SpellMisc row at the requested difficulty (base fallback).
-            // Always 14 words, so a consumer can index by word number.
+            // The 5.4.8-shaped accessor returns 14 words (Task 4 narrows it to 8); only the first 8 have enums and are emitted, indexed by word number.
             var groups = spell.AttributesFor(difficulty);
 
             var result = new List<object>();
