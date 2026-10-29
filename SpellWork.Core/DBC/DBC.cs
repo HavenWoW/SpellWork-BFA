@@ -318,7 +318,8 @@ namespace SpellWork.DBC
                 }
             }
 
-            DifficultyResolver = new SpellDifficultyResolver(SpellDifficulty);
+            var spells = Spell;
+            DifficultyResolver = new SpellDifficultyResolver(SpellDifficulty, id => spells.ContainsKey(id));
             return Task.CompletedTask;
         }
 
