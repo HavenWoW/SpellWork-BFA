@@ -353,11 +353,10 @@ namespace SpellWork.Spell
                 var values = spell.CalculateEffectValues(resolved, context);
                 var baseValue = values.BaseValue;
                 entry["basePoints"] = baseValue;
-                if (Math.Abs(values.Variance) > 1.0E-5f)
+                if (values.MinValue != values.MaxValue)
                 {
-                    var delta = Math.Abs(baseValue * values.Variance * 0.5f);
-                    entry["basePointsMin"] = baseValue - delta;
-                    entry["basePointsMax"] = baseValue + delta;
+                    entry["basePointsMin"] = values.MinValue;
+                    entry["basePointsMax"] = values.MaxValue;
                 }
 
                 // Each omitted on exactly the condition the text path uses to

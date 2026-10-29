@@ -15,7 +15,7 @@ namespace SpellWork.Mcp.Tools
         public DecoderTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "calculate_spell_scaling")]
-        [Description("Per-effect computed values at a specific level, item level and difficulty. Use this to see how a spell's numbers change with level rather than reading get_spell repeatedly. difficulty is a Difficulty.dbc id (0 = base); an effect index with no row at that difficulty uses its base row. mapId is accepted for compatibility and ignored: the 5.4.8 client has no MapDifficulty table.")]
+        [Description("Per-effect computed values at a specific level, using the CoA 3.3.5 CalcValue rule (base points plus RealPointsPerLevel for each level above the spell level, level clamped to BaseLevel..MaxLevel, plus the DieSides roll range). Use this to see how a spell's numbers change with level rather than reading get_spell repeatedly. level clamps to 1-100. difficulty is a SpellDifficulty mode 0-3: the spell id is resolved through SpellDifficulty.dbc first and the variant spell's own row is used. itemLevel is echoed and never applied (itemLevelApplied is false). mapId is accepted for compatibility and ignored.")]
         public async Task<string> CalculateSpellScaling(
             int id,
             uint level,
@@ -27,15 +27,20 @@ namespace SpellWork.Mcp.Tools
             if (!data.Loaded)
                 return SpellTools.DataError(data);
 
-            if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(id, out var spell))
+            if (!SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(id))
                 return SpellTools.NotFound(id);
 
             var difficultyError = SpellTools.ValidateDifficulty(difficulty);
             if (difficultyError != null)
                 return difficultyError;
 
-            // 5.4.8 effect scaling is level-only (gtSpellScaling); clamp to
-            // the client's level range.
+            // The difficulty picks a different Spell row, not a different
+            // effect row: resolve the id first, then read that spell.
+            var resolvedId = SpellWork.DBC.DBC.DifficultyResolver.Resolve(id, (int)difficulty).ResolvedSpellId;
+            if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(resolvedId, out var spell))
+                return SpellTools.NotFound(resolvedId);
+
+            // Clamp to the client's level range.
             var clampedLevel = Math.Min(Math.Max(level, 1u), (uint)SpellWork.DBC.DBC.MaxLevel);
             var context = new SpellWork.Spell.RenderContext(clampedLevel, itemLevel, (int)difficulty);
 
@@ -47,7 +52,6 @@ namespace SpellWork.Mcp.Tools
                     continue;
 
                 var values = spell.GetEffectValues(resolved, context);
-                var delta = Math.Abs(values.BaseValue * values.Variance * 0.5f);
                 effects.Add(new Dictionary<string, object>
                 {
                     ["index"] = effect.EffectIndex,
@@ -56,10 +60,9 @@ namespace SpellWork.Mcp.Tools
                         ["raw"] = effect.Effect,
                         ["name"] = Enum.GetName(typeof(SpellWork.Spell.SpellEffects), effect.Effect),
                     },
-                    ["resolvedDifficulty"] = resolved.ResolvedDifficulty,
                     ["base"] = values.BaseValue,
-                    ["min"] = values.BaseValue - delta,
-                    ["max"] = values.BaseValue + delta,
+                    ["min"] = values.MinValue,
+                    ["max"] = values.MaxValue,
                     ["perComboPoint"] = values.ValuePerResource,
                     ["spellPowerCoefficient"] = values.SpellPowerCoefficient,
                     ["scaled"] = values.Scaled,
@@ -68,7 +71,8 @@ namespace SpellWork.Mcp.Tools
 
             var payload = new Dictionary<string, object>
             {
-                ["id"] = spell.ID,
+                ["id"] = id,
+                ["resolvedSpellId"] = spell.ID,
                 ["name"] = spell.Name,
                 ["level"] = clampedLevel,
                 ["itemLevel"] = itemLevel,
@@ -76,8 +80,7 @@ namespace SpellWork.Mcp.Tools
                 ["effects"] = effects,
             };
 
-            // The Difficulty.dbc id the effects were resolved at (replaces
-            // the old mapDifficulty report, which 5.4.8 has no table for).
+            // The SpellDifficulty mode the spell id was resolved at.
             payload["difficulty"] = (int)difficulty;
 
             return ToolResponse.Ok(payload);

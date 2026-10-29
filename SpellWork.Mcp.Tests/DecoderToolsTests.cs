@@ -63,20 +63,66 @@ namespace SpellWork.Mcp.Tests
             Assert.Contains(0, error.GetProperty("details").GetProperty("valid").EnumerateArray().Select(e => e.GetInt32()));
         }
 
-        [SkippableFact(Skip = "coa: Task 5")]
-        public async Task CalculateSpellScaling_ReportsScaledAndItemLevelNotApplied()
+        [SkippableFact]
+        public async Task CalculateSpellScaling_ClampsLevelTo100_AndReportsItemLevelNotApplied()
         {
             _fixture.SkipIfNoClientData();
 
-            var json = await _fixture.DecoderTools.CalculateSpellScaling(133, level: 90, itemLevel: 463);
+            var json = await _fixture.DecoderTools.CalculateSpellScaling(133, level: 150, itemLevel: 463);
             using var doc = JsonDocument.Parse(json);
             var result = doc.RootElement.GetProperty("result");
 
+            Assert.Equal(100, result.GetProperty("level").GetInt32());
             Assert.False(result.GetProperty("itemLevelApplied").GetBoolean());
-            var e = result.GetProperty("effects")[0];
+            Assert.Equal(133, result.GetProperty("resolvedSpellId").GetInt32());
+
+            var at100 = JsonDocument.Parse(await _fixture.DecoderTools.CalculateSpellScaling(133, level: 100, itemLevel: 463));
+            Assert.Equal(at100.RootElement.GetProperty("result").GetProperty("effects").ToString(),
+                result.GetProperty("effects").ToString());
+        }
+
+        [SkippableFact]
+        public async Task CalculateSpellScaling_MatchesCalcValueForALevelScaledEffect()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var spell = SpellWork.DBC.DBC.SpellInfoStore.Values.First(s =>
+                s.Spell.MaxLevel > 0 && s.Spell.EffectRealPointsPerLevel[0] != 0 && s.Spell.EffectBasePoints[0] != 0);
+            var s0 = spell.Spell;
+            var level = 200u;
+            var expected = SpellWork.Spell.SpellScalingCalculator.Value(
+                s0.EffectBasePoints[0], s0.EffectDieSides[0], s0.EffectRealPointsPerLevel[0], s0.EffectPointsPerCombo[0],
+                s0.SpellLevel, s0.BaseLevel, s0.MaxLevel, 100);
+
+            var json = await _fixture.DecoderTools.CalculateSpellScaling(spell.ID, level: level, itemLevel: 0);
+            using var doc = JsonDocument.Parse(json);
+            var e = doc.RootElement.GetProperty("result").GetProperty("effects")[0];
+
             Assert.True(e.GetProperty("scaled").GetBoolean());
-            Assert.True(e.GetProperty("base").GetDouble() > 0);
-            Assert.Equal(0, e.GetProperty("resolvedDifficulty").GetInt32());
+            Assert.Equal(expected.Base, (float)e.GetProperty("base").GetDouble());
+            Assert.Equal(expected.Min, (float)e.GetProperty("min").GetDouble());
+            Assert.Equal(expected.Max, (float)e.GetProperty("max").GetDouble());
+        }
+
+        [SkippableFact]
+        public async Task CalculateSpellScaling_DifficultyResolvesSpellIdFirst()
+        {
+            _fixture.SkipIfNoClientData();
+
+            // Any spell whose SpellDifficulty row names a different spell for mode 1 (25N).
+            var row = SpellWork.DBC.DBC.SpellDifficulty.Values.FirstOrDefault(r =>
+                r.DifficultySpellID[0] > 0 && r.DifficultySpellID[1] > 0 && r.DifficultySpellID[0] != r.DifficultySpellID[1]
+                && SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(r.DifficultySpellID[0])
+                && SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(r.DifficultySpellID[1]));
+            Skip.If(row == null, "No SpellDifficulty row with two distinct existing spells.");
+
+            var json = await _fixture.DecoderTools.CalculateSpellScaling(row.DifficultySpellID[0], level: 80, itemLevel: 0, difficulty: 1);
+            using var doc = JsonDocument.Parse(json);
+            var result = doc.RootElement.GetProperty("result");
+
+            Assert.Equal(row.DifficultySpellID[0], result.GetProperty("id").GetInt32());
+            Assert.Equal(row.DifficultySpellID[1], result.GetProperty("resolvedSpellId").GetInt32());
+            Assert.Equal(1, result.GetProperty("difficulty").GetInt32());
         }
 
         [SkippableFact]

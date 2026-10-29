@@ -16,7 +16,8 @@ namespace SpellWork.Spell
     internal sealed class EffectValueBreakdown
     {
         public float BaseValue;
-        public float Variance;
+        public float MinValue;
+        public float MaxValue;
         public float ValuePerResource;
         public float RealPointsPerLevel;
         public float SpellPowerCoefficient;
@@ -34,7 +35,8 @@ namespace SpellWork.Spell
         internal EffectValues(EffectValueBreakdown breakdown)
         {
             BaseValue = breakdown.BaseValue;
-            Variance = breakdown.Variance;
+            MinValue = breakdown.MinValue;
+            MaxValue = breakdown.MaxValue;
             ValuePerResource = breakdown.ValuePerResource;
             RealPointsPerLevel = breakdown.RealPointsPerLevel;
             SpellPowerCoefficient = breakdown.SpellPowerCoefficient;
@@ -42,7 +44,8 @@ namespace SpellWork.Spell
         }
 
         public float BaseValue { get; }
-        public float Variance { get; }
+        public float MinValue { get; }
+        public float MaxValue { get; }
         public float ValuePerResource { get; }
         public float RealPointsPerLevel { get; }
         public float SpellPowerCoefficient { get; }
@@ -636,22 +639,17 @@ namespace SpellWork.Spell
             rtb.SetDefaultStyle();
         }
 
-        // 3.3.5 SpellEffectInfo::CalcValue base: BasePoints (+1 when DieSides
-        // is 1) plus RealPointsPerLevel per level above SpellLevel, the level
-        // clamped to [BaseLevel, MaxLevel]. Task 5 owns the full CoA rule.
-        internal float CalculateBaseEffectValue(ResolvedEffect effect, RenderContext context)
+        // 3.3.5 SpellEffectInfo::CalcValue (see SpellScalingCalculator).
+        internal (float Base, float Min, float Max, float PerComboPoint) CalculateEffectRange(ResolvedEffect effect, RenderContext context)
         {
             var entry = effect.Entry;
-            float value = entry.EffectBasePoints + (entry.EffectDieSides == 1 ? 1 : 0);
-            var level = (int)context.Level;
-            if (level < BaseLevel)
-                level = BaseLevel;
-            if (MaxLevel > 0 && level > MaxLevel)
-                level = MaxLevel;
-            value += entry.EffectRealPointsPerLevel * (level - SpellLevel);
-
-            return (float)Math.Round(value, MidpointRounding.AwayFromZero);
+            return SpellScalingCalculator.Value(entry.EffectBasePoints, entry.EffectDieSides,
+                entry.EffectRealPointsPerLevel, entry.EffectPointsPerCombo,
+                SpellLevel, BaseLevel, MaxLevel, (int)context.Level);
         }
+
+        internal float CalculateBaseEffectValue(ResolvedEffect effect, RenderContext context) =>
+            CalculateEffectRange(effect, context).Base;
 
         // Extracted from AppendEffectInfo so the text path and
         // SpellInfoJsonSerializer render the same numbers instead of the
@@ -660,15 +658,20 @@ namespace SpellWork.Spell
         internal EffectValueBreakdown CalculateEffectValues(ResolvedEffect resolved, RenderContext context)
         {
             var effect = resolved.Entry;
-            var baseValue = CalculateBaseEffectValue(resolved, context);
+            var range = CalculateEffectRange(resolved, context);
             var breakdown = new EffectValueBreakdown
             {
-                BaseValue = baseValue,
-                ValuePerResource = effect.EffectPointsPerCombo,
+                BaseValue = range.Base,
+                MinValue = range.Min,
+                MaxValue = range.Max,
+                ValuePerResource = range.PerComboPoint,
             };
 
             if (Math.Abs(effect.EffectRealPointsPerLevel) > 1.0E-5f)
                 breakdown.RealPointsPerLevel = effect.EffectRealPointsPerLevel;
+
+            // CalcValue applies the level term only for a non-zero RealPointsPerLevel.
+            breakdown.Scaled = effect.EffectRealPointsPerLevel != 0.0f;
 
             if (effect.EffectBonusCoefficient > 1.0E-5f)
                 breakdown.SpellPowerCoefficient = effect.EffectBonusCoefficient;
@@ -695,11 +698,8 @@ namespace SpellWork.Spell
 
             var values = CalculateEffectValues(resolved, context);
             var baseValue = values.BaseValue;
-            if (Math.Abs(values.Variance) > 1.0E-5f)
-            {
-                var delta = Math.Abs(baseValue * values.Variance * 0.5f);
-                rtb.AppendFormat("BasePoints = {0:F} to {1:F}", baseValue - delta, baseValue + delta);
-            }
+            if (values.MinValue != values.MaxValue)
+                rtb.AppendFormat("BasePoints = {0:F} to {1:F}", values.MinValue, values.MaxValue);
             else
                 rtb.AppendFormat("BasePoints = {0:F}", baseValue);
 

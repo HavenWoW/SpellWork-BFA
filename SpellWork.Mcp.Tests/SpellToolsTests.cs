@@ -583,19 +583,27 @@ namespace SpellWork.Mcp.Tests
                 <= ToolResponse.MaxRows);
         }
 
-        [SkippableFact(Skip = "coa: Task 5")]
+        [SkippableFact]
         public async Task GetSpell_HonoursLevel()
         {
             _fixture.SkipIfNoClientData();
 
+            // A spell whose effect 0 base differs between level 10 and 90 under CalcValue.
+            double Calc(SpellWork.DBC.Structures.SpellEntry e, int level) => SpellWork.Spell.SpellScalingCalculator.Value(
+                e.EffectBasePoints[0], e.EffectDieSides[0], e.EffectRealPointsPerLevel[0], e.EffectPointsPerCombo[0],
+                e.SpellLevel, e.BaseLevel, e.MaxLevel, level).Base;
+            var spell = SpellWork.DBC.DBC.SpellInfoStore.Values.First(s =>
+                s.Effects.Count > 0 && Calc(s.Spell, 10) != Calc(s.Spell, 90));
+
             async Task<double> BaseAt(uint level)
             {
-                var json = await _fixture.SpellTools.GetSpell(133, level: level);
+                var json = await _fixture.SpellTools.GetSpell(spell.ID, level: level);
                 using var doc = JsonDocument.Parse(json);
                 return doc.RootElement.GetProperty("result").GetProperty("effects")[0].GetProperty("basePoints").GetDouble();
             }
 
-            Assert.NotEqual(await BaseAt(10), await BaseAt(90));
+            Assert.Equal(Calc(spell.Spell, 10), await BaseAt(10));
+            Assert.Equal(Calc(spell.Spell, 90), await BaseAt(90));
         }
 
         [SkippableFact]
