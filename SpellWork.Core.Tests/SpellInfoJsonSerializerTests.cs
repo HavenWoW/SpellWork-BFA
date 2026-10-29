@@ -115,8 +115,43 @@ namespace SpellWork.Core.Tests
             Assert.Equal(2, reagents[0].GetProperty("count").GetInt32());
             Assert.Equal(17020, reagents[1].GetProperty("item").GetInt32());
 
-            foreach (var absent in new[] { "scaling", "misc", "nameSubtext", "effectDifficulties", "items", "procs" })
+            foreach (var absent in new[] { "scaling", "misc", "nameSubtext", "effectDifficulties", "procs", "castTime", "range" })
                 Assert.False(root.TryGetProperty(absent, out _), $"'{absent}' must not be emitted");
+
+            // No world database was passed: items is empty and says why.
+            Assert.Equal(0, root.GetProperty("items").GetArrayLength());
+            Assert.Equal(SpellInfoJsonSerializer.ItemsWithoutWorldDatabaseNote, root.GetProperty("itemsNote").GetString());
+        }
+
+        // Items using the spell come from item_template (spellid_1..5) when the
+        // world database supplies them: one entry per slot naming the spell.
+        [Fact]
+        public void Items_section_lists_the_item_template_slots_supplied()
+        {
+            var uses = new[]
+            {
+                new SpellWork.Database.ItemSpellUse { Entry = 5175, Name = "Earth Totem", Slot = 1, Trigger = 0 },
+                new SpellWork.Database.ItemSpellUse { Entry = 9999, Name = "Proc Blade", Slot = 2, Trigger = 2 },
+            };
+
+            var root = Parse(SpellInfoJsonSerializer.Serialize(new SpellInfo(SyntheticRow()), new RenderContext(80, 0),
+                new[] { "items" }, itemsUsingSpell: uses));
+
+            Assert.False(root.TryGetProperty("itemsNote", out _));
+            var items = root.GetProperty("items").EnumerateArray().ToList();
+            Assert.Equal(2, items.Count);
+            Assert.Equal(5175, items[0].GetProperty("id").GetInt32());
+            Assert.Equal("Earth Totem", items[0].GetProperty("name").GetString());
+            Assert.Equal(1, items[0].GetProperty("slot").GetInt32());
+            Assert.Equal("ITEM_SPELLTRIGGER_ON_USE", items[0].GetProperty("trigger").GetProperty("name").GetString());
+            Assert.Equal(2, items[1].GetProperty("trigger").GetProperty("raw").GetInt32());
+            Assert.Equal("ITEM_SPELLTRIGGER_CHANCE_ON_HIT", items[1].GetProperty("trigger").GetProperty("name").GetString());
+
+            // A configured world database with no matching item: empty, no note.
+            var none = Parse(SpellInfoJsonSerializer.Serialize(new SpellInfo(SyntheticRow()), new RenderContext(80, 0),
+                new[] { "items" }, itemsUsingSpell: new SpellWork.Database.ItemSpellUse[0]));
+            Assert.Equal(0, none.GetProperty("items").GetArrayLength());
+            Assert.False(none.TryGetProperty("itemsNote", out _));
         }
 
         [Fact]
@@ -202,7 +237,8 @@ namespace SpellWork.Core.Tests
         {
             var spell = new SpellInfo(SyntheticRow());
 
-            var requested = Parse(SpellInfoJsonSerializer.Serialize(spell, new RenderContext(80, 0, 2), new[] { "context" }))
+            // Present whatever the filter: "effects" alone still carries it.
+            var requested = Parse(SpellInfoJsonSerializer.Serialize(spell, new RenderContext(80, 0, 2), new[] { "effects" }))
                 .GetProperty("difficulty");
             Assert.Equal(2, requested.GetProperty("requested").GetInt32());
             Assert.Equal(SyntheticId, requested.GetProperty("resolvedSpellId").GetInt32()); // in no row: itself
@@ -225,19 +261,20 @@ namespace SpellWork.Core.Tests
             Assert.Contains("notasection", ex.Message);
         }
 
-        // Every section is filterable; "misc", "scaling" and "items" are gone
-        // with the 5.4.8 tables that fed them.
+        // The 5.4.8 section names are kept (spec 6: every spellwork server is
+        // called the same way); only "scaling" is gone with 3.3.5's lack of
+        // scaling data.
         [Fact]
-        public void Serialize_accepts_every_section_and_rejects_the_5_4_8_ones()
+        public void Serialize_accepts_the_5_4_8_sections_except_scaling()
         {
             var spell = MinimalSpell();
             var context = new RenderContext(1, 1);
 
-            foreach (var section in new[] { "general", "attributes", "effects", "powers", "targets", "reagents", "aura", "procs",
-                         "context", "cooldowns", "levels", "interrupts", "shapeshift", "equippedItems", "triggers", "totems", "visual" })
+            foreach (var section in new[] { "misc", "attributes", "effects", "powers", "targets", "reagents", "aura", "procs",
+                         "context", "cooldowns", "levels", "interrupts", "shapeshift", "equippedItems", "items", "triggers", "totems", "visual" })
                 SpellInfoJsonSerializer.Serialize(spell, context, new[] { section });
 
-            foreach (var gone in new[] { "misc", "scaling", "items", "notasection" })
+            foreach (var gone in new[] { "scaling", "general", "notasection" })
                 Assert.Throws<ArgumentException>(() => SpellInfoJsonSerializer.Serialize(spell, context, new[] { gone }));
         }
 
@@ -378,13 +415,15 @@ namespace SpellWork.Core.Tests
         [SkippableFact]
         public void Serialize_honours_the_sections_filter()
         {
-            var json = Parse(SpellInfoJsonSerializer.Serialize(Spell(133), RenderContext.Default, new[] { "general" }));
+            var json = Parse(SpellInfoJsonSerializer.Serialize(Spell(133), RenderContext.Default, new[] { "misc" }));
 
             Assert.False(json.TryGetProperty("effects", out _));
             Assert.False(json.TryGetProperty("attributes", out _));
             Assert.False(json.TryGetProperty("procFlags", out _));
+            Assert.False(json.TryGetProperty("misc", out _)); // root keys, no "misc" object
             Assert.True(json.TryGetProperty("schoolMask", out _));
-            Assert.True(json.TryGetProperty("castTime", out _));
+            Assert.Equal(16, json.GetProperty("castingTimeIndex").GetProperty("id").GetInt32());
+            Assert.Equal(35, json.GetProperty("rangeIndex").GetProperty("id").GetInt32());
             Assert.Equal(133, json.GetProperty("id").GetInt32());
             Assert.Equal("Fireball", json.GetProperty("name").GetString());
         }
@@ -459,11 +498,10 @@ namespace SpellWork.Core.Tests
             var json = Parse(SpellInfoJsonSerializer.Serialize(Spell(133), RenderContext.Default, new[] { "effects" }));
             Assert.False(json.TryGetProperty("level", out _));
             Assert.False(json.TryGetProperty("itemLevel", out _));
-            Assert.False(json.TryGetProperty("difficulty", out _));
+            Assert.True(json.TryGetProperty("difficulty", out _)); // always present
 
             var context = Parse(SpellInfoJsonSerializer.Serialize(Spell(133), RenderContext.Default, new[] { "context" }));
             Assert.True(context.TryGetProperty("level", out _));
-            Assert.True(context.TryGetProperty("difficulty", out _));
         }
 
         [SkippableFact]
@@ -483,9 +521,8 @@ namespace SpellWork.Core.Tests
         {
             var json = Parse(SpellInfoJsonSerializer.Serialize(Spell(49998), RenderContext.Default));
 
-            var category = json.GetProperty("category");
-            Assert.Equal(1196, category.GetProperty("id").GetInt32());
-            Assert.Equal(0, category.GetProperty("flags").GetProperty("raw").GetInt32());
+            Assert.Equal(1196, json.GetProperty("category").GetInt32());
+            Assert.Equal(0, json.GetProperty("categoryFlags").GetProperty("raw").GetInt32());
 
             var rune = json.GetProperty("runeCost");
             Assert.Equal(797, rune.GetProperty("id").GetInt32());

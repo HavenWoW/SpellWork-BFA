@@ -728,6 +728,17 @@ namespace SpellWork.Spell
         SPELL_CATEGORY_FLAG_COOLDOWN_STARTS_ON_EVENT          = 0x04,
     }
 
+    // CoA: azerothcore-wotlk-coa ItemTemplate.h ItemSpelltriggerType (item_template.spelltrigger_N)
+    public enum ItemSpelltriggerType
+    {
+        ITEM_SPELLTRIGGER_ON_USE          = 0,
+        ITEM_SPELLTRIGGER_ON_EQUIP        = 1,
+        ITEM_SPELLTRIGGER_CHANCE_ON_HIT   = 2,
+        ITEM_SPELLTRIGGER_SOULSTONE       = 4,
+        ITEM_SPELLTRIGGER_ON_NO_DELAY_USE = 5,
+        ITEM_SPELLTRIGGER_LEARN_SPELL_ID  = 6,
+    }
+
     // CoA: azerothcore-wotlk-coa SpellMgr.h ProcFlagsExLegacy
     [Flags]
     public enum ProcFlagsEx

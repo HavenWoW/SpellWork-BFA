@@ -16,7 +16,7 @@ namespace SpellWork.Mcp.Tools
         public SpellTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "get_spell")]
-        [Description("The full decoded view of one spell. format is \"json\" or \"text\". sections filters to any of: misc, attributes, effects, powers, targets, reagents, aura, procs, scaling, context, cooldowns, levels, interrupts, shapeshift, equippedItems, totems, items, triggers, visual (the 5.4.8 visual chain, same shape as get_spell_visual_chain; storeUnloaded true and missingStores naming the stores that did not load when a visual store is missing). Displayed numeric values are rounded (half away from zero) server formula results; the 5.4.8 server truncates, so a client tooltip may differ by 1. difficulty is a Difficulty.dbc id (0 = base, the default); every difficulty-keyed table (SpellMisc, SpellEffect, SpellCategories, SpellAuraOptions, SpellCooldowns, SpellLevels, SpellInterrupts, SpellTargetRestrictions) is read at that difficulty, and a spell with no row of its own there (per effect index for SpellEffect) uses its base row. An unknown difficulty is an error that lists the valid ids.")]
+        [Description("The full decoded view of one spell (CoA 3.3.5a Spell.dbc row). format is \"json\" or \"text\". sections filters to any of: misc, attributes, effects, powers, targets, reagents, aura, procs, context, cooldowns, levels, interrupts, shapeshift, equippedItems, items, triggers, totems, visual (the visual chain, same shape as get_spell_visual_chain; storeUnloaded true and missingStores naming the stores that did not load when a visual store is missing). id, name, rank and difficulty {requested, resolvedSpellId, variants} are always present. items lists item_template items whose spellid_1..5 name the spell when the world database is configured, otherwise an empty array plus itemsNote. Effect basePoints is the 3.3.5 CalcValue base at the given level (basePointsMin/Max when DieSides gives a range). difficulty is an optional SpellDifficulty mode 0-3 (10N, 25N, 10H, 25H); omitted means no resolution (the id is used as given); a mode resolves the id to that mode's variant as the server does, a heroic mode with no variant falling back to the normal mode of the same size. Any other value is an error that lists the valid modes.")]
         public async Task<string> GetSpell(
             int id,
             string format = "json",
@@ -372,7 +372,7 @@ namespace SpellWork.Mcp.Tools
             // them properly, one spell at a time.
             var sections = new[]
             {
-                "general", "attributes", "effects", "powers", "targets", "reagents", "aura", "procs",
+                "misc", "attributes", "effects", "powers", "targets", "reagents", "aura", "procs",
                 "cooldowns", "levels", "interrupts", "shapeshift", "equippedItems", "totems",
             };
 
@@ -442,9 +442,11 @@ namespace SpellWork.Mcp.Tools
         /// The root properties that identify <em>which</em> spell a document
         /// describes rather than anything about its definition. Named here as
         /// data so the reason they are dropped is stated once; see
-        /// <see cref="CompareSpells"/> for that reason.
+        /// <see cref="CompareSpells"/> for that reason. "difficulty" names the
+        /// spell's own SpellDifficulty row and resolved id, so it is identity
+        /// too, and it is emitted whatever the sections filter.
         /// </summary>
-        internal static readonly string[] IdentityProperties = { "id", "name" };
+        internal static readonly string[] IdentityProperties = { "id", "name", "difficulty" };
 
         /// <summary>
         /// Parses a serialized spell document with <see cref="IdentityProperties"/>

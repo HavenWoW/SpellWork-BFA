@@ -34,18 +34,23 @@ namespace SpellWork.Spell
             typeof(SpellAtributeEx7),
         };
 
-        // Section names the `sections` filter accepts; the single source of
-        // truth for both validating `sections` and echoing back which of them
-        // were applied. "context" is the render context (level, itemLevel and
-        // the difficulty block) basePoints is computed against. "general" holds
-        // the scalar spell-row fields 5.4.8 kept under "misc" (spec 4.2: there
-        // is no SpellMisc in 3.3.5, so there is no "misc" object either).
-        private static readonly string[] ValidSections =
+        // Section names the `sections` filter accepts -- 5.4.8's names, kept
+        // so every spellwork server is called the same way (spec 6), minus
+        // "scaling" (3.3.5 has no scaling data). The single source of truth
+        // for both validating `sections` and echoing back which were applied.
+        // "context" is the render context (level, itemLevel) basePoints is
+        // computed against. "misc" selects the scalar Spell-row fields, which
+        // are root keys (there is no "misc" object, as in 5.4.8).
+        internal static readonly string[] ValidSections =
         {
-            "general", "attributes", "effects", "powers", "targets", "reagents", "aura", "procs",
+            "misc", "attributes", "effects", "powers", "targets", "reagents", "aura", "procs",
             "context", "cooldowns", "levels", "interrupts", "shapeshift", "equippedItems",
-            "triggers", "totems", "visual",
+            "items", "triggers", "totems", "visual",
         };
+
+        /// <summary>The <c>itemsNote</c> emitted when no world database supplied the items.</summary>
+        public const string ItemsWithoutWorldDatabaseNote =
+            "World database not configured: items using this spell come from item_template (spellid_1..spellid_5).";
 
         /// <param name="difficulty">
         /// The difficulty block. A tool that resolved a requested spell id to a
@@ -57,8 +62,14 @@ namespace SpellWork.Spell
         /// item_template names by entry, when the world database is configured;
         /// a reagent's <c>name</c> is emitted only when its item is in here.
         /// </param>
+        /// <param name="itemsUsingSpell">
+        /// The item_template slots naming this spell, when the world database
+        /// is configured; null means it is not, and "items" is then an empty
+        /// array with an "itemsNote" saying so.
+        /// </param>
         public static string Serialize(SpellInfo spell, RenderContext context, IReadOnlyCollection<string> sections = null,
-            SpellDifficultyView difficulty = null, IReadOnlyDictionary<int, string> itemNames = null)
+            SpellDifficultyView difficulty = null, IReadOnlyDictionary<int, string> itemNames = null,
+            IReadOnlyList<Database.ItemSpellUse> itemsUsingSpell = null)
         {
             if (spell == null)
                 throw new ArgumentNullException(nameof(spell));
@@ -93,6 +104,10 @@ namespace SpellWork.Spell
                 ["name"] = spell.Name,
                 // 3.3.5 NameSubtext ("Rank 1"); empty for unranked spells.
                 ["rank"] = spell.Spell.NameSubtext ?? string.Empty,
+                // Always present, whatever the sections filter: which spell
+                // this document is and which SpellDifficulty mode (if any)
+                // led to it (spec D4).
+                ["difficulty"] = BuildDifficulty(difficulty ?? SpellDifficultyView.For(spell.ID, context.Difficulty)),
             };
 
             // Echoed only when the caller actually filtered. Its presence
@@ -104,23 +119,21 @@ namespace SpellWork.Spell
                 root["sections"] = ValidSections.Where(Wants).ToList();
 
             // basePoints (in "effects") is computed against the supplied
-            // RenderContext, so the document records which level produced it,
-            // and which SpellDifficulty mode (if any) was asked for. Recorded
-            // at the root because it describes how the *document* was
+            // RenderContext, so the document records which level produced it.
+            // Recorded at the root because it describes how the *document* was
             // rendered. Emitted directly: a level of 0 is a real render
             // context and must not be indistinguishable from "omitted".
             if (Wants("context"))
             {
                 root["level"] = context.Level;
                 root["itemLevel"] = context.ItemLevel;
-                root["difficulty"] = BuildDifficulty(difficulty ?? SpellDifficultyView.For(spell.ID, context.Difficulty));
             }
 
             AddIfNotEmpty(root, "description", spell.Description);
             AddIfNotEmpty(root, "auraDescription", spell.Spell.AuraDescription);
 
-            if (Wants("general"))
-                BuildGeneral(root, spell);
+            if (Wants("misc"))
+                BuildMisc(root, spell);
 
             if (Wants("attributes"))
                 root["attributes"] = BuildAttributes(spell);
@@ -193,6 +206,17 @@ namespace SpellWork.Spell
             if (Wants("triggers"))
                 root["triggers"] = BuildTriggers(spell);
 
+            // Items whose item_template spell slots name this spell (5.4.8
+            // read Item-sparse; 3.3.5 Item.dbc has no spell columns). Emitted
+            // always when requested: an empty array is an answer, and the
+            // note says when it is empty only because there is no world DB.
+            if (Wants("items"))
+            {
+                root["items"] = BuildItems(itemsUsingSpell);
+                if (itemsUsingSpell == null)
+                    root["itemsNote"] = ItemsWithoutWorldDatabaseNote;
+            }
+
             // Emitted unconditionally: {"storeUnloaded": true, ...} when a
             // gated store is missing, otherwise the chain (spec §6). The same
             // single ResolveSection call the text block and
@@ -211,10 +235,21 @@ namespace SpellWork.Spell
                 ["variants"] = difficulty.Variants,
             };
 
-        // The scalar Spell-row fields. Root keys rather than a nested object:
-        // search_spells filters on family, and burying it one level deep
-        // makes every caller destructure to reach it.
-        private static void BuildGeneral(IDictionary<string, object> root, SpellInfo spell)
+        private static List<object> BuildItems(IReadOnlyList<Database.ItemSpellUse> uses) =>
+            (uses ?? Array.Empty<Database.ItemSpellUse>())
+                .Select(u => (object)new Dictionary<string, object>
+                {
+                    ["id"] = u.Entry,
+                    ["name"] = u.Name,
+                    ["slot"] = u.Slot,
+                    ["trigger"] = BuildRawAndName(u.Trigger, typeof(ItemSpelltriggerType)),
+                })
+                .ToList();
+
+        // The scalar Spell-row fields ("misc" section). Root keys rather than
+        // a nested object, as in 5.4.8: search_spells filters on family, and
+        // burying it one level deep makes every caller destructure to reach it.
+        private static void BuildMisc(IDictionary<string, object> root, SpellInfo spell)
         {
             if (spell.SchoolMask != 0)
                 root["schoolMask"] = BuildRawAndFlags(spell.SchoolMask, typeof(SpellSchoolMask));
@@ -223,22 +258,18 @@ namespace SpellWork.Spell
             root["spellFamilyName"] = BuildRawAndName(spell.SpellFamilyName, typeof(SpellFamilyNames));
             root["spellClassMask"] = spell.SpellClassMask;
 
-            // The raw Spell.Category id, plus the SpellCategory.dbc row's
-            // flags when that row exists.
-            if (spell.CategoryID != 0)
-            {
-                var category = new Dictionary<string, object> { ["id"] = spell.CategoryID };
-                if (spell.Category != null)
-                    category["flags"] = BuildRawAndFlags(spell.Category.Flags, typeof(SpellCategoryFlags));
-                root["category"] = category;
-            }
+            // The raw Spell.Category id (5.4.8 key), plus the SpellCategory.dbc
+            // row's flags beside it when that row exists.
+            AddIfNonZero(root, "category", spell.CategoryID);
+            if (spell.Category != null)
+                root["categoryFlags"] = BuildRawAndFlags(spell.Category.Flags, typeof(SpellCategoryFlags));
 
             AddIfNonZero(root, "speed", spell.Speed);
 
             // CastingTimeIndex/RangeIndex are indices, not values: resolved
             // to an object with the id plus the row's values, or omitted.
-            AddIfNotEmpty(root, "castTime", BuildCastTime(spell.CastingTimeIndex));
-            AddIfNotEmpty(root, "range", BuildRange(spell));
+            AddIfNotEmpty(root, "castingTimeIndex", BuildCastTime(spell.CastingTimeIndex));
+            AddIfNotEmpty(root, "rangeIndex", BuildRange(spell));
 
             AddIfNonZero(root, "spellIconID", spell.SpellIconID);
             AddIfNonZero(root, "activeIconID", spell.ActiveIconID);

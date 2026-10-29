@@ -219,6 +219,46 @@ namespace SpellWork.Database
             return names;
         }
 
+        /// <summary>
+        /// The items whose item_template spellid_1..spellid_5 name
+        /// <paramref name="spellId"/>, one entry per matching slot (3.3.5
+        /// Item.dbc has no spell columns). At most <paramref name="limit"/>
+        /// items are read.
+        /// </summary>
+        public List<ItemSpellUse> SelectItemsUsingSpell(int spellId, int limit)
+        {
+            var uses = new List<ItemSpellUse>();
+            if (spellId <= 0)
+                return uses;
+
+            var result = SelectRows(
+                "SELECT `entry`, `name`, " +
+                "`spellid_1`, `spelltrigger_1`, `spellid_2`, `spelltrigger_2`, `spellid_3`, `spelltrigger_3`, " +
+                "`spellid_4`, `spelltrigger_4`, `spellid_5`, `spelltrigger_5` FROM `item_template` " +
+                "WHERE `spellid_1` = @spell OR `spellid_2` = @spell OR `spellid_3` = @spell OR `spellid_4` = @spell OR `spellid_5` = @spell " +
+                "ORDER BY `entry`",
+                limit, ("@spell", spellId));
+
+            foreach (var row in result.Rows)
+            {
+                for (var slot = 1; slot <= 5; slot++)
+                {
+                    if (Convert.ToInt32(row["spellid_" + slot]) != spellId)
+                        continue;
+
+                    uses.Add(new ItemSpellUse
+                    {
+                        Entry = Convert.ToInt32(row["entry"]),
+                        Name = row["name"] as string,
+                        Slot = slot,
+                        Trigger = Convert.ToInt32(row["spelltrigger_" + slot]),
+                    });
+                }
+            }
+
+            return uses;
+        }
+
         private static string UniqueColumnName(List<string> taken, string name)
         {
             if (string.IsNullOrEmpty(name))

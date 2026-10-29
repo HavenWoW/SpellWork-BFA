@@ -271,8 +271,7 @@ namespace SpellWork.Spell
 
             #region Modified by ...
             foreach (var eff in
-                    from s in DBC.DBC.SpellInfoStore.Values.OrderBy(x => x.ID)
-                    where s.SpellFamilyName == SpellFamilyName
+                    from s in DBC.DBC.SpellInfoStore.Values.Where(x => x.SpellFamilyName == SpellFamilyName).OrderBy(x => x.ID)
                     from eff in s.Effects
                     where eff != null && ((eff.Entry.EffectSpellClassMask[0] & SpellClassMask[0]) != 0 ||
                           (eff.Entry.EffectSpellClassMask[1] & SpellClassMask[1]) != 0 ||
@@ -725,8 +724,8 @@ namespace SpellWork.Spell
                 rtb.AppendFormatLine("SpellClassMask = {0:X8} {1:X8} {2:X8}", classMask[0], classMask[1], classMask[2]);
 
                 var skillLineAbilities = DBC.DBC.SkillLineAbility?.Values ?? Enumerable.Empty<SkillLineAbilityEntry>();
-                var query = from spell in DBC.DBC.SpellInfoStore.Values.OrderBy(x => x.ID)
-                            where spell.SpellFamilyName == SpellFamilyName && spell.SpellClassMask.ContainsElement(classMask)
+                var query = from spell in DBC.DBC.SpellInfoStore.Values.Where(x => x.SpellFamilyName == SpellFamilyName).OrderBy(x => x.ID)
+                            where spell.SpellClassMask.ContainsElement(classMask)
                             join sk in skillLineAbilities on spell.ID equals sk.Spell into temp
                             from skill in temp.DefaultIfEmpty(new SkillLineAbilityEntry())
                             select new
