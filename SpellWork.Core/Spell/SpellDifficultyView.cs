@@ -13,13 +13,23 @@ namespace SpellWork.Spell
     public sealed class SpellDifficultyView
     {
         public SpellDifficultyView(int? requested, int resolvedSpellId, IReadOnlyList<int> variants)
+            : this(requested, resolvedSpellId, resolvedSpellId, variants)
+        {
+        }
+
+        public SpellDifficultyView(int? requested, int requestedSpellId, int resolvedSpellId, IReadOnlyList<int> variants)
         {
             Requested = requested;
+            RequestedSpellId = requestedSpellId;
             ResolvedSpellId = resolvedSpellId;
             Variants = variants ?? Array.Empty<int>();
         }
 
         public int? Requested { get; }
+
+        /// <summary>The spell id the caller asked for, before any resolution.</summary>
+        public int RequestedSpellId { get; }
+
         public int ResolvedSpellId { get; }
         public IReadOnlyList<int> Variants { get; }
 
@@ -32,7 +42,7 @@ namespace SpellWork.Spell
         {
             var resolver = DBC.DBC.DifficultyResolver;
             var (resolved, variants) = resolver.Resolve(spellId, mode ?? 0);
-            return new SpellDifficultyView(mode, mode.HasValue ? resolved : spellId, variants);
+            return new SpellDifficultyView(mode, spellId, mode.HasValue ? resolved : spellId, variants);
         }
     }
 }

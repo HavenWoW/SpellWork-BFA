@@ -44,7 +44,7 @@ namespace SpellWork.Mcp.Tests
                 el.TryGetProperty(name, out var v) ? v.GetDouble() : 0;
 
             Assert.Equal(Get(fromSpell, "basePoints"), Get(fromScaling, "base"));
-            Assert.Equal(Get(fromSpell, "pointsPerComboPoint"), Get(fromScaling, "perComboPoint"));
+            Assert.Equal(Get(fromSpell, "valuePerResource"), Get(fromScaling, "perComboPoint"));
             // get_spell reports the raw EffectBonusMultiplier; calculate_spell_scaling
             // reports it as spellPowerCoefficient when it is non-zero.
             Assert.Equal(Get(fromSpell, "bonusMultiplier"), Get(fromScaling, "spellPowerCoefficient"));
@@ -122,8 +122,12 @@ namespace SpellWork.Mcp.Tests
             using var doc = JsonDocument.Parse(json);
             var result = doc.RootElement.GetProperty("result");
 
-            Assert.Equal(row.DifficultySpellID[0], result.GetProperty("id").GetInt32());
+            // I5: id and name are the spell computed (resolved), requestedId
+            // the id asked for.
+            Assert.Equal(row.DifficultySpellID[1], result.GetProperty("id").GetInt32());
+            Assert.Equal(row.DifficultySpellID[0], result.GetProperty("requestedId").GetInt32());
             Assert.Equal(row.DifficultySpellID[1], result.GetProperty("resolvedSpellId").GetInt32());
+            Assert.Equal(SpellWork.DBC.DBC.SpellInfoStore[row.DifficultySpellID[1]].Name, result.GetProperty("name").GetString());
             Assert.Equal(1, result.GetProperty("difficulty").GetInt32());
         }
 
@@ -141,6 +145,8 @@ namespace SpellWork.Mcp.Tests
 
             using var omitted = JsonDocument.Parse(await _fixture.DecoderTools.CalculateSpellScaling(id25, level: 80, itemLevel: 0));
             Assert.Equal(id25, omitted.RootElement.GetProperty("result").GetProperty("resolvedSpellId").GetInt32());
+            Assert.Equal(id25, omitted.RootElement.GetProperty("result").GetProperty("id").GetInt32());
+            Assert.Equal(id25, omitted.RootElement.GetProperty("result").GetProperty("requestedId").GetInt32());
 
             using var zero = JsonDocument.Parse(await _fixture.DecoderTools.CalculateSpellScaling(id25, level: 80, itemLevel: 0, difficulty: 0));
             Assert.Equal(row.DifficultySpellID[0], zero.RootElement.GetProperty("result").GetProperty("resolvedSpellId").GetInt32());

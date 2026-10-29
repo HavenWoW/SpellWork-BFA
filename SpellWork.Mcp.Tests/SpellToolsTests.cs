@@ -578,7 +578,7 @@ namespace SpellWork.Mcp.Tests
             });
         }
 
-        // Pins the drop at exactly two. 133 vs 116 produces 65 differences
+        // Pins the drop at exactly two. 133 vs 116 produces 63 differences (5.4.8 envelope, v1.0.1)
         // against the CoA 3.3.5a (12340) reference data -- measured, not
         // inferred. If a future change reintroduces a root field outside the
         // section gates, this fails rather than quietly inflating every diff
@@ -592,8 +592,8 @@ namespace SpellWork.Mcp.Tests
             using var doc = JsonDocument.Parse(json);
             var result = doc.RootElement.GetProperty("result");
 
-            Assert.Equal(65, result.GetProperty("totalDifferences").GetInt32());
-            Assert.Equal(65, result.GetProperty("differences").GetArrayLength());
+            Assert.Equal(63, result.GetProperty("totalDifferences").GetInt32());
+            Assert.Equal(63, result.GetProperty("differences").GetArrayLength());
         }
 
         [SkippableFact]
@@ -673,6 +673,7 @@ namespace SpellWork.Mcp.Tests
             var difficulty = result.GetProperty("difficulty");
 
             Assert.Equal(mode1, result.GetProperty("id").GetInt32());
+            Assert.Equal(mode1, result.GetProperty("requestedId").GetInt32());
             Assert.Equal(JsonValueKind.Null, difficulty.GetProperty("requested").ValueKind);
             Assert.Equal(mode1, difficulty.GetProperty("resolvedSpellId").GetInt32());
             Assert.Contains(mode0, difficulty.GetProperty("variants").EnumerateArray().Select(v => v.GetInt32()));
@@ -688,7 +689,11 @@ namespace SpellWork.Mcp.Tests
             {
                 using var doc = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(mode0, format: format, difficulty: 1));
                 var result = doc.RootElement.GetProperty("result");
+                // I5: id and name are the spell described, requestedId the id
+                // asked for -- in both formats.
                 Assert.Equal(mode1, result.GetProperty("id").GetInt32());
+                Assert.Equal(mode0, result.GetProperty("requestedId").GetInt32());
+                Assert.Equal(SpellWork.DBC.DBC.SpellInfoStore[mode1].Name, result.GetProperty("name").GetString());
                 if (format == "json")
                 {
                     var difficulty = result.GetProperty("difficulty");
@@ -697,7 +702,7 @@ namespace SpellWork.Mcp.Tests
                 }
                 else
                 {
-                    Assert.Equal(mode0, result.GetProperty("requestedId").GetInt32());
+                    Assert.Equal(mode1, result.GetProperty("resolvedSpellId").GetInt32());
                     Assert.Contains("ID - " + mode1, result.GetProperty("text").GetString());
                 }
             }
@@ -748,14 +753,19 @@ namespace SpellWork.Mcp.Tests
             {
                 var result = plain.RootElement.GetProperty("result");
                 Assert.Equal(mode0, result.GetProperty("id").GetInt32());
+                Assert.Equal(mode0, result.GetProperty("requestedId").GetInt32());
                 Assert.Equal(mode0, result.GetProperty("resolvedSpellId").GetInt32());
             }
 
             using (var resolved = JsonDocument.Parse(await _fixture.SpellTools.GetSpellTriggers(mode0, difficulty: 1)))
             {
                 var result = resolved.RootElement.GetProperty("result");
-                Assert.Equal(mode0, result.GetProperty("id").GetInt32());
+                // I5: id and name are the resolved spell (never the requested
+                // id beside the resolved name); requestedId is the id asked for.
+                Assert.Equal(mode1, result.GetProperty("id").GetInt32());
+                Assert.Equal(mode0, result.GetProperty("requestedId").GetInt32());
                 Assert.Equal(mode1, result.GetProperty("resolvedSpellId").GetInt32());
+                Assert.Equal(SpellWork.DBC.DBC.SpellInfoStore[mode1].Name, result.GetProperty("name").GetString());
             }
 
             using var bad = JsonDocument.Parse(await _fixture.SpellTools.GetSpellTriggers(mode0, difficulty: 4));
@@ -773,8 +783,19 @@ namespace SpellWork.Mcp.Tests
             var result = doc.RootElement.GetProperty("result");
             Assert.Equal(mode1, result.GetProperty("a").GetProperty("id").GetInt32());
             Assert.Equal(mode1, result.GetProperty("b").GetProperty("id").GetInt32());
-            Assert.Equal(mode0, result.GetProperty("a").GetProperty("requestedId").GetInt32());
+            foreach (var side in new[] { "a", "b" })
+            {
+                Assert.Equal(mode0, result.GetProperty(side).GetProperty("requestedId").GetInt32());
+                Assert.Equal(mode1, result.GetProperty(side).GetProperty("resolvedSpellId").GetInt32());
+                Assert.Equal(SpellWork.DBC.DBC.SpellInfoStore[mode1].Name, result.GetProperty(side).GetProperty("name").GetString());
+            }
             Assert.True(result.GetProperty("identical").GetBoolean());
+
+            // requestedId is identity, not a difference: two different ids
+            // never report it in the diff.
+            using var two = JsonDocument.Parse(await _fixture.SpellTools.CompareSpells(mode0, mode1));
+            Assert.DoesNotContain(two.RootElement.GetProperty("result").GetProperty("differences").EnumerateArray(),
+                d => d.GetProperty("path").GetString() == "requestedId");
 
             using var bad = JsonDocument.Parse(await _fixture.SpellTools.CompareSpells(mode0, mode1, difficulty: 7));
             Assert.Equal("unknown_difficulty", bad.RootElement.GetProperty("error").GetProperty("code").GetString());
@@ -795,7 +816,7 @@ namespace SpellWork.Mcp.Tests
             var result = doc.RootElement.GetProperty("result");
             Assert.Equal(0, result.GetProperty("items").GetArrayLength());
             Assert.Equal(SpellWork.Spell.SpellInfoJsonSerializer.ItemsWithoutWorldDatabaseNote, result.GetProperty("itemsNote").GetString());
-            Assert.False(result.GetProperty("reagents")[0].TryGetProperty("name", out _));
+            Assert.False(result.GetProperty("reagents").GetProperty("items")[0].TryGetProperty("name", out _));
         }
 
         private static McpServerConfig TestWorldDatabaseConfig()
@@ -869,7 +890,7 @@ namespace SpellWork.Mcp.Tests
             // 3561 Teleport: Stormwind takes a Rune of Teleportation.
             using (var doc = JsonDocument.Parse(await tools.GetSpell(3561, sections: new[] { "reagents" })))
             {
-                var first = doc.RootElement.GetProperty("result").GetProperty("reagents")[0];
+                var first = doc.RootElement.GetProperty("result").GetProperty("reagents").GetProperty("items")[0];
                 Assert.False(string.IsNullOrEmpty(first.GetProperty("name").GetString()));
             }
         }

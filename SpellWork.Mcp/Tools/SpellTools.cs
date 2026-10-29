@@ -16,7 +16,7 @@ namespace SpellWork.Mcp.Tools
         public SpellTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "get_spell")]
-        [Description("The full decoded view of one spell (CoA 3.3.5a Spell.dbc row). format is \"json\" or \"text\". sections filters to any of: misc, attributes, effects, powers, targets, reagents, aura, procs, context, cooldowns, levels, interrupts, shapeshift, equippedItems, items, triggers, totems, visual (the visual chain, same shape as get_spell_visual_chain; storeUnloaded true and missingStores naming the stores that did not load when a visual store is missing). id, name, rank and difficulty {requested, resolvedSpellId, variants} are always present. items lists item_template items whose spellid_1..5 name the spell, and each reagent carries its item_template name, when the world database is configured; otherwise items is an empty array plus itemsNote (and a failed world-database query adds worldDatabaseError). Effect basePoints is the 3.3.5 CalcValue base at the given level (basePointsMin/Max when DieSides gives a range). difficulty is an optional SpellDifficulty mode 0-3 (10N, 25N, 10H, 25H); omitted means no resolution (the id is used as given); a mode resolves the id to that mode's variant as the server does, a heroic mode with no variant falling back to the normal mode of the same size, and the document (id included) describes that variant; format text adds requestedId. Any other value is an error that lists the valid modes.")]
+        [Description("The full decoded view of one spell (CoA 3.3.5a Spell.dbc row). format is \"json\" or \"text\". sections filters to any of: misc, attributes, effects, powers, targets, reagents, aura, procs, context, cooldowns, levels, interrupts, shapeshift, equippedItems, items, triggers, totems, visual (the visual chain, same shape as get_spell_visual_chain; storeUnloaded true and missingStores naming the stores that did not load when a visual store is missing). id (the spell described), requestedId (the id asked for), name, rank and difficulty {requested, resolvedSpellId, variants} are always present; the document keeps the 5.4.8 envelope (misc, procs, reagents.items, effects[].targetA/targetB/auraType, ...) with 3.3.5-only data in added keys. items lists item_template items whose spellid_1..5 name the spell, and each reagent carries its item_template name, when the world database is configured; otherwise items is an empty array plus itemsNote (and a failed world-database query adds worldDatabaseError). Effect basePoints is the 3.3.5 CalcValue base at the given level (basePointsMin/Max when DieSides gives a range). difficulty is an optional SpellDifficulty mode 0-3 (10N, 25N, 10H, 25H); omitted means no resolution (the id is used as given); a mode resolves the id to that mode's variant as the server does, a heroic mode with no variant falling back to the normal mode of the same size, and the document (id and name included) describes that variant while requestedId keeps the id asked for; format text returns id, requestedId, resolvedSpellId and name too. Any other value is an error that lists the valid modes.")]
         public async Task<string> GetSpell(
             int id,
             string format = "json",
@@ -58,6 +58,7 @@ namespace SpellWork.Mcp.Tools
                 {
                     ["id"] = spell.ID,
                     ["requestedId"] = id,
+                    ["resolvedSpellId"] = spell.ID,
                     ["name"] = spell.Name,
                     ["text"] = writer.ToString(),
                 });
@@ -382,7 +383,7 @@ namespace SpellWork.Mcp.Tools
         }
 
         [McpServerTool(Name = "get_spell_triggers")]
-        [Description("Which spells this spell triggers (from its effects' EffectTriggerSpell, with the effect index) and which spells trigger it. difficulty is an optional SpellDifficulty mode 0-3: omitted uses the id as given; a mode first resolves the id to that mode's variant spell (resolvedSpellId), whose triggers are listed. Any other value is an error that lists the valid modes.")]
+        [Description("Which spells this spell triggers (from its effects' EffectTriggerSpell, with the effect index) and which spells trigger it. difficulty is an optional SpellDifficulty mode 0-3: omitted uses the id as given; a mode first resolves the id to that mode's variant spell, whose triggers are listed. id, resolvedSpellId and name describe that resolved spell; requestedId is the id asked for. Any other value is an error that lists the valid modes.")]
         public async Task<string> GetSpellTriggers(int id, uint? difficulty = null)
         {
             var data = await _data.GetAsync();
@@ -426,7 +427,10 @@ namespace SpellWork.Mcp.Tools
 
             return ToolResponse.Ok(new Dictionary<string, object>
             {
-                ["id"] = id,
+                // One rule across the spell tools: id (and name) describe the
+                // resolved spell, requestedId is the id asked for.
+                ["id"] = spell.ID,
+                ["requestedId"] = id,
                 ["resolvedSpellId"] = spell.ID,
                 ["difficulty"] = difficulty.HasValue ? (int)difficulty.Value : (int?)null,
                 ["name"] = spell.Name,
@@ -437,7 +441,7 @@ namespace SpellWork.Mcp.Tools
         }
 
         [McpServerTool(Name = "compare_spells")]
-        [Description("Structured field-by-field diff of two spells. Returns each differing JSON path with both values. difficulty is an optional SpellDifficulty mode 0-3 applied to both ids: omitted compares the ids as given; a mode first resolves each id to that mode's variant (a/b report requestedId and the resolved id). Any other value is an error that lists the valid modes.")]
+        [Description("Structured field-by-field diff of two spells. Returns each differing JSON path with both values. difficulty is an optional SpellDifficulty mode 0-3 applied to both ids: omitted compares the ids as given; a mode first resolves each id to that mode's variant (a/b report id and resolvedSpellId = the resolved spell, requestedId = the id asked for). Any other value is an error that lists the valid modes.")]
         public async Task<string> CompareSpells(int idA, int idB, uint? difficulty = null)
         {
             var data = await _data.GetAsync();
@@ -524,8 +528,8 @@ namespace SpellWork.Mcp.Tools
 
             var result = new Dictionary<string, object>
             {
-                ["a"] = new Dictionary<string, object> { ["id"] = spellA.ID, ["requestedId"] = idA, ["name"] = spellA.Name },
-                ["b"] = new Dictionary<string, object> { ["id"] = spellB.ID, ["requestedId"] = idB, ["name"] = spellB.Name },
+                ["a"] = new Dictionary<string, object> { ["id"] = spellA.ID, ["requestedId"] = idA, ["resolvedSpellId"] = spellA.ID, ["name"] = spellA.Name },
+                ["b"] = new Dictionary<string, object> { ["id"] = spellB.ID, ["requestedId"] = idB, ["resolvedSpellId"] = spellB.ID, ["name"] = spellB.Name },
                 ["difficulty"] = difficulty.HasValue ? (int)difficulty.Value : (int?)null,
                 ["identical"] = differences.Count == 0,
                 ["differences"] = differences.Take(ToolResponse.MaxRows).ToList(),
@@ -551,11 +555,12 @@ namespace SpellWork.Mcp.Tools
         /// The root properties that identify <em>which</em> spell a document
         /// describes rather than anything about its definition. Named here as
         /// data so the reason they are dropped is stated once; see
-        /// <see cref="CompareSpells"/> for that reason. "difficulty" names the
+        /// <see cref="CompareSpells"/> for that reason. "requestedId" is the id
+        /// the caller passed. "difficulty" names the
         /// spell's own SpellDifficulty row and resolved id, so it is identity
         /// too, and it is emitted whatever the sections filter.
         /// </summary>
-        internal static readonly string[] IdentityProperties = { "id", "name", "difficulty" };
+        internal static readonly string[] IdentityProperties = { "id", "requestedId", "name", "difficulty" };
 
         /// <summary>
         /// Parses a serialized spell document with <see cref="IdentityProperties"/>

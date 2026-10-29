@@ -34,6 +34,16 @@ namespace SpellWork.Mcp.Tests
                 Assert.True(EnumCatalog.TryResolve(name, out _), $"{name} missing after cold static init.");
         }
 
+        // The 5.4.8 Difficulty.dbc enum (DIFFICULTY_10MAN_NORMAL = 3, ...)
+        // contradicted the CoA difficulty argument, a SpellDifficulty mode
+        // where 3 is 25H; it is gone from list_enum/decode_flags.
+        [Fact]
+        public void Stale_5_4_8_Difficulty_enum_is_not_listed()
+        {
+            Assert.False(EnumCatalog.TryResolve("Difficulty", out _));
+            Assert.DoesNotContain("Difficulty", EnumCatalog.Names);
+        }
+
         // CoA 3.3.5a (AzerothCore CoA fork headers) ids.
         [Theory]
         [InlineData("AuraType", 3, "SPELL_AURA_PERIODIC_DAMAGE")]

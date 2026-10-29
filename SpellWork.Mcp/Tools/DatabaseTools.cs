@@ -49,14 +49,19 @@ namespace SpellWork.Mcp.Tools
         // Tables whose loaders do not match on the plain spell id alone. Each
         // entry lists the stored key forms that apply to a spell and why.
         // Tables absent here are exact-id only.
-        //  - spell_proc, spell_proc_event: negative SpellId = every rank of
-        //    the spell whose first rank is |id| (SpellMgr.cpp LoadSpellProcs).
+        //  - spell_proc: negative SpellId = every rank of the spell whose
+        //    first rank is |id| (SpellMgr.cpp LoadSpellProcs).
+        //  - spell_proc_event: legacy, not loaded by the CoA server (only
+        //    spell_proc is); matched like spell_proc for continuity.
         //  - spell_script_names: spell_id <= 0 = all ranks of first rank
         //    -spell_id (ObjectMgr.cpp:6472-6520 LoadSpellScriptNames).
         //  - spell_group: only first ranks are listed and membership covers
         //    every rank (SpellMgr.cpp LoadSpellGroups, GetFirstSpellInChain).
         //  - spell_linked_spell: negative spell_trigger = fires when the aura
         //    is removed (SpellMgr.cpp LoadSpellLinked).
+        //  - spell_bonus_data, spell_threat: the exact row, else the first
+        //    rank's row (SpellMgr.cpp:990-1019 GetSpellBonusData /
+        //    GetSpellThreatEntry); see FallbackTables.
         internal static readonly Dictionary<string, (KeyForm Form, string MatchedBy)[]> MatchRules =
             new Dictionary<string, (KeyForm, string)[]>
             {
@@ -65,7 +70,27 @@ namespace SpellWork.Mcp.Tools
                 ["spell_script_names"] = new[] { (KeyForm.Id, "exact"), (KeyForm.NegFirstRank, "allRanks") },
                 ["spell_group"] = new[] { (KeyForm.Id, "exact"), (KeyForm.FirstRank, "firstRank") },
                 ["spell_linked_spell"] = new[] { (KeyForm.Id, "exact"), (KeyForm.NegId, "onRemoval") },
+                ["spell_bonus_data"] = new[] { (KeyForm.Id, "exact"), (KeyForm.FirstRank, "firstRank") },
+                ["spell_threat"] = new[] { (KeyForm.Id, "exact"), (KeyForm.FirstRank, "firstRank") },
             };
+
+        /// <summary>
+        /// Tables the server reads either/or: the exact row wins, and the
+        /// first rank's row applies only when there is no exact row. The
+        /// first-rank rows are dropped from the result whenever an exact row
+        /// came back, so the rows reported are the ones the server uses.
+        /// </summary>
+        internal static readonly HashSet<string> FallbackTables =
+            new HashSet<string> { "spell_bonus_data", "spell_threat" };
+
+        /// <summary>Applies <see cref="FallbackTables"/>' either/or to
+        /// rows already labelled with matchedBy.</summary>
+        internal static List<Dictionary<string, object>> ApplyFallback(string table, List<Dictionary<string, object>> rows)
+        {
+            if (!FallbackTables.Contains(table) || !rows.Any(r => Equals(r["matchedBy"], "exact")))
+                return rows;
+            return rows.Where(r => Equals(r["matchedBy"], "exact")).ToList();
+        }
 
         private static long KeyValue(KeyForm form, int id, int first) => form switch
         {
@@ -95,8 +120,8 @@ namespace SpellWork.Mcp.Tools
         public DatabaseTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "query_world_db")]
-        [Description("Run one read-only SELECT against the configured world database. Multiple statements, DDL and DML are rejected. The server should be configured with a read-only MySQL user.")]
-        public Task<string> QueryWorldDb(string sql, string database = "world", int limit = 100)
+        [Description("Run one read-only SELECT against the configured world database. Multiple statements, DDL and DML are rejected. database is optional: omitted, empty or \"world\" means the configured world database (SPELLWORK_MYSQL_WORLD_DB); any other name must equal it. The server should be configured with a read-only MySQL user.")]
+        public Task<string> QueryWorldDb(string sql, string database = null, int limit = 100)
         {
             // Validate first, unconditionally: a malformed query is a caller
             // error whether or not a database happens to be reachable, and
@@ -109,7 +134,11 @@ namespace SpellWork.Mcp.Tools
             if (!config.MySqlConfigured)
                 return Task.FromResult(NotConfigured());
 
-            if (!string.Equals(database, config.WorldDatabase, StringComparison.OrdinalIgnoreCase))
+            // "world" is the generic name (5.4.8's default); it and an omitted
+            // value both mean the configured world database, whatever it is
+            // called (acore_world, ...).
+            if (!IsWorldDatabaseAlias(database) &&
+                !string.Equals(database, config.WorldDatabase, StringComparison.OrdinalIgnoreCase))
             {
                 return Task.FromResult(ToolResponse.Error("unknown_database",
                     $"This server is configured for database '{config.WorldDatabase}'. " +
@@ -144,7 +173,7 @@ namespace SpellWork.Mcp.Tools
         }
 
         [McpServerTool(Name = "get_spell_db_overrides")]
-        [Description("Rows for one spell id from whichever AzerothCore/CoA spell override tables this world database has: spell_proc, spell_proc_event, spell_script_names, spell_custom_attr, spell_bonus_data, spell_threat, spell_ranks, spell_linked_spell, spell_dbc, spell_cooldown_overrides, spell_area, spell_group and spell_required. Rows carry matchedBy: exact, allRanks (negative key naming the first rank), firstRank (spell_group lists first ranks) or onRemoval (negative spell_linked_spell trigger). Tables the schema does not have are listed under missingTables, which is expected and not an error.")]
+        [Description("Rows for one spell id from whichever AzerothCore/CoA spell override tables this world database has: spell_proc, spell_proc_event, spell_script_names, spell_custom_attr, spell_bonus_data, spell_threat, spell_ranks, spell_linked_spell, spell_dbc, spell_cooldown_overrides, spell_area, spell_group and spell_required. Rows carry matchedBy: exact, allRanks (negative key naming the first rank), firstRank (spell_group lists first ranks; spell_bonus_data and spell_threat fall back to the first rank's row only when the spell has no row of its own, as the server does) or onRemoval (negative spell_linked_spell trigger). spell_proc_event is legacy: the CoA server does not load it (only spell_proc), so its rows have no effect. Tables the schema does not have are listed under missingTables, which is expected and not an error.")]
         public Task<string> GetSpellDbOverrides(int id)
         {
             var config = _data.Config;
@@ -202,7 +231,7 @@ namespace SpellWork.Mcp.Tools
                         var stored = Convert.ToInt64(row[idColumn]);
                         row["matchedBy"] = keys.First(k => k.Value == stored).MatchedBy;
                     }
-                    tables[table] = result.Rows.Cast<object>().ToList();
+                    tables[table] = ApplyFallback(table, result.Rows.ToList()).Cast<object>().ToList();
                     if (result.Truncated)
                         truncated.Add(table);
                 }
@@ -264,6 +293,10 @@ namespace SpellWork.Mcp.Tools
         /// changes no result set.
         /// </para>
         /// </summary>
+        internal static bool IsWorldDatabaseAlias(string database) =>
+            string.IsNullOrWhiteSpace(database) ||
+            string.Equals(database, "world", StringComparison.OrdinalIgnoreCase);
+
         internal static int EffectiveLimit(int limit) =>
             Math.Min(limit < 0 ? 0 : limit, ToolResponse.MaxRows);
 

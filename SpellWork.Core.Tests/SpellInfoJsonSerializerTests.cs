@@ -102,21 +102,27 @@ namespace SpellWork.Core.Tests
             Assert.Equal(0x00010000u, attributes[0].GetProperty("value").GetUInt32());
             Assert.Equal(1u, attributes[7].GetProperty("value").GetUInt32());
 
-            var procFlags = root.GetProperty("procFlags");
-            Assert.Equal(0x40010000u, procFlags.GetProperty("raw").GetUInt32());
-            Assert.Equal("PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG", Assert.Single(procFlags.GetProperty("flags").EnumerateArray()).GetProperty("name").GetString());
-            Assert.Equal(30, Assert.Single(procFlags.GetProperty("unmatchedBits").EnumerateArray()).GetInt32());
-            Assert.Equal(35, root.GetProperty("procChance").GetInt32());
-            Assert.Equal(2, root.GetProperty("procCharges").GetInt32());
+            Assert.Equal(SyntheticId, root.GetProperty("requestedId").GetInt32());
+            Assert.Equal("Rank 3", root.GetProperty("nameSubtext").GetString());
 
-            var reagents = root.GetProperty("reagents").EnumerateArray().ToList();
+            // 5.4.8 "procs": procFlags is the matched-bit array itself.
+            var procs = root.GetProperty("procs");
+            Assert.Equal("PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG", Assert.Single(procs.GetProperty("procFlags").EnumerateArray()).GetProperty("name").GetString());
+            Assert.Equal(30, Assert.Single(procs.GetProperty("procFlagsUnmatchedBits").EnumerateArray()).GetInt32());
+            Assert.Equal(35, procs.GetProperty("procChance").GetInt32());
+            Assert.Equal(2, procs.GetProperty("procCharges").GetInt32());
+
+            // 5.4.8 "reagents": {items: [{itemId, count}]}.
+            var reagents = root.GetProperty("reagents").GetProperty("items").EnumerateArray().ToList();
             Assert.Equal(2, reagents.Count);
-            Assert.Equal(17031, reagents[0].GetProperty("item").GetInt32());
+            Assert.Equal(17031, reagents[0].GetProperty("itemId").GetInt32());
             Assert.Equal(2, reagents[0].GetProperty("count").GetInt32());
-            Assert.Equal(17020, reagents[1].GetProperty("item").GetInt32());
+            Assert.Equal(17020, reagents[1].GetProperty("itemId").GetInt32());
 
-            foreach (var absent in new[] { "scaling", "misc", "nameSubtext", "effectDifficulties", "procs", "castTime", "range" })
-                Assert.False(root.TryGetProperty(absent, out _), $"'{absent}' must not be emitted");
+            Assert.Equal(JsonValueKind.Object, root.GetProperty("misc").ValueKind);
+            foreach (var absent in new[] { "scaling", "effectDifficulties", "procFlags", "procChance", "castTime", "range",
+                         "castingTimeIndex", "mechanic", "dispel", "preventionType", "category" })
+                Assert.False(root.TryGetProperty(absent, out _), $"'{absent}' must not be emitted at the root");
 
             // No world database was passed: items is empty and says why.
             Assert.Equal(0, root.GetProperty("items").GetArrayLength());
@@ -161,51 +167,56 @@ namespace SpellWork.Core.Tests
             var effects = root.GetProperty("effects").EnumerateArray().ToList();
             Assert.Equal(new[] { 0, 1 }, effects.Select(e => e.GetProperty("index").GetInt32()));
 
-            var expectedKeys = new[]
+            // Always present: the 5.4.8 always-emitted keys plus the CoA
+            // additions (dieSides, auraPeriod, itemType, damageMultiplier).
+            var alwaysKeys = new[]
             {
-                "index", "effect", "aura", "basePoints", "dieSides", "realPointsPerLevel", "pointsPerComboPoint",
-                "amplitude", "auraPeriod", "chainTargets", "itemType", "mechanic", "implicitTargetA", "implicitTargetB",
-                "radius", "miscValue", "miscValueB", "triggerSpell", "spellClassMask", "damageMultiplier", "bonusMultiplier",
+                "index", "effect", "basePoints", "targetA", "targetB",
+                "dieSides", "auraPeriod", "itemType", "damageMultiplier",
             };
             foreach (var effect in effects)
             {
-                foreach (var key in expectedKeys)
+                foreach (var key in alwaysKeys)
                     Assert.True(effect.TryGetProperty(key, out _), $"effect {effect.GetProperty("index")} lacks '{key}'");
-                foreach (var absent in new[] { "difficulty", "resolvedDifficulty", "scaling" })
+                foreach (var absent in new[] { "difficulty", "resolvedDifficulty", "scaling", "aura", "implicitTargetA",
+                             "implicitTargetB", "pointsPerComboPoint", "maxRadius" })
                     Assert.False(effect.TryGetProperty(absent, out _), $"effect must not carry '{absent}'");
             }
 
             // Effect 0: CalcValue base is BasePoints + 1 with a die; the range
-            // is 100..120.
+            // is 100..120. 5.4.8 omits the zero-valued keys.
             var damage = effects[0];
             Assert.Equal("SPELL_EFFECT_SCHOOL_DAMAGE", damage.GetProperty("effect").GetProperty("name").GetString());
-            Assert.Equal(0, damage.GetProperty("aura").GetProperty("raw").GetInt32());
             Assert.Equal(100, damage.GetProperty("basePoints").GetDouble());
             Assert.Equal(100, damage.GetProperty("basePointsMin").GetDouble());
             Assert.Equal(120, damage.GetProperty("basePointsMax").GetDouble());
             Assert.Equal(21, damage.GetProperty("dieSides").GetInt32());
-            Assert.Equal(JsonValueKind.Null, damage.GetProperty("triggerSpell").ValueKind);
-            Assert.Equal(new uint[] { 0, 0, 0 }, damage.GetProperty("spellClassMask").EnumerateArray().Select(x => x.GetUInt32()));
+            Assert.Equal(6, damage.GetProperty("targetA").GetProperty("raw").GetInt32());
+            foreach (var zero in new[] { "auraType", "triggerSpell", "spellClassMask", "radius", "chainTargets",
+                         "miscValue", "miscValueB", "amplitude", "mechanic", "valuePerResource", "realPointsPerLevel",
+                         "bonusMultiplier", "spellPowerCoefficient" })
+                Assert.False(damage.TryGetProperty(zero, out _), $"zero '{zero}' must be omitted as in 5.4.8");
 
             var aura = effects[1];
-            Assert.Equal("SPELL_AURA_DUMMY", aura.GetProperty("aura").GetProperty("name").GetString());
+            Assert.Equal("SPELL_AURA_DUMMY", aura.GetProperty("auraType").GetProperty("name").GetString());
             // Level 80, spell level 10: 4 + (int)(70 * 1.5) = 109, no die.
             Assert.Equal(109, aura.GetProperty("basePoints").GetDouble());
             Assert.False(aura.TryGetProperty("basePointsMin", out _));
             Assert.Equal(1.5, aura.GetProperty("realPointsPerLevel").GetDouble(), 5);
-            Assert.Equal(3, aura.GetProperty("pointsPerComboPoint").GetDouble(), 5);
+            Assert.Equal(3, aura.GetProperty("valuePerResource").GetDouble(), 5);
             Assert.Equal(0.25, aura.GetProperty("amplitude").GetDouble(), 5);
             Assert.Equal(3000, aura.GetProperty("auraPeriod").GetInt32());
             Assert.Equal(4, aura.GetProperty("chainTargets").GetInt32());
             Assert.Equal(7, aura.GetProperty("itemType").GetInt32());
             Assert.Equal(12, aura.GetProperty("mechanic").GetProperty("raw").GetInt32());
-            Assert.Equal(1, aura.GetProperty("implicitTargetA").GetProperty("raw").GetInt32());
-            Assert.Equal(15, aura.GetProperty("implicitTargetB").GetProperty("raw").GetInt32());
+            Assert.Equal(1, aura.GetProperty("targetA").GetProperty("raw").GetInt32());
+            Assert.Equal(15, aura.GetProperty("targetB").GetProperty("raw").GetInt32());
             Assert.Equal(127, aura.GetProperty("miscValue").GetInt32());
             Assert.Equal(-3, aura.GetProperty("miscValueB").GetInt32());
             Assert.Equal(133, aura.GetProperty("triggerSpell").GetProperty("id").GetInt32());
             Assert.Equal(0.5, aura.GetProperty("damageMultiplier").GetDouble(), 5);
             Assert.Equal(0.75, aura.GetProperty("bonusMultiplier").GetDouble(), 5);
+            Assert.Equal(0.75, aura.GetProperty("spellPowerCoefficient").GetDouble(), 5);
 
             // Effect-major (CoA flag96 per effect): effect 1's mask is the B
             // group, columns 125-127, in word order.
@@ -221,11 +232,11 @@ namespace SpellWork.Core.Tests
             var context = new RenderContext(80, 0);
 
             var without = Parse(SpellInfoJsonSerializer.Serialize(spell, context, new[] { "reagents" }));
-            Assert.All(without.GetProperty("reagents").EnumerateArray(), r => Assert.False(r.TryGetProperty("name", out _)));
+            Assert.All(without.GetProperty("reagents").GetProperty("items").EnumerateArray(), r => Assert.False(r.TryGetProperty("name", out _)));
 
             var names = new Dictionary<int, string> { [17031] = "Rune of Teleportation" };
             var with = Parse(SpellInfoJsonSerializer.Serialize(spell, context, new[] { "reagents" }, itemNames: names));
-            var reagents = with.GetProperty("reagents").EnumerateArray().ToList();
+            var reagents = with.GetProperty("reagents").GetProperty("items").EnumerateArray().ToList();
             Assert.Equal("Rune of Teleportation", reagents[0].GetProperty("name").GetString());
             Assert.False(reagents[1].TryGetProperty("name", out _)); // 17020 not in the lookup
         }
@@ -248,6 +259,81 @@ namespace SpellWork.Core.Tests
                 .GetProperty("difficulty");
             Assert.Equal(1, passed.GetProperty("requested").GetInt32());
             Assert.Equal(new[] { 7, SyntheticId }, passed.GetProperty("variants").EnumerateArray().Select(x => x.GetInt32()));
+        }
+
+        // The requested id sits at the root next to the resolved id (I5): a
+        // tool that resolved 25N -> 10N passes a view naming both.
+        [Fact]
+        public void Root_reports_the_requested_id_beside_the_described_id()
+        {
+            var spell = new SpellInfo(SyntheticRow());
+            var view = new SpellDifficultyView(0, 1234567, SyntheticId, new[] { SyntheticId, 1234567 });
+            var root = Parse(SpellInfoJsonSerializer.Serialize(spell, new RenderContext(80, 0, 0), new[] { "effects" }, view));
+
+            Assert.Equal(SyntheticId, root.GetProperty("id").GetInt32());
+            Assert.Equal(1234567, root.GetProperty("requestedId").GetInt32());
+            Assert.Equal(SyntheticId, root.GetProperty("difficulty").GetProperty("resolvedSpellId").GetInt32());
+        }
+
+        // Pins the 5.4.8 envelope (185ef00 goldens): containers and key names
+        // every spellwork server shares. CoA additions may sit beside them;
+        // the 5.4.8 paths must exist and the CoA-only renames must not.
+        [Fact]
+        public void Document_keeps_the_5_4_8_key_paths()
+        {
+            var row = SyntheticRow();
+            row.Targets = 0x2;
+            row.MaxTargets = 3;
+            var root = Parse(SpellInfoJsonSerializer.Serialize(new SpellInfo(row), new RenderContext(80, 0)));
+
+            var paths = new HashSet<string>();
+            CollectPaths(root, "", paths);
+
+            foreach (var expected in new[]
+                     {
+                         "id", "name", "level", "itemLevel", "nameSubtext",
+                         "misc", "misc.mechanic", "misc.damageClass", "misc.dispel", "misc.preventionType",
+                         "spellFamilyName", "spellClassMask", "attributes[].word", "attributes[].value", "attributes[].flags",
+                         "effects[].index", "effects[].effect.raw", "effects[].effect.name", "effects[].auraType.raw",
+                         "effects[].basePoints", "effects[].basePointsMin", "effects[].basePointsMax",
+                         "effects[].valuePerResource", "effects[].realPointsPerLevel", "effects[].bonusMultiplier",
+                         "effects[].spellPowerCoefficient", "effects[].targetA.raw", "effects[].targetB.name",
+                         "effects[].chainTargets", "effects[].triggerSpell.id", "effects[].miscValue", "effects[].miscValueB",
+                         "effects[].amplitude", "effects[].mechanic.raw", "effects[].spellClassMask",
+                         "targets[].difficultyId", "targets[].targets.raw", "targets[].targets.flags", "targets[].maxTargets",
+                         "reagents.items[].itemId", "reagents.items[].count",
+                         "procs.procFlags[].raw", "procs.procFlags[].name", "procs.procChance", "procs.procCharges",
+                         "triggers.triggers", "triggers.triggeredBy", "items",
+                     })
+                Assert.True(paths.Contains(expected), $"5.4.8 key path '{expected}' is missing");
+
+            foreach (var renamed in new[]
+                     {
+                         "procFlags", "procChance", "procCharges", "castingTimeIndex", "rangeIndex", "mechanic", "category",
+                         "effects[].aura", "effects[].implicitTargetA", "effects[].implicitTargetB",
+                         "effects[].pointsPerComboPoint", "reagents[].item", "reagents.items[].item", "targets.targets",
+                     })
+                Assert.False(paths.Contains(renamed), $"'{renamed}' is not a 5.4.8 key path");
+            Assert.DoesNotContain(paths, p => p.Contains("Hostile") || p.Contains("Friendly"));
+        }
+
+        private static void CollectPaths(JsonElement element, string prefix, HashSet<string> paths)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    foreach (var property in element.EnumerateObject())
+                    {
+                        var path = prefix.Length == 0 ? property.Name : prefix + "." + property.Name;
+                        paths.Add(path);
+                        CollectPaths(property.Value, path, paths);
+                    }
+                    break;
+                case JsonValueKind.Array:
+                    foreach (var item in element.EnumerateArray())
+                        CollectPaths(item, prefix + "[]", paths);
+                    break;
+            }
         }
 
         // An unrecognised section name is a caller mistake, not a near-empty
@@ -320,7 +406,7 @@ namespace SpellWork.Core.Tests
             Assert.Equal("Rank 1", json.GetProperty("rank").GetString());
             Assert.Equal(8, json.GetProperty("attributes").GetArrayLength());
             Assert.False(json.TryGetProperty("scaling", out _));
-            Assert.False(json.TryGetProperty("misc", out _));
+            Assert.True(json.TryGetProperty("misc", out _));
             Assert.False(json.TryGetProperty("effectDifficulties", out _));
 
             // CoA Fireball rank 1: SCHOOL_DAMAGE 13 d9 (14..22), then two auras.
@@ -330,7 +416,7 @@ namespace SpellWork.Core.Tests
             Assert.Equal(14, effects[0].GetProperty("basePointsMin").GetDouble());
             Assert.Equal(22, effects[0].GetProperty("basePointsMax").GetDouble());
             Assert.Equal(9, effects[0].GetProperty("dieSides").GetInt32());
-            Assert.Equal("SPELL_AURA_PERIODIC_DAMAGE", effects[1].GetProperty("aura").GetProperty("name").GetString());
+            Assert.Equal("SPELL_AURA_PERIODIC_DAMAGE", effects[1].GetProperty("auraType").GetProperty("name").GetString());
             Assert.Equal(2000, effects[1].GetProperty("auraPeriod").GetInt32());
             Assert.All(effects, e => Assert.False(e.TryGetProperty("resolvedDifficulty", out _)));
         }
@@ -419,11 +505,15 @@ namespace SpellWork.Core.Tests
 
             Assert.False(json.TryGetProperty("effects", out _));
             Assert.False(json.TryGetProperty("attributes", out _));
-            Assert.False(json.TryGetProperty("procFlags", out _));
-            Assert.False(json.TryGetProperty("misc", out _)); // root keys, no "misc" object
+            Assert.False(json.TryGetProperty("procs", out _));
             Assert.True(json.TryGetProperty("schoolMask", out _));
-            Assert.Equal(16, json.GetProperty("castingTimeIndex").GetProperty("id").GetInt32());
-            Assert.Equal(35, json.GetProperty("rangeIndex").GetProperty("id").GetInt32());
+            var misc = json.GetProperty("misc");
+            Assert.Equal(16, misc.GetProperty("castingTimeIndex").GetProperty("id").GetInt32());
+            var range = misc.GetProperty("rangeIndex");
+            Assert.Equal(35, range.GetProperty("id").GetInt32());
+            // 5.4.8 names: Negative = hostile (slot 0), Positive = friendly (slot 1).
+            Assert.Equal(DBC.DBC.SpellRange[35].RangeMax[0], range.GetProperty("maxRangeNegative").GetSingle());
+            Assert.Equal(DBC.DBC.SpellRange[35].RangeMax[1], range.GetProperty("maxRangePositive").GetSingle());
             Assert.Equal(133, json.GetProperty("id").GetInt32());
             Assert.Equal("Fireball", json.GetProperty("name").GetString());
         }
@@ -457,7 +547,7 @@ namespace SpellWork.Core.Tests
         public void Serialize_names_a_CoA_custom_aura()
         {
             var json = Parse(SpellInfoJsonSerializer.Serialize(Spell(1459), RenderContext.Default));
-            var aura = json.GetProperty("effects")[1].GetProperty("aura");
+            var aura = json.GetProperty("effects")[1].GetProperty("auraType");
 
             Assert.Equal(345, aura.GetProperty("raw").GetInt32());
             Assert.Equal(Enum.GetName(typeof(AuraType), 345), aura.GetProperty("name").GetString());
@@ -470,7 +560,9 @@ namespace SpellWork.Core.Tests
         public void Serialize_decomposes_a_combined_flags_value_into_named_bits()
         {
             var json = Parse(SpellInfoJsonSerializer.Serialize(Spell(118), RenderContext.Default));
-            var creatureType = json.GetProperty("targets").GetProperty("targetCreatureType");
+            var target = Assert.Single(json.GetProperty("targets").EnumerateArray());
+            Assert.Equal(0, target.GetProperty("difficultyId").GetInt32());
+            var creatureType = target.GetProperty("targetCreatureType");
 
             Assert.Equal(0xC1, creatureType.GetProperty("raw").GetInt32());
             var names = creatureType.GetProperty("flags").EnumerateArray().Select(f => f.GetProperty("name").GetString()).ToList();
@@ -521,8 +613,8 @@ namespace SpellWork.Core.Tests
         {
             var json = Parse(SpellInfoJsonSerializer.Serialize(Spell(49998), RenderContext.Default));
 
-            Assert.Equal(1196, json.GetProperty("category").GetInt32());
-            Assert.Equal(0, json.GetProperty("categoryFlags").GetProperty("raw").GetInt32());
+            Assert.Equal(1196, json.GetProperty("misc").GetProperty("category").GetInt32());
+            Assert.Equal(0, json.GetProperty("misc").GetProperty("categoryFlags").GetProperty("raw").GetInt32());
 
             var rune = json.GetProperty("runeCost");
             Assert.Equal(797, rune.GetProperty("id").GetInt32());
@@ -538,10 +630,12 @@ namespace SpellWork.Core.Tests
         {
             var json = Parse(SpellInfoJsonSerializer.Serialize(Spell(16870), RenderContext.Default));
 
-            Assert.Equal(0x15510u, json.GetProperty("procFlags").GetProperty("raw").GetUInt32());
-            Assert.Equal(6, json.GetProperty("procFlags").GetProperty("flags").GetArrayLength());
-            Assert.Equal(100, json.GetProperty("procChance").GetInt32());
-            Assert.Equal(1, json.GetProperty("procCharges").GetInt32());
+            var procs = json.GetProperty("procs");
+            var flags = procs.GetProperty("procFlags").EnumerateArray().Select(f => f.GetProperty("raw").GetUInt32()).ToList();
+            Assert.Equal(6, flags.Count);
+            Assert.Equal(0x15510u, flags.Aggregate(0u, (mask, bit) => mask | bit));
+            Assert.Equal(100, procs.GetProperty("procChance").GetInt32());
+            Assert.Equal(1, procs.GetProperty("procCharges").GetInt32());
         }
 
         // Teleport: Stormwind (3561) uses one Rune of Teleportation (17031);
@@ -551,8 +645,8 @@ namespace SpellWork.Core.Tests
         {
             var json = Parse(SpellInfoJsonSerializer.Serialize(Spell(3561), RenderContext.Default));
 
-            var reagent = Assert.Single(json.GetProperty("reagents").EnumerateArray());
-            Assert.Equal(17031, reagent.GetProperty("item").GetInt32());
+            var reagent = Assert.Single(json.GetProperty("reagents").GetProperty("items").EnumerateArray());
+            Assert.Equal(17031, reagent.GetProperty("itemId").GetInt32());
             Assert.Equal(1, reagent.GetProperty("count").GetInt32());
             Assert.False(reagent.TryGetProperty("name", out _));
         }
@@ -568,7 +662,7 @@ namespace SpellWork.Core.Tests
 
             var json = Parse(SpellInfoJsonSerializer.Serialize(spell, RenderContext.Default));
             var triggered = json.GetProperty("effects").EnumerateArray()
-                .First(e => e.GetProperty("triggerSpell").ValueKind == JsonValueKind.Object)
+                .First(e => e.TryGetProperty("triggerSpell", out _))
                 .GetProperty("triggerSpell");
 
             Assert.True(triggered.GetProperty("id").GetInt32() != 0);

@@ -39,8 +39,8 @@ namespace SpellWork.Spell
         // "scaling" (3.3.5 has no scaling data). The single source of truth
         // for both validating `sections` and echoing back which were applied.
         // "context" is the render context (level, itemLevel) basePoints is
-        // computed against. "misc" selects the scalar Spell-row fields, which
-        // are root keys (there is no "misc" object, as in 5.4.8).
+        // computed against. "misc" selects the "misc" object plus the root
+        // family/class-mask/school-mask/rune-cost keys, as in 5.4.8.
         internal static readonly string[] ValidSections =
         {
             "misc", "attributes", "effects", "powers", "targets", "reagents", "aura", "procs",
@@ -98,16 +98,22 @@ namespace SpellWork.Spell
 
             bool Wants(string section) => include == null || include.Contains(section);
 
+            var view = difficulty ?? SpellDifficultyView.For(spell.ID, context.Difficulty);
             var root = new Dictionary<string, object>
             {
+                // The spell this document describes (the resolved variant).
                 ["id"] = spell.ID,
+                // The id the caller asked for; equals id when no difficulty
+                // resolution changed it.
+                ["requestedId"] = view.RequestedSpellId,
                 ["name"] = spell.Name,
                 // 3.3.5 NameSubtext ("Rank 1"); empty for unranked spells.
+                // Added for CoA; 5.4.8's nameSubtext is emitted below too.
                 ["rank"] = spell.Spell.NameSubtext ?? string.Empty,
                 // Always present, whatever the sections filter: which spell
                 // this document is and which SpellDifficulty mode (if any)
                 // led to it (spec D4).
-                ["difficulty"] = BuildDifficulty(difficulty ?? SpellDifficultyView.For(spell.ID, context.Difficulty)),
+                ["difficulty"] = BuildDifficulty(view),
             };
 
             // Echoed only when the caller actually filtered. Its presence
@@ -130,44 +136,47 @@ namespace SpellWork.Spell
             }
 
             AddIfNotEmpty(root, "description", spell.Description);
+            AddIfNotEmpty(root, "nameSubtext", spell.Spell.NameSubtext);
             AddIfNotEmpty(root, "auraDescription", spell.Spell.AuraDescription);
 
+            // The 5.4.8 envelope (spec 6): the scalar Spell-row fields live in
+            // a "misc" object; family, class mask, school mask and rune cost
+            // sit at the root under the same section, as in 5.4.8.
             if (Wants("misc"))
-                BuildMisc(root, spell);
+            {
+                AddIfNotEmpty(root, "misc", BuildMisc(spell));
+
+                // SPELLFAMILY_GENERIC is 0 and is a real family: emitted always.
+                root["spellFamilyName"] = BuildRawAndName(spell.SpellFamilyName, typeof(SpellFamilyNames));
+                root["spellClassMask"] = spell.SpellClassMask;
+
+                if (spell.SchoolMask != 0)
+                    root["schoolMask"] = BuildRawAndFlags(spell.SchoolMask, typeof(SpellSchoolMask));
+
+                var rune = spell.RuneCost;
+                if (rune != null)
+                {
+                    // 5.4.8 keys; "id" is added (the SpellRuneCost row id).
+                    // 3.3.5 has no chromatic rune.
+                    root["runeCost"] = new Dictionary<string, object>
+                    {
+                        ["blood"] = rune.RuneCost[0],
+                        ["unholy"] = rune.RuneCost[1],
+                        ["frost"] = rune.RuneCost[2],
+                        ["runicPower"] = rune.RunicPower,
+                        ["id"] = spell.Spell.RuneCostID,
+                    };
+                }
+            }
 
             if (Wants("attributes"))
                 root["attributes"] = BuildAttributes(spell);
-
-            // ProcTypeMask/ProcChance/ProcCharges of the Spell row (3.3.5 has
-            // no SpellAuraOptions). Emitted always: chance 0 and no charges
-            // are values, not absences.
-            if (Wants("procs"))
-            {
-                root["procFlags"] = BuildRawAndFlags(spell.ProcFlags, typeof(ProcFlags));
-                root["procChance"] = spell.ProcChance;
-                root["procCharges"] = spell.ProcCharges;
-            }
 
             if (Wants("effects"))
                 AddIfNotEmpty(root, "effects", BuildEffects(spell, context));
 
             if (Wants("powers"))
-            {
                 AddIfNotEmpty(root, "powers", BuildPowers(spell));
-
-                var rune = spell.RuneCost;
-                if (rune != null)
-                {
-                    root["runeCost"] = new Dictionary<string, object>
-                    {
-                        ["id"] = spell.Spell.RuneCostID,
-                        ["blood"] = rune.RuneCost[0],
-                        ["unholy"] = rune.RuneCost[1],
-                        ["frost"] = rune.RuneCost[2],
-                        ["runicPower"] = rune.RunicPower,
-                    };
-                }
-            }
 
             if (Wants("targets"))
                 AddIfNotEmpty(root, "targets", BuildTargets(spell));
@@ -177,6 +186,11 @@ namespace SpellWork.Spell
 
             if (Wants("aura"))
                 AddIfNotEmpty(root, "aura", BuildAura(spell));
+
+            // ProcTypeMask/ProcChance/ProcCharges of the Spell row (3.3.5 has
+            // no SpellAuraOptions), in 5.4.8's "procs" object.
+            if (Wants("procs"))
+                AddIfNotEmpty(root, "procs", BuildProcs(spell));
 
             if (Wants("cooldowns"))
                 AddIfNotEmpty(root, "cooldowns", BuildCooldowns(spell));
@@ -246,41 +260,33 @@ namespace SpellWork.Spell
                 })
                 .ToList();
 
-        // The scalar Spell-row fields ("misc" section). Root keys rather than
-        // a nested object, as in 5.4.8: search_spells filters on family, and
-        // burying it one level deep makes every caller destructure to reach it.
-        private static void BuildMisc(IDictionary<string, object> root, SpellInfo spell)
+        // The scalar Spell-row fields: 5.4.8's "misc" object, same keys and
+        // order. categoryFlags (the SpellCategory.dbc row's flags, when that
+        // row exists) is a CoA addition beside category.
+        private static Dictionary<string, object> BuildMisc(SpellInfo spell)
         {
-            if (spell.SchoolMask != 0)
-                root["schoolMask"] = BuildRawAndFlags(spell.SchoolMask, typeof(SpellSchoolMask));
-
-            // SPELLFAMILY_GENERIC is 0 and is a real family: emitted always.
-            root["spellFamilyName"] = BuildRawAndName(spell.SpellFamilyName, typeof(SpellFamilyNames));
-            root["spellClassMask"] = spell.SpellClassMask;
-
-            // The raw Spell.Category id (5.4.8 key), plus the SpellCategory.dbc
-            // row's flags beside it when that row exists.
-            AddIfNonZero(root, "category", spell.CategoryID);
-            if (spell.Category != null)
-                root["categoryFlags"] = BuildRawAndFlags(spell.Category.Flags, typeof(SpellCategoryFlags));
-
-            AddIfNonZero(root, "speed", spell.Speed);
+            var misc = new Dictionary<string, object>();
+            AddIfNonZero(misc, "speed", spell.Speed);
 
             // CastingTimeIndex/RangeIndex are indices, not values: resolved
             // to an object with the id plus the row's values, or omitted.
-            AddIfNotEmpty(root, "castingTimeIndex", BuildCastTime(spell.CastingTimeIndex));
-            AddIfNotEmpty(root, "rangeIndex", BuildRange(spell));
+            AddIfNotEmpty(misc, "castingTimeIndex", BuildCastTime(spell.CastingTimeIndex));
+            AddIfNotEmpty(misc, "rangeIndex", BuildRange(spell));
 
-            AddIfNonZero(root, "spellIconID", spell.SpellIconID);
-            AddIfNonZero(root, "activeIconID", spell.ActiveIconID);
-            AddIfNonZero(root, "startRecoveryCategory", spell.StartRecoveryCategory);
+            AddIfNonZero(misc, "spellIconID", spell.SpellIconID);
+            AddIfNonZero(misc, "activeIconID", spell.ActiveIconID);
+            AddIfNonZero(misc, "category", spell.CategoryID);
+            if (spell.Category != null)
+                misc["categoryFlags"] = BuildRawAndFlags(spell.Category.Flags, typeof(SpellCategoryFlags));
+            AddIfNonZero(misc, "startRecoveryCategory", spell.StartRecoveryCategory);
 
             // MECHANIC_NONE, SPELL_DAMAGE_CLASS_NONE, DISPEL_NONE and
             // SPELL_PREVENTION_TYPE_NONE are real values: emitted even at 0.
-            root["mechanic"] = BuildRawAndName(spell.Mechanic, typeof(Mechanics));
-            root["damageClass"] = BuildRawAndName(spell.DamageClass, typeof(SpellDmgClass));
-            root["dispel"] = BuildRawAndName(spell.Dispel, typeof(DispelType));
-            root["preventionType"] = BuildRawAndFlags(spell.PreventionType, typeof(SpellPreventionType));
+            misc["mechanic"] = BuildRawAndName(spell.Mechanic, typeof(Mechanics));
+            misc["damageClass"] = BuildRawAndName(spell.DamageClass, typeof(SpellDmgClass));
+            misc["dispel"] = BuildRawAndName(spell.Dispel, typeof(DispelType));
+            misc["preventionType"] = BuildRawAndFlags(spell.PreventionType, typeof(SpellPreventionType));
+            return misc;
         }
 
         // CastingTimeIndex is an index into DBC.DBC.SpellCastTimes, not a
@@ -306,6 +312,8 @@ namespace SpellWork.Spell
         }
 
         // RangeIndex is likewise an index, resolved through SpellInfo.Range.
+        // 5.4.8 key names: Negative is the hostile range (SpellRange.dbc
+        // slot 0), Positive the friendly one (slot 1).
         private static Dictionary<string, object> BuildRange(SpellInfo spell)
         {
             var range = spell.Range;
@@ -316,10 +324,10 @@ namespace SpellWork.Spell
             {
                 ["id"] = spell.RangeIndex,
                 ["displayName"] = range.DisplayName,
-                ["minRangeHostile"] = range.RangeMin[0],
-                ["minRangeFriendly"] = range.RangeMin[1],
-                ["maxRangeHostile"] = range.RangeMax[0],
-                ["maxRangeFriendly"] = range.RangeMax[1],
+                ["minRangeNegative"] = range.RangeMin[0],
+                ["minRangePositive"] = range.RangeMin[1],
+                ["maxRangeNegative"] = range.RangeMax[0],
+                ["maxRangePositive"] = range.RangeMax[1],
             };
         }
 
@@ -363,14 +371,16 @@ namespace SpellWork.Spell
         }
 
         // One entry per non-zero Effect[i] slot of the Spell row (spec 4.2).
-        // Every column of the effect's group is emitted, zero or not, so the
-        // shape of an effect never depends on its values. 3.3.5 has no
-        // per-difficulty effect rows, so there is no per-effect difficulty.
+        // 5.4.8's keys follow 5.4.8's emission rules (each omitted when zero,
+        // exactly as there). The 3.3.5-only columns -- dieSides, auraPeriod,
+        // itemType, damageMultiplier -- are additions, emitted always. 3.3.5
+        // has no per-difficulty effect rows and no SpellEffectScaling, so
+        // 5.4.8's resolvedDifficulty and scaling keys have no source here.
         //
         // basePoints is the CalcValue base at the context level (BasePoints
         // plus the level term, plus 1 when DieSides != 0 -- see
         // SpellScalingCalculator); basePointsMin/Max appear when DieSides
-        // gives a range. The raw columns sit beside it.
+        // gives a range.
         private static List<object> BuildEffects(SpellInfo spell, RenderContext context)
         {
             var result = new List<object>();
@@ -385,56 +395,74 @@ namespace SpellWork.Spell
                 {
                     ["index"] = effect.EffectIndex,
                     ["effect"] = BuildRawAndName(effect.Effect, typeof(SpellEffects)),
-                    ["aura"] = BuildRawAndName(effect.EffectAura, typeof(AuraType)),
-                    ["basePoints"] = values.BaseValue,
                 };
 
+                if (effect.EffectAura != 0)
+                    entry["auraType"] = BuildRawAndName(effect.EffectAura, typeof(AuraType));
+
+                entry["basePoints"] = values.BaseValue;
                 if (values.MinValue != values.MaxValue)
                 {
                     entry["basePointsMin"] = values.MinValue;
                     entry["basePointsMax"] = values.MaxValue;
                 }
 
-                entry["dieSides"] = effect.EffectDieSides;
-                entry["realPointsPerLevel"] = effect.EffectRealPointsPerLevel;
-                entry["pointsPerComboPoint"] = effect.EffectPointsPerCombo;
-                // WoWDBDefs EffectAmplitude (server: EffectValueMultiplier);
-                // the aura tick period is auraPeriod.
-                entry["amplitude"] = effect.EffectAmplitude;
-                entry["auraPeriod"] = effect.EffectAuraPeriod;
-                entry["chainTargets"] = effect.EffectChainTargets;
-                entry["itemType"] = effect.EffectItemType;
-                entry["mechanic"] = BuildRawAndName(effect.EffectMechanic, typeof(Mechanics));
-                entry["implicitTargetA"] = BuildRawAndName(effect.ImplicitTarget[0], typeof(Targets));
-                entry["implicitTargetB"] = BuildRawAndName(effect.ImplicitTarget[1], typeof(Targets));
+                // CalculateEffectValues zeroes each of these exactly when the
+                // text path would not print it. valuePerResource is the
+                // 3.3.5 PointsPerComboPoint; spellPowerCoefficient and
+                // bonusMultiplier both come from EffectBonusCoefficient
+                // (server: EffectBonusMultiplier), as the text path shows it.
+                AddIfNonZero(entry, "valuePerResource", values.ValuePerResource);
+                AddIfNonZero(entry, "realPointsPerLevel", values.RealPointsPerLevel);
+                AddIfNonZero(entry, "bonusMultiplier", effect.EffectBonusCoefficient);
+                AddIfNonZero(entry, "spellPowerCoefficient", values.SpellPowerCoefficient);
 
-                // The SpellRadius row for the index, or null when the index is
-                // 0 or names no row.
-                entry["radius"] = BuildRadius(effect.EffectRadiusIndex);
+                entry["targetA"] = BuildRawAndName(effect.ImplicitTarget[0], typeof(Targets));
+                entry["targetB"] = BuildRawAndName(effect.ImplicitTarget[1], typeof(Targets));
 
-                entry["miscValue"] = effect.EffectMiscValue[0];
-                entry["miscValueB"] = effect.EffectMiscValue[1];
+                // The SpellRadius row for the index; omitted when the index is
+                // 0 or names no row. 3.3.5 has one radius index per effect, so
+                // 5.4.8's second slot (maxRadius) never appears.
+                var radius = BuildRadius(effect.EffectRadiusIndex);
+                if (radius != null)
+                    entry["radius"] = radius;
+
+                AddIfNonZero(entry, "chainTargets", effect.EffectChainTargets);
 
                 // get_spell_triggers reads this. The name is resolved here: an
                 // id that resolves to nothing is a data problem the caller
-                // should see. Null when the effect triggers nothing.
-                entry["triggerSpell"] = effect.EffectTriggerSpell == 0
-                    ? null
-                    : new Dictionary<string, object>
+                // should see.
+                if (effect.EffectTriggerSpell != 0)
+                {
+                    entry["triggerSpell"] = new Dictionary<string, object>
                     {
                         ["id"] = effect.EffectTriggerSpell,
                         ["name"] = DBC.DBC.SpellInfoStore.TryGetValue(effect.EffectTriggerSpell, out var triggered)
                             ? triggered.Name
                             : null,
                     };
+                }
+
+                AddIfNonZero(entry, "miscValue", effect.EffectMiscValue[0]);
+                AddIfNonZero(entry, "miscValueB", effect.EffectMiscValue[1]);
+                // WoWDBDefs EffectAmplitude (server: EffectValueMultiplier);
+                // the aura tick period is auraPeriod.
+                AddIfNonZero(entry, "amplitude", effect.EffectAmplitude);
+
+                if (effect.EffectMechanic != 0)
+                    entry["mechanic"] = BuildRawAndName(effect.EffectMechanic, typeof(Mechanics));
 
                 // The effect's own three mask words (CoA flag96 per effect).
-                entry["spellClassMask"] = effect.EffectSpellClassMask;
+                var classMask = effect.EffectSpellClassMask;
+                if (classMask.Any(word => word != 0))
+                    entry["spellClassMask"] = classMask;
 
-                // WoWDBDefs EffectChainAmplitude (server: EffectDamageMultiplier)
-                // and EffectBonusCoefficient (server: EffectBonusMultiplier).
+                // CoA additions (3.3.5-only columns), emitted always.
+                entry["dieSides"] = effect.EffectDieSides;
+                entry["auraPeriod"] = effect.EffectAuraPeriod;
+                entry["itemType"] = effect.EffectItemType;
+                // WoWDBDefs EffectChainAmplitude (server: EffectDamageMultiplier).
                 entry["damageMultiplier"] = effect.EffectChainAmplitude;
-                entry["bonusMultiplier"] = effect.EffectBonusCoefficient;
 
                 result.Add(entry);
             }
@@ -479,7 +507,11 @@ namespace SpellWork.Spell
             return result;
         }
 
-        private static Dictionary<string, object> BuildTargets(SpellInfo spell)
+        // 5.4.8's targets array of SpellTargetRestrictions rows. 3.3.5 keeps
+        // these columns on the Spell row and has no per-difficulty rows, so
+        // the array holds at most one entry, with difficultyId 0 (the base
+        // row), and is omitted when every column is zero (5.4.8: no row).
+        private static List<object> BuildTargets(SpellInfo spell)
         {
             var row = spell.Spell;
             var entry = new Dictionary<string, object>();
@@ -491,27 +523,56 @@ namespace SpellWork.Spell
 
             AddIfNonZero(entry, "maxTargets", row.MaxTargets);
             AddIfNonZero(entry, "maxTargetLevel", row.MaxTargetLevel);
-            return entry;
-        }
 
-        // [{item, count, name?}] per non-empty reagent slot. 3.3.5 Item.dbc
-        // has no names; name comes from item_template when the caller
-        // supplies it (world database configured), and is omitted otherwise.
-        private static List<object> BuildReagents(SpellInfo spell, IReadOnlyDictionary<int, string> itemNames)
-        {
             var result = new List<object>();
-            foreach (var (item, count) in spell.Reagents)
+            if (entry.Count > 0)
             {
-                var entry = new Dictionary<string, object> { ["item"] = item, ["count"] = count };
-                if (itemNames != null && itemNames.TryGetValue(item, out var name) && name != null)
-                    entry["name"] = name;
-                result.Add(entry);
+                var withDifficulty = new Dictionary<string, object> { ["difficultyId"] = 0 };
+                foreach (var pair in entry)
+                    withDifficulty[pair.Key] = pair.Value;
+                result.Add(withDifficulty);
             }
 
             return result;
         }
 
-        // CumulativeAura and the duration scalars; proc data is at the root.
+        // 5.4.8's {items: [{itemId, count}]} per non-empty reagent slot.
+        // 3.3.5 Item.dbc has no names; name (a CoA addition) comes from
+        // item_template when the caller supplies it (world database
+        // configured), and is omitted otherwise.
+        private static Dictionary<string, object> BuildReagents(SpellInfo spell, IReadOnlyDictionary<int, string> itemNames)
+        {
+            var result = new Dictionary<string, object>();
+            var items = new List<object>();
+            foreach (var (item, count) in spell.Reagents)
+            {
+                var entry = new Dictionary<string, object> { ["itemId"] = item, ["count"] = count };
+                if (itemNames != null && itemNames.TryGetValue(item, out var name) && name != null)
+                    entry["name"] = name;
+                items.Add(entry);
+            }
+
+            if (items.Count > 0)
+                result["items"] = items;
+            return result;
+        }
+
+        // 5.4.8's "procs" object. procFlags is the matched-bit array itself
+        // (no {raw, flags} wrapper), with procFlagsUnmatchedBits beside it
+        // when a set bit has no declared member; chance and charges are
+        // omitted at zero, as in 5.4.8.
+        private static Dictionary<string, object> BuildProcs(SpellInfo spell)
+        {
+            var procs = new Dictionary<string, object>();
+            var flags = BuildFlagList(typeof(ProcFlags), spell.ProcFlags, out var unmatchedBits);
+            AddIfNotEmpty(procs, "procFlags", flags);
+            AddIfNotEmpty(procs, "procFlagsUnmatchedBits", unmatchedBits);
+            AddIfNonZero(procs, "procChance", spell.ProcChance);
+            AddIfNonZero(procs, "procCharges", spell.ProcCharges);
+            return procs;
+        }
+
+        // CumulativeAura and the duration scalars; proc data is in "procs".
         private static Dictionary<string, object> BuildAura(SpellInfo spell)
         {
             var aura = new Dictionary<string, object>();
@@ -774,7 +835,7 @@ namespace SpellWork.Spell
 
         // BuildFlagList returns an empty list for raw == 0, which is correct
         // for attributes (each word carries its own value). BuildRawAndFlags's
-        // callers are different -- preventionType and procFlags are emitted
+        // callers are different -- preventionType is emitted
         // unconditionally, even at zero, precisely
         // so SPELL_PREVENTION_TYPE_NONE stays distinguishable from "this
         // field never got serialised" -- so an empty flags array there would
@@ -782,7 +843,7 @@ namespace SpellWork.Spell
         // synthesise it as the sole flags entry instead of leaving the array
         // empty; schoolMask/targets/targetCreatureType keep the caller-side
         // `!= 0` gate that already prevents them from reaching this path at
-        // zero, so this fires for preventionType, procFlags and category flags -- and
+        // zero, so this fires for preventionType and category flags -- and
         // a synthesised zero entry is never an "unmatched bit" (there is no
         // bit position for value 0), so unmatchedBits stays empty on that
         // branch.

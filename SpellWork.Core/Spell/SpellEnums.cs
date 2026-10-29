@@ -11,24 +11,6 @@ namespace SpellWork.Spell
     // Enums below that still carry a "5.4.8:" note are not driven by those headers yet.
     // Comments on members are carried from the source.
 
-    // 5.4.8: SkyFire_548 DBCEnums.h DifficultyID
-    public enum Difficulty
-    {
-        DIFFICULTY_NONE         = 0,
-        DIFFICULTY_NORMAL       = 1,
-        DIFFICULTY_HEROIC       = 2,
-        DIFFICULTY_10MAN_NORMAL = 3,
-        DIFFICULTY_25MAN_NORMAL = 4,
-        DIFFICULTY_10MAN_HEROIC = 5,
-        DIFFICULTY_25MAN_HEROIC = 6,
-        DIFFICULTY_25MAN_LFR    = 7,
-        DIFFICULTY_CHALLENGE    = 8,
-        DIFFICULTY_40MAN        = 9,
-        DIFFICULTY_SCE_HEROIC   = 11,
-        DIFFICULTY_SCE_NORMAL   = 12,
-        DIFFICULTY_FLEX         = 14,
-    }
-
     // CoA: azerothcore-wotlk-coa SharedDefines.h SpellFamilyNames
     public enum SpellFamilyNames
     {

@@ -15,7 +15,7 @@ namespace SpellWork.Mcp.Tools
         public DecoderTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "calculate_spell_scaling")]
-        [Description("Per-effect computed values at a specific level, using the CoA 3.3.5 CalcValue rule (base points plus RealPointsPerLevel for each level above the spell level, level clamped to BaseLevel..MaxLevel, plus the DieSides roll range). Use this to see how a spell's numbers change with level rather than reading get_spell repeatedly. level clamps to 1-100. difficulty is optional: when omitted the id is used exactly as given (resolvedSpellId equals id); when given it is a SpellDifficulty mode 0-3 and the id is resolved through SpellDifficulty.dbc first, using the variant spell's own row (mode 0 maps a 25N variant id to its 10N id). itemLevel is echoed and never applied (itemLevelApplied is false). mapId is accepted for compatibility and ignored.")]
+        [Description("Per-effect computed values at a specific level, using the CoA 3.3.5 CalcValue rule (base points plus RealPointsPerLevel for each level above the spell level, level clamped to BaseLevel..MaxLevel, plus the DieSides roll range). Use this to see how a spell's numbers change with level rather than reading get_spell repeatedly. level clamps to 1-100. id, resolvedSpellId and name describe the spell computed; requestedId is the id asked for. difficulty is optional: when omitted the id is used exactly as given (id equals requestedId); when given it is a SpellDifficulty mode 0-3 and the id is resolved through SpellDifficulty.dbc first, using the variant spell's own row (mode 0 maps a 25N variant id to its 10N id). itemLevel is echoed and never applied (itemLevelApplied is false). mapId is accepted for compatibility and ignored.")]
         public async Task<string> CalculateSpellScaling(
             int id,
             uint level,
@@ -73,7 +73,10 @@ namespace SpellWork.Mcp.Tools
 
             var payload = new Dictionary<string, object>
             {
-                ["id"] = id,
+                // One rule across the spell tools: id (and name) describe the
+                // resolved spell, requestedId is the id asked for.
+                ["id"] = spell.ID,
+                ["requestedId"] = id,
                 ["resolvedSpellId"] = spell.ID,
                 ["name"] = spell.Name,
                 ["level"] = clampedLevel,

@@ -216,12 +216,129 @@ namespace SpellWork.Mcp.Tests
             Assert.Equal(new[] { (20L, "exact"), (-10L, "allRanks") }, DatabaseTools.KeysFor("spell_script_names", 20, 10));
             Assert.Equal(new[] { (20L, "exact"), (10L, "firstRank") }, DatabaseTools.KeysFor("spell_group", 20, 10));
             Assert.Equal(new[] { (20L, "exact"), (-20L, "onRemoval") }, DatabaseTools.KeysFor("spell_linked_spell", 20, 10));
-            Assert.Equal(new[] { (20L, "exact") }, DatabaseTools.KeysFor("spell_bonus_data", 20, 10));
+            Assert.Equal(new[] { (20L, "exact"), (10L, "firstRank") }, DatabaseTools.KeysFor("spell_bonus_data", 20, 10));
+            Assert.Equal(new[] { (20L, "exact"), (10L, "firstRank") }, DatabaseTools.KeysFor("spell_threat", 20, 10));
+            Assert.Equal(new[] { (20L, "exact") }, DatabaseTools.KeysFor("spell_custom_attr", 20, 10));
             // a first-rank spell is its own first rank: the group key collapses
             Assert.Equal(new[] { (10L, "exact") }, DatabaseTools.KeysFor("spell_group", 10, 10));
             Assert.Equal(new[] { (10L, "exact"), (-10L, "allRanks") }, DatabaseTools.KeysFor("spell_proc", 10, 10));
             foreach (var table in DatabaseTools.MatchRules.Keys)
                 Assert.Contains(DatabaseTools.OverrideTables, t => t.Table == table);
+        }
+
+        // SpellMgr.cpp:990-1019: spell_bonus_data / spell_threat use the
+        // exact row, else the first rank's row -- never both.
+        [Theory]
+        [InlineData("spell_bonus_data")]
+        [InlineData("spell_threat")]
+        public void ApplyFallback_KeepsTheFirstRankRowOnlyWithoutAnExactRow(string table)
+        {
+            Dictionary<string, object> Row(string matchedBy) => new Dictionary<string, object> { ["matchedBy"] = matchedBy };
+
+            var onlyFirst = DatabaseTools.ApplyFallback(table, new List<Dictionary<string, object>> { Row("firstRank") });
+            Assert.Equal("firstRank", Assert.Single(onlyFirst)["matchedBy"]);
+
+            var both = DatabaseTools.ApplyFallback(table, new List<Dictionary<string, object>> { Row("firstRank"), Row("exact") });
+            Assert.Equal("exact", Assert.Single(both)["matchedBy"]);
+
+            // spell_group is additive (membership covers every rank): untouched.
+            var group = DatabaseTools.ApplyFallback("spell_group", new List<Dictionary<string, object>> { Row("firstRank"), Row("exact") });
+            Assert.Equal(2, group.Count);
+        }
+
+        [SkippableTheory]
+        [InlineData("spell_bonus_data")]
+        [InlineData("spell_threat")]
+        public async Task FirstRankRow_IsReturnedForALaterRankSpellWithoutItsOwnRow(string table)
+        {
+            var tools = ToolsWithMySql();
+            var db = new SpellWork.Database.WorldDatabase(McpServerConfig.FromEnvironment(new Dictionary<string, string>
+            {
+                ["SPELLWORK_MYSQL_HOST"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_HOST"),
+                ["SPELLWORK_MYSQL_PORT"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_PORT") ?? "3306",
+                ["SPELLWORK_MYSQL_USER"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_USER") ?? "",
+                ["SPELLWORK_MYSQL_PASS"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_PASS") ?? "",
+                ["SPELLWORK_MYSQL_WORLD_DB"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_WORLD_DB") ?? "world",
+            }).ToSpellWorkConfig());
+
+            var found = db.SelectRows(
+                $"SELECT r.`spell_id` AS rank_spell, r.`first_spell_id` AS first_spell FROM `spell_ranks` r " +
+                $"JOIN `{table}` t ON t.`entry` = r.`first_spell_id` " +
+                $"WHERE r.`spell_id` <> r.`first_spell_id` " +
+                $"AND NOT EXISTS (SELECT 1 FROM `{table}` x WHERE x.`entry` = r.`spell_id`) " +
+                "ORDER BY r.`spell_id` LIMIT 1", 1);
+            Skip.If(found.Rows.Count == 0, $"No rank-2+ spell that relies on its first rank's {table} row.");
+
+            var rankSpell = Convert.ToInt32(found.Rows[0]["rank_spell"]);
+            var first = Convert.ToInt32(found.Rows[0]["first_spell"]);
+            var rows = JsonDocument.Parse(await tools.GetSpellDbOverrides(rankSpell)).RootElement
+                .GetProperty("result").GetProperty("tables").GetProperty(table).EnumerateArray().ToList();
+            var row = Assert.Single(rows);
+            Assert.Equal(first, row.GetProperty("entry").GetInt32());
+            Assert.Equal("firstRank", row.GetProperty("matchedBy").GetString());
+
+            // The first rank itself: its row is exact, reported once.
+            var own = JsonDocument.Parse(await tools.GetSpellDbOverrides(first)).RootElement
+                .GetProperty("result").GetProperty("tables").GetProperty(table).EnumerateArray().ToList();
+            Assert.Equal("exact", Assert.Single(own).GetProperty("matchedBy").GetString());
+        }
+
+        [SkippableTheory]
+        [InlineData(null)]
+        [InlineData("world")]
+        [InlineData("")]
+        public async Task QueryWorldDb_DefaultDatabase_IsTheConfiguredWorldDatabase(string database)
+        {
+            var tools = ToolsWithMySql();
+            var configured = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_WORLD_DB") ?? "world";
+
+            var json = database == null
+                ? await tools.QueryWorldDb("SELECT 1 AS one")
+                : await tools.QueryWorldDb("SELECT 1 AS one", database);
+            var root = JsonDocument.Parse(json).RootElement;
+            Assert.True(root.GetProperty("ok").GetBoolean(), json);
+            Assert.Equal(configured, root.GetProperty("result").GetProperty("database").GetString());
+            Assert.Equal(1, root.GetProperty("result").GetProperty("count").GetInt32());
+
+            // The configured name itself still works; any other name does not.
+            var named = JsonDocument.Parse(await tools.QueryWorldDb("SELECT 1 AS one", configured)).RootElement;
+            Assert.True(named.GetProperty("ok").GetBoolean());
+            var other = JsonDocument.Parse(await tools.QueryWorldDb("SELECT 1 AS one", "not_" + configured)).RootElement;
+            Assert.Equal("unknown_database", other.GetProperty("error").GetProperty("code").GetString());
+        }
+
+        // No MySQL needed: with SPELLWORK_MYSQL_WORLD_DB=acore_world (the
+        // documented setup) an omitted database passes the name check and
+        // reaches the connection, which fails here (port 1) as query_failed
+        // -- not unknown_database.
+        [Fact]
+        public async Task QueryWorldDb_OmittedDatabase_PassesTheNameCheckForANonWorldName()
+        {
+            var config = McpServerConfig.FromEnvironment(new Dictionary<string, string>
+            {
+                ["SPELLWORK_MYSQL_HOST"] = "127.0.0.1",
+                ["SPELLWORK_MYSQL_PORT"] = "1",
+                ["SPELLWORK_MYSQL_USER"] = "nobody",
+                ["SPELLWORK_MYSQL_WORLD_DB"] = "acore_world",
+            });
+            var tools = new DatabaseTools(new SpellDataService(config, NullLoggerFactoryStub.Logger));
+
+            var code = JsonDocument.Parse(await tools.QueryWorldDb("SELECT 1")).RootElement
+                .GetProperty("error").GetProperty("code").GetString();
+            Assert.Equal("query_failed", code);
+
+            var other = JsonDocument.Parse(await tools.QueryWorldDb("SELECT 1", "characters")).RootElement
+                .GetProperty("error").GetProperty("code").GetString();
+            Assert.Equal("unknown_database", other);
+        }
+
+        [Fact]
+        public void WorldDatabaseAlias_IsOmittedEmptyOrWorld()
+        {
+            Assert.True(DatabaseTools.IsWorldDatabaseAlias(null));
+            Assert.True(DatabaseTools.IsWorldDatabaseAlias(""));
+            Assert.True(DatabaseTools.IsWorldDatabaseAlias("World"));
+            Assert.False(DatabaseTools.IsWorldDatabaseAlias("acore_world"));
         }
 
         [SkippableFact]
