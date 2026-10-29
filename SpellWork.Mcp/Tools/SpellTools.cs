@@ -16,12 +16,12 @@ namespace SpellWork.Mcp.Tools
         public SpellTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "get_spell")]
-        [Description("The full decoded view of one spell (CoA 3.3.5a Spell.dbc row). format is \"json\" or \"text\". sections filters to any of: misc, attributes, effects, powers, targets, reagents, aura, procs, context, cooldowns, levels, interrupts, shapeshift, equippedItems, items, triggers, totems, visual (the visual chain, same shape as get_spell_visual_chain; storeUnloaded true and missingStores naming the stores that did not load when a visual store is missing). id, name, rank and difficulty {requested, resolvedSpellId, variants} are always present. items lists item_template items whose spellid_1..5 name the spell when the world database is configured, otherwise an empty array plus itemsNote. Effect basePoints is the 3.3.5 CalcValue base at the given level (basePointsMin/Max when DieSides gives a range). difficulty is an optional SpellDifficulty mode 0-3 (10N, 25N, 10H, 25H); omitted means no resolution (the id is used as given); a mode resolves the id to that mode's variant as the server does, a heroic mode with no variant falling back to the normal mode of the same size. Any other value is an error that lists the valid modes.")]
+        [Description("The full decoded view of one spell (CoA 3.3.5a Spell.dbc row). format is \"json\" or \"text\". sections filters to any of: misc, attributes, effects, powers, targets, reagents, aura, procs, context, cooldowns, levels, interrupts, shapeshift, equippedItems, items, triggers, totems, visual (the visual chain, same shape as get_spell_visual_chain; storeUnloaded true and missingStores naming the stores that did not load when a visual store is missing). id, name, rank and difficulty {requested, resolvedSpellId, variants} are always present. items lists item_template items whose spellid_1..5 name the spell, and each reagent carries its item_template name, when the world database is configured; otherwise items is an empty array plus itemsNote (and a failed world-database query adds worldDatabaseError). Effect basePoints is the 3.3.5 CalcValue base at the given level (basePointsMin/Max when DieSides gives a range). difficulty is an optional SpellDifficulty mode 0-3 (10N, 25N, 10H, 25H); omitted means no resolution (the id is used as given); a mode resolves the id to that mode's variant as the server does, a heroic mode with no variant falling back to the normal mode of the same size, and the document (id included) describes that variant; format text adds requestedId. Any other value is an error that lists the valid modes.")]
         public async Task<string> GetSpell(
             int id,
             string format = "json",
             string[] sections = null,
-            uint difficulty = 0,
+            uint? difficulty = null,
             uint? level = null,
             uint? itemLevel = null)
         {
@@ -29,7 +29,7 @@ namespace SpellWork.Mcp.Tools
             if (!data.Loaded)
                 return DataError(data);
 
-            if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(id, out var spell))
+            if (!SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(id))
                 return NotFound(id);
 
             if (!string.Equals(format, "json", StringComparison.OrdinalIgnoreCase) &&
@@ -39,9 +39,14 @@ namespace SpellWork.Mcp.Tools
                     $"Unknown format '{format}'. Valid formats are: json, text.");
             }
 
-            var difficultyError = ValidateDifficulty(difficulty);
-            if (difficultyError != null)
+            if (!TryResolveDifficulty(id, difficulty, out var view, out var difficultyError))
                 return difficultyError;
+
+            // The difficulty picks a different Spell row (spec D4): the
+            // document describes the variant, and the difficulty block says
+            // which mode led there from which id.
+            if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(view.ResolvedSpellId, out var spell))
+                return NotFound(view.ResolvedSpellId);
 
             var context = ResolveContext(level, itemLevel, difficulty);
 
@@ -52,17 +57,22 @@ namespace SpellWork.Mcp.Tools
                 return ToolResponse.Ok(new Dictionary<string, object>
                 {
                     ["id"] = spell.ID,
+                    ["requestedId"] = id,
                     ["name"] = spell.Name,
                     ["text"] = writer.ToString(),
                 });
             }
 
+            string document;
             try
             {
-                // Serialize returns a complete JSON document, so it is spliced
-                // in as raw JSON rather than re-serialised as a string value.
-                var document = SpellInfoJsonSerializer.Serialize(spell, context, sections);
-                return "{\"ok\":true,\"result\":" + document + "}";
+                // Validates the section names before any world-database
+                // round trip; the real document is built below.
+                SpellInfoJsonSerializer.Serialize(spell, context, sections ?? Array.Empty<string>(), view);
+                var world = ReadWorldData(spell, sections);
+                document = SpellInfoJsonSerializer.Serialize(spell, context, sections, view, world.ItemNames, world.Items);
+                if (world.Error != null)
+                    document = WithWorldDatabaseError(document, world.Error);
             }
             catch (ArgumentException ex)
             {
@@ -72,6 +82,86 @@ namespace SpellWork.Mcp.Tools
                 // exception the transport turns into a protocol-level failure.
                 return ToolResponse.Error("invalid_section", ex.Message);
             }
+
+            // Serialize returns a complete JSON document, so it is spliced
+            // in as raw JSON rather than re-serialised as a string value.
+            return "{\"ok\":true,\"result\":" + document + "}";
+        }
+
+        private sealed class WorldData
+        {
+            public IReadOnlyDictionary<int, string> ItemNames;
+            public IReadOnlyList<SpellWork.Database.ItemSpellUse> Items;
+            public string Error;
+        }
+
+        /// <summary>
+        /// item_template data for the items and reagents sections, when the
+        /// world database is configured and those sections are wanted. 3.3.5
+        /// Item.dbc has neither names nor spell columns. A failed query does
+        /// not fail get_spell: the client-data document is still the answer,
+        /// and the error is reported next to it.
+        /// </summary>
+        private WorldData ReadWorldData(SpellInfo spell, string[] sections)
+        {
+            var world = new WorldData();
+            if (!_data.Config.MySqlConfigured)
+                return world;
+
+            bool Wants(string section) => sections == null ||
+                sections.Any(s => string.Equals(s, section, StringComparison.OrdinalIgnoreCase));
+
+            var reagentIds = spell.Reagents.Select(r => r.Item).Where(item => item > 0).ToList();
+            var wantsItems = Wants("items");
+            var wantsNames = Wants("reagents") && reagentIds.Count > 0;
+            if (!wantsItems && !wantsNames)
+                return world;
+
+            try
+            {
+                var database = new SpellWork.Database.WorldDatabase(_data.Config.ToSpellWorkConfig());
+                if (wantsItems)
+                    world.Items = database.SelectItemsUsingSpell(spell.ID, ToolResponse.MaxRows);
+                if (wantsNames)
+                    world.ItemNames = database.SelectItemNames(reagentIds);
+            }
+            catch (Exception ex)
+            {
+                world.Items = null;
+                world.ItemNames = null;
+                world.Error = ex.Message;
+            }
+
+            return world;
+        }
+
+        // The serializer's itemsNote says "not configured"; when it is
+        // configured but the query failed, say that instead.
+        private static string WithWorldDatabaseError(string document, string error)
+        {
+            var root = System.Text.Json.Nodes.JsonNode.Parse(document).AsObject();
+            if (root.ContainsKey("itemsNote"))
+                root["itemsNote"] = "World database query failed; items could not be read from item_template.";
+            root["worldDatabaseError"] = error;
+            return root.ToJsonString();
+        }
+
+        /// <summary>
+        /// The shared difficulty rule (spec D4) for every tool that takes one:
+        /// null keeps <paramref name="id"/>; 0-3 resolves it through
+        /// SpellDifficulty.dbc (a heroic mode with no variant falls back to
+        /// the normal mode of the same size); anything else is
+        /// unknown_difficulty naming the valid modes.
+        /// </summary>
+        internal static bool TryResolveDifficulty(int id, uint? difficulty, out SpellDifficultyView view, out string error)
+        {
+            view = null;
+            error = difficulty.HasValue ? ValidateDifficulty(difficulty.Value) : null;
+            if (error != null)
+                return false;
+
+            view = SpellDifficultyView.For(id, (int?)difficulty);
+            return true;
         }
 
         /// <summary>
@@ -107,7 +197,7 @@ namespace SpellWork.Mcp.Tools
         }
 
         [McpServerTool(Name = "search_spells")]
-        [Description("Find spells by any combination of name substring, family, aura type, effect type, target type, attribute bit and school mask. Enum arguments accept either a number or an enum member name. attribute is a mask or SpellAtribute member name tested against Attributes word 0, or \"word:value\" (word 0-13, value a number, 0x-hex mask or that word's enum member), e.g. \"13:0x1\". Returns id, name and a one-line summary per hit.")]
+        [Description("Find spells by any combination of name substring, family, aura type, effect type, target type, attribute bit and school mask. Enum arguments accept either a number or an enum member name. attribute is a mask or SpellAtribute member name tested against Attributes word 0, or \"word:value\" (word 0-7, value a number, 0x-hex mask or that word's enum member), e.g. \"7:0x1\". Returns id, name and a one-line summary per hit.")]
         public async Task<string> SearchSpells(
             string name = null,
             string family = null,
@@ -174,7 +264,7 @@ namespace SpellWork.Mcp.Tools
 
         /// <summary>
         /// "SPELL_ATTR0_PASSIVE" or "64" test word 0, as before. "7:0x1" or
-        /// "7:SPELL_ATTR7_UNK0" test the named word (0-7); the value is a
+        /// "7:SPELL_ATTR7_ALLOW_SPELL_REFLECTION" test the named word (0-7); the value is a
         /// decimal or 0x-hex mask, or a member of that word's enum.
         /// </summary>
         internal static bool TryResolveAttribute(string text, out int word, out long? mask, out string error)
@@ -203,7 +293,7 @@ namespace SpellWork.Mcp.Tools
             {
                 if (!int.TryParse(value.Substring(0, colon).Trim(), out word) || word < 0 || word >= AttributeWordEnums.Length)
                 {
-                    error = $"'{text}': the attribute word must be a number from 0 to {AttributeWordEnums.Length - 1}, as in \"13:0x1\".";
+                    error = $"'{text}': the attribute word must be a number from 0 to {AttributeWordEnums.Length - 1}, as in \"7:0x1\".";
                     return false;
                 }
 
@@ -257,8 +347,8 @@ namespace SpellWork.Mcp.Tools
             if (schoolMask.HasValue && (spell.SchoolMask & schoolMask.Value) == 0)
                 return false;
 
-            // An attribute filter is a mask tested against one of the fourteen
-            // Attributes words (0-13); "word:value" picks the word, and a bare
+            // An attribute filter is a mask tested against one of the eight
+            // Attributes words (0-7); "word:value" picks the word, and a bare
             // value means word 0.
             if (attribute.HasValue && (spell.Attributes[attributeWord] & (uint)attribute.Value) == 0)
                 return false;
@@ -292,15 +382,22 @@ namespace SpellWork.Mcp.Tools
         }
 
         [McpServerTool(Name = "get_spell_triggers")]
-        [Description("Which spells this spell triggers (from its own base-difficulty effects, with the effect index) and which spells trigger it. Base difficulty only; get_spell with sections=[\"triggers\"] and a difficulty resolves the forward list at that difficulty.")]
-        public async Task<string> GetSpellTriggers(int id)
+        [Description("Which spells this spell triggers (from its effects' EffectTriggerSpell, with the effect index) and which spells trigger it. difficulty is an optional SpellDifficulty mode 0-3: omitted uses the id as given; a mode first resolves the id to that mode's variant spell (resolvedSpellId), whose triggers are listed. Any other value is an error that lists the valid modes.")]
+        public async Task<string> GetSpellTriggers(int id, uint? difficulty = null)
         {
             var data = await _data.GetAsync();
             if (!data.Loaded)
                 return DataError(data);
 
-            if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(id, out var spell))
+            if (!SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(id))
                 return NotFound(id);
+
+            if (!TryResolveDifficulty(id, difficulty, out var view, out var difficultyError))
+                return difficultyError;
+
+            var resolvedId = view.ResolvedSpellId;
+            if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(resolvedId, out var spell))
+                return NotFound(resolvedId);
 
             var triggers = spell.Effects.Select(r => r.Entry)
                 .Where(effect => effect != null && effect.EffectTriggerSpell != 0)
@@ -315,7 +412,7 @@ namespace SpellWork.Mcp.Tools
                 .ToList();
 
             var triggeredBy = new List<object>();
-            if (SpellWork.DBC.DBC.SpellTriggerStore.TryGetValue(id, out var sources))
+            if (SpellWork.DBC.DBC.SpellTriggerStore.TryGetValue(resolvedId, out var sources))
             {
                 triggeredBy.AddRange(sources.OrderBy(sourceId => sourceId)
                     .Select(sourceId => (object)new Dictionary<string, object>
@@ -329,7 +426,9 @@ namespace SpellWork.Mcp.Tools
 
             return ToolResponse.Ok(new Dictionary<string, object>
             {
-                ["id"] = spell.ID,
+                ["id"] = id,
+                ["resolvedSpellId"] = spell.ID,
+                ["difficulty"] = difficulty.HasValue ? (int)difficulty.Value : (int?)null,
                 ["name"] = spell.Name,
                 ["triggers"] = triggers.Take(ToolResponse.MaxRows).ToList(),
                 ["triggeredBy"] = triggeredBy.Take(ToolResponse.MaxRows).ToList(),
@@ -338,19 +437,28 @@ namespace SpellWork.Mcp.Tools
         }
 
         [McpServerTool(Name = "compare_spells")]
-        [Description("Structured field-by-field diff of two spells. Returns each differing JSON path with both values.")]
-        public async Task<string> CompareSpells(int idA, int idB)
+        [Description("Structured field-by-field diff of two spells. Returns each differing JSON path with both values. difficulty is an optional SpellDifficulty mode 0-3 applied to both ids: omitted compares the ids as given; a mode first resolves each id to that mode's variant (a/b report requestedId and the resolved id). Any other value is an error that lists the valid modes.")]
+        public async Task<string> CompareSpells(int idA, int idB, uint? difficulty = null)
         {
             var data = await _data.GetAsync();
             if (!data.Loaded)
                 return DataError(data);
 
-            if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(idA, out var spellA))
+            if (!SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(idA))
                 return NotFound(idA);
-            if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(idB, out var spellB))
+            if (!SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(idB))
                 return NotFound(idB);
 
-            var context = ResolveContext(null, null, 0);
+            if (!TryResolveDifficulty(idA, difficulty, out var viewA, out var difficultyError) ||
+                !TryResolveDifficulty(idB, difficulty, out var viewB, out difficultyError))
+                return difficultyError;
+
+            if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(viewA.ResolvedSpellId, out var spellA))
+                return NotFound(viewA.ResolvedSpellId);
+            if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(viewB.ResolvedSpellId, out var spellB))
+                return NotFound(viewB.ResolvedSpellId);
+
+            var context = ResolveContext(null, null, difficulty);
 
             // Diff the serialized documents rather than comparing fields by
             // hand: this covers every field get_spell emits, including ones
@@ -416,8 +524,9 @@ namespace SpellWork.Mcp.Tools
 
             var result = new Dictionary<string, object>
             {
-                ["a"] = new Dictionary<string, object> { ["id"] = spellA.ID, ["name"] = spellA.Name },
-                ["b"] = new Dictionary<string, object> { ["id"] = spellB.ID, ["name"] = spellB.Name },
+                ["a"] = new Dictionary<string, object> { ["id"] = spellA.ID, ["requestedId"] = idA, ["name"] = spellA.Name },
+                ["b"] = new Dictionary<string, object> { ["id"] = spellB.ID, ["requestedId"] = idB, ["name"] = spellB.Name },
+                ["difficulty"] = difficulty.HasValue ? (int)difficulty.Value : (int?)null,
                 ["identical"] = differences.Count == 0,
                 ["differences"] = differences.Take(ToolResponse.MaxRows).ToList(),
                 ["truncated"] = truncated,
@@ -579,15 +688,15 @@ namespace SpellWork.Mcp.Tools
                 ["b"] = b.ToString(),
             };
 
-        internal static RenderContext ResolveContext(uint? level, uint? itemLevel, uint difficulty) =>
+        internal static RenderContext ResolveContext(uint? level, uint? itemLevel, uint? difficulty) =>
             new RenderContext(
                 level ?? SpellWork.DBC.DBC.MaxLevel,
                 itemLevel ?? SpellWork.DBC.DBC.DefaultItemLevel,
-                (int)difficulty);
+                (int?)difficulty);
 
-        // Shared by get_spell and calculate_spell_scaling: null when the
-        // difficulty is a SpellDifficulty mode (0-3, spec D4), else the error
-        // response. Task 8 settles the tool contract.
+        // Shared by every tool that takes a difficulty: null when the value
+        // is a SpellDifficulty mode (0-3, spec D4), else the error response
+        // naming the valid modes.
         internal static string ValidateDifficulty(uint difficulty)
         {
             if (difficulty < SpellWork.DBC.SpellDifficultyResolver.ModeCount)

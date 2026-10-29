@@ -52,7 +52,22 @@ namespace SpellWork.Mcp
             _data = new Lazy<Task<SpellData>>(LoadAsync, LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
+        private SpellDataService(McpServerConfig config, SpellDataService loadedFrom)
+        {
+            _config = config;
+            _logger = loadedFrom._logger;
+            _data = loadedFrom._data;
+        }
+
         public McpServerConfig Config => _config;
+
+        /// <summary>
+        /// The same one-time client-data load under a different config (for
+        /// tests that need a world database next to the loaded data). A
+        /// second SpellDataService would load again, and DBC.LoadAsync resets
+        /// process-wide statics every other caller is reading.
+        /// </summary>
+        internal SpellDataService WithConfig(McpServerConfig config) => new SpellDataService(config, this);
 
         public Task<SpellData> GetAsync() => _data.Value;
 
@@ -67,8 +82,7 @@ namespace SpellWork.Mcp
 
             try
             {
-                // gtSpellScaling is an ordinary DBC store in 5.4.8, so
-                // DBC.LoadAsync is the whole load.
+                // 3.3.5a has no gt tables: DBC.LoadAsync is the whole load.
                 await DBC.DBC.LoadAsync(_config.ToSpellWorkConfig(), new LoggerAdapter(_logger));
             }
             catch (Exception ex)
@@ -86,7 +100,7 @@ namespace SpellWork.Mcp
             result.SpellCount = DBC.DBC.SpellInfoStore.Count;
 
             // DBC.LoadAsync swallows DirectoryNotFoundException per store, so
-            // a path that exists but holds no .db2 files "succeeds" with every
+            // a path that exists but holds no .dbc files "succeeds" with every
             // store empty. Zero spells is that case, and the caller needs to
             // hear about it rather than get empty results forever.
             if (result.SpellCount == 0)

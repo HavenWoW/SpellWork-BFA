@@ -64,15 +64,26 @@ namespace SpellWork.Mcp.Tests
             Assert.False(config.MySqlConfigured);
         }
 
+        // Spec section 7: a 5.4.8 registration that still sets the DB2 and
+        // gt paths must start; the paths are accepted and never reach the
+        // loader, which reads .dbc files from SPELLWORK_DBC_PATH only.
         [Fact]
-        public void ReadsDb2Path()
+        public void AcceptsAndIgnoresDb2AndGtPaths()
         {
             var c = McpServerConfig.FromEnvironment(new Dictionary<string, string>
             {
                 ["SPELLWORK_DBC_PATH"] = "C:/x/dbc",
                 ["SPELLWORK_DB2_PATH"] = "C:/x/db2",
+                ["SPELLWORK_GT_PATH"] = "C:/x/gt",
             });
-            Assert.Equal("C:/x/db2", c.Db2Path);
+
+            Assert.Equal(new[] { "SPELLWORK_DB2_PATH", "SPELLWORK_GT_PATH" }, c.IgnoredVariables);
+            var core = c.ToSpellWorkConfig();
+            Assert.Equal("C:/x/dbc", core.DbcPath);
+            Assert.Null(core.Db2Path);
+            Assert.Null(core.GtPath);
+
+            Assert.Empty(McpServerConfig.FromEnvironment(new Dictionary<string, string>()).IgnoredVariables);
         }
 
         [Fact]
@@ -92,7 +103,7 @@ namespace SpellWork.Mcp.Tests
             var core = config.ToSpellWorkConfig();
 
             Assert.Equal(@"C:\data\dbc", core.DbcPath);
-            Assert.Equal(@"C:\data\gt", core.GtPath);
+            Assert.Null(core.GtPath);
             Assert.Equal("enUS", core.Locale);
             Assert.Equal("db.local", core.MySqlHost);
             Assert.Equal("3307", core.MySqlPortOrPipe);

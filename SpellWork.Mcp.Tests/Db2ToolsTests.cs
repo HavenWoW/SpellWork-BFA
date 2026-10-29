@@ -55,53 +55,91 @@ namespace SpellWork.Mcp.Tests
             Assert.True(error.GetProperty("details").GetProperty("modelledStores").GetArrayLength() > 0);
         }
 
-        [SkippableFact(Skip = "coa: Task 8")]
-        public async Task ListDb2MarksShadowedDbc()
+        // Spec section 6: list_db2 is over .dbc only. Every .dbc in the
+        // folder is listed, including the CoA-only files SpellWork does not
+        // model (SpellAddon.dbc), which come back modelled false.
+        [SkippableFact]
+        public async Task ListDb2_ListsEveryDbcInTheFolder_WithTheModelledFlag()
         {
             _fixture.SkipIfNoClientData();
 
             var rows = await Stores(_fixture.Db2Tools);
-            var stale = rows.Single(r => r.GetProperty("name").GetString() == "SpellVisual" && r.GetProperty("extension").GetString() == "dbc");
-            Assert.True(stale.GetProperty("shadowed").GetBoolean());
-            Assert.False(stale.GetProperty("loaded").GetBoolean());
+            var onDisk = Directory.GetFiles(Environment.GetEnvironmentVariable("SPELLWORK_DBC_PATH"), "*.dbc")
+                .Where(f => string.Equals(Path.GetExtension(f), ".dbc", StringComparison.OrdinalIgnoreCase))
+                .Select(Path.GetFileNameWithoutExtension)
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-            var current = rows.Single(r => r.GetProperty("name").GetString() == "SpellVisual" && r.GetProperty("extension").GetString() == "db2");
-            Assert.True(current.GetProperty("loaded").GetBoolean());
-            Assert.True(current.GetProperty("modelled").GetBoolean());
-            Assert.False(current.TryGetProperty("shadowed", out _));
+            var listed = rows.Where(r => r.GetProperty("extension").ValueKind == JsonValueKind.String)
+                .ToList();
+            Assert.All(listed, r => Assert.Equal("dbc", r.GetProperty("extension").GetString()));
+            Assert.Equal(onDisk, listed.Select(r => r.GetProperty("name").GetString())
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList());
+
+            var addon = rows.Single(r => r.GetProperty("name").GetString() == "SpellAddon");
+            Assert.False(addon.GetProperty("modelled").GetBoolean());
+            Assert.False(addon.GetProperty("loaded").GetBoolean());
+            Assert.False(addon.TryGetProperty("store", out _));
+
+            foreach (var store in new[] { "Spell", "SpellDifficulty", "SpellAffect" })
+            {
+                var row = rows.Single(r => r.GetProperty("name").GetString() == store);
+                Assert.True(row.GetProperty("modelled").GetBoolean());
+                Assert.True(row.GetProperty("loaded").GetBoolean());
+                Assert.Equal(store, row.GetProperty("store").GetString());
+                Assert.True(row.GetProperty("rowCount").GetInt32() > 0);
+            }
+
+            Assert.DoesNotContain(rows, r => r.TryGetProperty("shadowed", out _));
         }
 
-        [SkippableFact(Skip = "coa: Task 8")]
-        public async Task ListDb2_ReportsUnmodelledFilesAndFileNames()
+        // get_db2_row and query_db2 answer for every modelled store, by its
+        // name in any case (3.3.5a file names equal the store names).
+        [SkippableFact]
+        public async Task GetDb2RowAndQueryDb2_WorkOverEveryModelledStore()
         {
             _fixture.SkipIfNoClientData();
 
-            var rows = await Stores(_fixture.Db2Tools);
-            Assert.Contains(rows, r => !r.GetProperty("modelled").GetBoolean() && r.GetProperty("extension").GetString() == "db2");
-            Assert.Contains(rows, r => r.GetProperty("name").GetString() == "Item-sparse" && r.GetProperty("modelled").GetBoolean());
+            var stores = typeof(SpellWork.DBC.DBC).GetProperties(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                .Where(p => p.PropertyType.IsGenericType && p.PropertyType.GetGenericTypeDefinition() == typeof(DBFileReaderLib.Storage<>))
+                .ToList();
+            Assert.Contains(stores, p => p.Name == "SpellDifficulty");
+            Assert.Contains(stores, p => p.Name == "SpellAffect");
+
+            foreach (var property in stores)
+            {
+                var storage = (System.Collections.IDictionary)property.GetValue(null);
+                Assert.True(storage != null && storage.Count > 0, $"{property.Name} loaded no rows.");
+                var id = storage.Keys.Cast<int>().Min();
+
+                using (var row = JsonDocument.Parse(await _fixture.Db2Tools.GetDb2Row(property.Name.ToLowerInvariant(), id)))
+                {
+                    Assert.True(row.RootElement.GetProperty("ok").GetBoolean(), property.Name);
+                    var result = row.RootElement.GetProperty("result");
+                    Assert.Equal(property.Name, result.GetProperty("store").GetString());
+                    Assert.Equal(id, result.GetProperty("row").GetProperty("ID").GetInt32());
+                }
+
+                using (var query = JsonDocument.Parse(await _fixture.Db2Tools.QueryDb2(property.Name, filter: $"ID={id}")))
+                {
+                    Assert.True(query.RootElement.GetProperty("ok").GetBoolean(), property.Name);
+                    var result = query.RootElement.GetProperty("result");
+                    Assert.Equal(1, result.GetProperty("totalMatches").GetInt32());
+                    Assert.Equal(id, result.GetProperty("rows")[0].GetProperty("ID").GetInt32());
+                }
+            }
         }
 
-        // 3.3.5a has no store whose file name differs from its property name
-        // (Item-sparse is gone); Task 8 decides what this test pins.
-        [SkippableFact(Skip = "coa: Task 8")]
-        public async Task GetDb2RowAcceptsFileName()
+        [SkippableFact]
+        public async Task GetDb2Row_SpellDifficulty_ReturnsTheVariantColumns()
         {
             _fixture.SkipIfNoClientData();
 
-            var anyItem = SpellWork.DBC.DBC.Item.Keys.First();
-            using var doc = JsonDocument.Parse(await _fixture.Db2Tools.GetDb2Row("Item", anyItem));
-            var result = doc.RootElement.GetProperty("result");
-            Assert.Equal("Item", result.GetProperty("store").GetString());
-            Assert.Equal(anyItem, result.GetProperty("row").GetProperty("ID").GetInt32());
-        }
-
-        [SkippableFact(Skip = "coa: Task 8")]
-        public async Task QueryDb2AcceptsFileName()
-        {
-            _fixture.SkipIfNoClientData();
-
-            using var doc = JsonDocument.Parse(await _fixture.Db2Tools.QueryDb2("gtSpellScaling", limit: 1));
-            Assert.Equal("GtSpellScaling", doc.RootElement.GetProperty("result").GetProperty("store").GetString());
+            var entry = SpellWork.DBC.DBC.SpellDifficulty.Values.First(e => e.DifficultySpellID[1] != 0);
+            using var doc = JsonDocument.Parse(await _fixture.Db2Tools.GetDb2Row("SpellDifficulty", entry.ID));
+            var row = doc.RootElement.GetProperty("result").GetProperty("row");
+            Assert.Equal(entry.DifficultySpellID.ToArray(),
+                row.GetProperty("DifficultySpellID").EnumerateArray().Select(v => v.GetInt32()).ToArray());
         }
 
         private static async Task<System.Collections.Generic.List<JsonElement>> Stores(SpellWork.Mcp.Tools.Db2Tools tools)
@@ -121,80 +159,71 @@ namespace SpellWork.Mcp.Tests
             Assert.Equal("row_not_found", doc.RootElement.GetProperty("error").GetProperty("code").GetString());
         }
 
-        [SkippableFact(Skip = "coa: Task 8")]
+        [SkippableFact]
         public async Task QueryDb2_FilterMatchesOnFieldValue()
         {
             _fixture.SkipIfNoClientData();
 
-            var json = await _fixture.Db2Tools.QueryDb2("SpellEffect", filter: "SpellID=133");
+            var modifier = SpellWork.DBC.DBC.SpellAffect.Values.First().ModifierSpellID;
+            var json = await _fixture.Db2Tools.QueryDb2("SpellAffect", filter: $"ModifierSpellID={modifier}");
             using var doc = JsonDocument.Parse(json);
             var rows = doc.RootElement.GetProperty("result").GetProperty("rows").EnumerateArray().ToList();
 
             Assert.NotEmpty(rows);
             foreach (var row in rows)
-                Assert.Equal(133, row.GetProperty("SpellID").GetInt32());
+                Assert.Equal(modifier, row.GetProperty("ModifierSpellID").GetInt32());
         }
 
         // Companion to QueryDb2_FilterMatchesOnFieldValue: proves the filter
         // is actually excluding rows, not just failing to include wrong ones.
-        // An implementation that ignored the filter entirely would return the
-        // same (much larger) totalMatches here as for the SpellID=133 query.
-        [SkippableFact(Skip = "coa: Task 8")]
+        [SkippableFact]
         public async Task QueryDb2_FilterExcludesNonMatchingRows()
         {
             _fixture.SkipIfNoClientData();
 
-            var filteredJson = await _fixture.Db2Tools.QueryDb2("SpellEffect", filter: "SpellID=133");
+            var modifier = SpellWork.DBC.DBC.SpellAffect.Values.First().ModifierSpellID;
+            var filteredJson = await _fixture.Db2Tools.QueryDb2("SpellAffect", filter: $"ModifierSpellID={modifier}");
             using var filteredDoc = JsonDocument.Parse(filteredJson);
             var filteredTotal = filteredDoc.RootElement.GetProperty("result").GetProperty("totalMatches").GetInt32();
 
-            var unfilteredJson = await _fixture.Db2Tools.QueryDb2("SpellEffect", limit: 1);
+            var unfilteredJson = await _fixture.Db2Tools.QueryDb2("SpellAffect", limit: 1);
             using var unfilteredDoc = JsonDocument.Parse(unfilteredJson);
             var unfilteredTotal = unfilteredDoc.RootElement.GetProperty("result").GetProperty("totalMatches").GetInt32();
 
             Assert.True(filteredTotal > 0);
             Assert.True(filteredTotal < unfilteredTotal);
+            Assert.Equal(SpellWork.DBC.DBC.SpellAffect.Count, unfilteredTotal);
         }
 
-        // Review finding: the brief's own documented example filter is
-        // "SpellID=133,DifficultyID=0" -- two comma-joined clauses -- but
-        // nothing verified both are actually applied. An implementation that
-        // kept only the last clause (EffectIndex=0, matching many spells,
-        // not just 133) or only the first (SpellID=133, matching every
-        // effect of spell 133, not just index 0) would each fail one of the
-        // assertions below; only applying both clauses together satisfies
-        // all of them.
-        [SkippableFact(Skip = "coa: Task 8")]
+        // Both comma-joined clauses must apply: a ModifierSpellID with more
+        // than one SpellAffect row, narrowed by one of its AffectedSpellIDs.
+        [SkippableFact]
         public async Task QueryDb2_MultiClauseFilter_AppliesAllClauses()
         {
             _fixture.SkipIfNoClientData();
 
-            // Spell 53 has four SpellEffect rows (EffectIndex 0-3) in this
-            // client-data build, confirmed by inspection -- unlike spell 133
-            // (Fireball), which has only one, so 133 could not distinguish
-            // "both clauses applied" from "only the first was".
-            var singleClauseJson = await _fixture.Db2Tools.QueryDb2("SpellEffect", filter: "SpellID=53");
+            var group = SpellWork.DBC.DBC.SpellAffect.Values
+                .GroupBy(e => e.ModifierSpellID)
+                .First(g => g.Select(e => e.AffectedSpellID).Distinct().Count() > 1);
+            var affected = group.First().AffectedSpellID;
+
+            var singleClauseJson = await _fixture.Db2Tools.QueryDb2("SpellAffect", filter: $"ModifierSpellID={group.Key}");
             using var singleDoc = JsonDocument.Parse(singleClauseJson);
             var singleTotal = singleDoc.RootElement.GetProperty("result").GetProperty("totalMatches").GetInt32();
-
-            // Test assumption, asserted rather than silently relied on:
-            // spell 53 needs more than one effect for the second clause to
-            // have anything to narrow away.
             Assert.True(singleTotal > 1);
 
-            var multiClauseJson = await _fixture.Db2Tools.QueryDb2("SpellEffect", filter: "SpellID=53,EffectIndex=0");
+            var multiClauseJson = await _fixture.Db2Tools.QueryDb2("SpellAffect",
+                filter: $"ModifierSpellID={group.Key},AffectedSpellID={affected}");
             using var multiDoc = JsonDocument.Parse(multiClauseJson);
             var result = multiDoc.RootElement.GetProperty("result");
             var rows = result.GetProperty("rows").EnumerateArray().ToList();
 
             Assert.NotEmpty(rows);
-            // Narrower than SpellID=53 alone: the second clause must have
-            // done something, not merely failed to contradict the first.
             Assert.True(result.GetProperty("totalMatches").GetInt32() < singleTotal);
             foreach (var row in rows)
             {
-                Assert.Equal(53, row.GetProperty("SpellID").GetInt32());
-                Assert.Equal(0, row.GetProperty("EffectIndex").GetInt32());
+                Assert.Equal(group.Key, row.GetProperty("ModifierSpellID").GetInt32());
+                Assert.Equal(affected, row.GetProperty("AffectedSpellID").GetInt32());
             }
         }
 

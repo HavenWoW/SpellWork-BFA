@@ -39,7 +39,7 @@ namespace SpellWork.Mcp.Tools
         public Db2Tools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "list_db2")]
-        [Description("Every .dbc and .db2 file present in the effective DBC directory and the DB2 path, one row per file: name (the file name), extension, modelled (real field names available; store is then the store property name), loaded (this file is the one the store was read from) and rowCount. A .dbc whose .db2 twin is the one loaded has shadowed true. A modelled store with no file is listed with extension null. Only modelled stores can be read with get_db2_row and query_db2, by store property name or file name.")]
+        [Description("Every .dbc file in SPELLWORK_DBC_PATH (3.3.5a has no .db2 files), one row per file: name (the file name without extension), extension (\"dbc\"), modelled (SpellWork has a structure for it, so real field names are available; store is then the store name), loaded (the store was read from this file) and rowCount. CoA-only files SpellWork does not model, such as SpellAddon, are listed with modelled false. A modelled store with no file is listed with extension null. Only modelled stores can be read with get_db2_row and query_db2, by store name in any case.")]
         public async Task<string> ListDb2()
         {
             var data = await _data.GetAsync();
@@ -58,14 +58,8 @@ namespace SpellWork.Mcp.Tools
                 seen.Add(file.Name);
 
                 var isModelled = property != null;
-                var isLoaded = false;
-                var shadowed = false;
-                if (isModelled && opened.TryGetValue(property, out var openedFile))
-                {
-                    isLoaded = string.Equals(openedFile.Extension, file.Extension, StringComparison.OrdinalIgnoreCase);
-                    shadowed = file.Extension == "dbc" &&
-                        string.Equals(openedFile.Extension, "db2", StringComparison.OrdinalIgnoreCase);
-                }
+                var isLoaded = isModelled && opened.TryGetValue(property, out var openedFile) &&
+                    string.Equals(openedFile.Extension, file.Extension, StringComparison.OrdinalIgnoreCase);
 
                 var row = new Dictionary<string, object>
                 {
@@ -77,8 +71,6 @@ namespace SpellWork.Mcp.Tools
                 };
                 if (isModelled)
                     row["store"] = property;
-                if (shadowed)
-                    row["shadowed"] = true;
                 stores.Add((file.Name, file.Extension, row));
             }
 
@@ -114,7 +106,7 @@ namespace SpellWork.Mcp.Tools
         }
 
         [McpServerTool(Name = "get_db2_row")]
-        [Description("One row from a modelled DB2 store, by id, with real field names. Call list_db2 for the available stores.")]
+        [Description("One row from a modelled .dbc store (e.g. Spell, SpellDifficulty, SpellAffect), by id, with real field names. Call list_db2 for the available stores.")]
         public async Task<string> GetDb2Row(string store, int id)
         {
             var data = await _data.GetAsync();
@@ -142,7 +134,7 @@ namespace SpellWork.Mcp.Tools
         }
 
         [McpServerTool(Name = "query_db2")]
-        [Description("Rows from a modelled DB2 store. filter is comma-separated field=value pairs, e.g. \"SpellID=133,DifficultyID=0\"; values are compared as case-insensitive strings. No operators or expressions.")]
+        [Description("Rows from a modelled .dbc store. filter is comma-separated field=value pairs, e.g. \"ModifierSpellID=12345,AffectedSpellID=133\" on SpellAffect; values are compared as case-insensitive strings (an array field as its comma-joined values). No operators or expressions.")]
         public async Task<string> QueryDb2(string store, string filter = null, int limit = 50, int offset = 0)
         {
             var data = await _data.GetAsync();
@@ -264,10 +256,9 @@ namespace SpellWork.Mcp.Tools
         }
 
         /// <summary>
-        /// Every <c>.db2</c> and <c>.dbc</c> file actually present in the
-        /// effective DBC directory (the locale folder, or the root when it
-        /// does not exist) and in <c>Db2Path</c>, one entry per name and
-        /// extension. This is the one place either the listing in
+        /// Every <c>.dbc</c> file actually present in the effective DBC
+        /// directory, one entry per name (3.3.5a has no .db2 files, and
+        /// SPELLWORK_DB2_PATH is ignored). This is the one place either the listing in
         /// <see cref="ListDb2"/> or the <c>store_not_modelled</c> decision
         /// in <see cref="TryGetStore"/> ever asks "what files exist" --
         /// deliberately, so the answer can only ever be a real directory
@@ -278,37 +269,23 @@ namespace SpellWork.Mcp.Tools
         /// </summary>
         private IEnumerable<PresentFile> PresentFiles()
         {
-            var directories = new List<string>();
-            var dbcDirectory = SpellWork.DBC.ClientFileResolver.EffectiveDbcDirectory(_data.Config.ToSpellWorkConfig());
-            if (dbcDirectory != null)
-                directories.Add(dbcDirectory);
-            if (!string.IsNullOrEmpty(_data.Config.Db2Path))
-                directories.Add(_data.Config.Db2Path);
+            const string extension = "dbc";
+            var directory = SpellWork.DBC.ClientFileResolver.EffectiveDbcDirectory(_data.Config.ToSpellWorkConfig());
+            if (directory == null || !Directory.Exists(directory))
+                yield break;
 
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var directory in directories)
+            // "*.dbc" also matches longer extensions on Windows ("x.dbcx");
+            // the extension is compared exactly below.
+            foreach (var file in Directory.GetFiles(directory, "*." + extension))
             {
-                if (!Directory.Exists(directory))
+                if (!string.Equals(Path.GetExtension(file), "." + extension, StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                foreach (var extension in new[] { "db2", "dbc" })
-                {
-                    // "*.db2" also matches longer extensions on Windows
-                    // ("x.db2x"); the extension is compared exactly below.
-                    foreach (var file in Directory.GetFiles(directory, "*." + extension))
-                    {
-                        if (!string.Equals(Path.GetExtension(file), "." + extension, StringComparison.OrdinalIgnoreCase))
-                            continue;
-
-                        var name = Path.GetFileNameWithoutExtension(file);
-                        if (seen.Add(name + "." + extension))
-                            yield return new PresentFile { Name = name, Extension = extension };
-                    }
-                }
+                yield return new PresentFile { Name = Path.GetFileNameWithoutExtension(file), Extension = extension };
             }
         }
 
-        /// <summary>Client file name (<c>Item-sparse</c>) to store property name (<c>ItemSparse</c>).</summary>
+        /// <summary>Client file name to store property name (the same name in 3.3.5a; see DBC.FileNameFor).</summary>
         private static Dictionary<string, string> StorePropertyByFileName()
         {
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -388,8 +365,8 @@ namespace SpellWork.Mcp.Tools
             if (modelled[match] == null)
             {
                 error = ToolResponse.Error("store_not_loaded",
-                    $"Store '{match}' is modelled but was not loaded -- its .db2 file is missing from " +
-                    $"'{_data.Config.DbcPath}\\{_data.Config.Locale}'.",
+                    $"Store '{match}' is modelled but was not loaded -- its .dbc file is missing from " +
+                    $"'{_data.Config.DbcPath}'.",
                     new Dictionary<string, object> { ["variable"] = "SPELLWORK_DBC_PATH" });
                 return false;
             }

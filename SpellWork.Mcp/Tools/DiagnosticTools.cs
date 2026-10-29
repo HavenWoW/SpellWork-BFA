@@ -10,15 +10,17 @@ namespace SpellWork.Mcp.Tools
     [McpServerToolType]
     public sealed class DiagnosticTools
     {
-        // The client build every structure class was written against.
-        private const int ClientBuild = 18414;
+        // The client build every structure class was written against, and
+        // the server family its layouts follow (CoA DBCfmt.h).
+        private const int ClientBuild = 12340;
+        private const string Variant = "coa";
 
         private readonly SpellDataService _data;
 
         public DiagnosticTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "server_info")]
-        [Description("Configured paths, client build, locale (and whether the root was used instead), the file each store was opened from, layout mismatches, store counts, load duration and MySQL reachability. Call this first when something looks wrong.")]
+        [Description("Configured paths, client build (12340) and variant (\"coa\"), the locale string slot (and whether it fell back to enUS), the .dbc file each store was opened from, layout mismatches, store counts, load duration and MySQL reachability. ignoredVariables names SPELLWORK_DB2_PATH/SPELLWORK_GT_PATH when set: they are accepted and ignored. Call this first when something looks wrong.")]
         public async Task<string> ServerInfo()
         {
             var data = await _data.GetAsync();
@@ -31,6 +33,8 @@ namespace SpellWork.Mcp.Tools
                 ["gtPath"] = config.GtPath,
                 ["db2Path"] = config.Db2Path,
                 ["clientBuild"] = ClientBuild,
+                ["variant"] = Variant,
+                ["ignoredVariables"] = config.IgnoredVariables,
                 ["localeSlot"] = SpellWork.DBC.DBC.LocaleSlot,
                 ["localeSlotFallback"] = SpellWork.DBC.DBC.LocaleSlotFallback,
                 ["openedFiles"] = SpellWork.DBC.DBC.OpenedFiles
@@ -63,7 +67,7 @@ namespace SpellWork.Mcp.Tools
             }
 
             // Always present: an empty array says the layouts match the client
-            // build the structure classes were written against (18414), which is
+            // build the structure classes were written against (12340), which is
             // an answer an agent chasing garbled visual data needs, where a
             // missing key would read as "not checked".
             var layoutMismatches = SpellWork.DBC.DBC.LayoutMismatches

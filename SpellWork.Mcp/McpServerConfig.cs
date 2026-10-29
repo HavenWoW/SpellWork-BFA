@@ -6,7 +6,7 @@ using SpellWork;
 namespace SpellWork.Mcp
 {
     /// <summary>
-    /// The nine SPELLWORK_* environment variables, read once at startup.
+    /// The SPELLWORK_* environment variables, read once at startup.
     /// Never throws: a misconfigured server must still start and still answer
     /// (spec section 9), so a missing required path becomes a null here and a
     /// structured per-tool error later.
@@ -14,8 +14,29 @@ namespace SpellWork.Mcp
     public sealed class McpServerConfig
     {
         public string DbcPath { get; private set; }
+
+        /// <summary>
+        /// SPELLWORK_DB2_PATH and SPELLWORK_GT_PATH: accepted so a 5.4.8
+        /// registration still starts, and ignored (spec section 7). 3.3.5a
+        /// has no .db2 files and no gt tables; the loader reads .dbc files
+        /// from DbcPath only, so neither value is passed on.
+        /// </summary>
         public string Db2Path { get; private set; }
         public string GtPath { get; private set; }
+
+        /// <summary>The accepted-and-ignored variables that are set, in name order.</summary>
+        public IReadOnlyList<string> IgnoredVariables
+        {
+            get
+            {
+                var ignored = new List<string>();
+                if (Db2Path != null)
+                    ignored.Add("SPELLWORK_DB2_PATH");
+                if (GtPath != null)
+                    ignored.Add("SPELLWORK_GT_PATH");
+                return ignored;
+            }
+        }
         public string Locale { get; private set; }
         public string MySqlHost { get; private set; }
         public string MySqlPortOrPipe { get; private set; }
@@ -64,8 +85,6 @@ namespace SpellWork.Mcp
         public SpellWorkConfig ToSpellWorkConfig() => new SpellWorkConfig
         {
             DbcPath = DbcPath,
-            Db2Path = Db2Path,
-            GtPath = GtPath,
             Locale = Locale,
             MySqlHost = MySqlHost,
             MySqlPortOrPipe = MySqlPortOrPipe,

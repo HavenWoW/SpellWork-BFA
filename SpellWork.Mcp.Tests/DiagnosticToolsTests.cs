@@ -12,7 +12,7 @@ namespace SpellWork.Mcp.Tests
 
         public DiagnosticToolsTests(McpClientDataFixture fixture) => _fixture = fixture;
 
-        [SkippableFact(Skip = "coa: Task 8")]
+        [SkippableFact]
         public async Task ServerInfoReportsOpenedFilesAndBuild()
         {
             _fixture.SkipIfNoClientData();
@@ -21,16 +21,40 @@ namespace SpellWork.Mcp.Tests
             using var doc = JsonDocument.Parse(json);
             var result = doc.RootElement.GetProperty("result");
 
-            Assert.Equal(18414, result.GetProperty("clientBuild").GetInt32());
+            Assert.Equal(12340, result.GetProperty("clientBuild").GetInt32());
+            Assert.Equal("coa", result.GetProperty("variant").GetString());
+            Assert.Equal(JsonValueKind.Number, result.GetProperty("localeSlot").ValueKind);
             var openedFiles = result.GetProperty("openedFiles");
-            Assert.EndsWith("SpellVisual.db2", openedFiles.GetProperty("SpellVisual").GetProperty("path").GetString());
-            Assert.Equal("db2", openedFiles.GetProperty("SpellVisual").GetProperty("extension").GetString());
-            Assert.Equal(18273, openedFiles.GetProperty("SpellVisual").GetProperty("build").GetInt32());
-            Assert.Equal(JsonValueKind.Null, openedFiles.GetProperty("Spell").GetProperty("build").ValueKind);
-            Assert.True(result.GetProperty("localeFallback").ValueKind is JsonValueKind.True or JsonValueKind.False);
+            foreach (var store in new[] { "Spell", "SpellDifficulty", "SpellAffect", "SpellVisual" })
+            {
+                Assert.EndsWith(store + ".dbc", openedFiles.GetProperty(store).GetProperty("path").GetString());
+                Assert.Equal("dbc", openedFiles.GetProperty(store).GetProperty("extension").GetString());
+            }
+            Assert.True(result.GetProperty("loadDurationMs").GetInt32() > 0);
             Assert.Equal(0, result.GetProperty("layoutMismatches").GetArrayLength());
             Assert.False(result.TryGetProperty("hotfixCache", out _));
-            Assert.False(result.TryGetProperty("hotfixCachePath", out _));
+        }
+
+        // Spec section 7: SPELLWORK_DB2_PATH and SPELLWORK_GT_PATH are
+        // accepted (a 5.4.8 registration still starts) and ignored; the
+        // server says which of them it ignored. Data-independent.
+        [Fact]
+        public async Task ServerInfo_WithoutData_StillNamesBuildVariantAndIgnoredVariables()
+        {
+            var config = McpServerConfig.FromEnvironment(new System.Collections.Generic.Dictionary<string, string>
+            {
+                ["SPELLWORK_DB2_PATH"] = "C:/nowhere/db2",
+                ["SPELLWORK_GT_PATH"] = "C:/nowhere/gt",
+            });
+            var json = await new DiagnosticTools(new SpellDataService(config, NullLoggerFactoryStub.Logger)).ServerInfo();
+            using var doc = JsonDocument.Parse(json);
+            var result = doc.RootElement.GetProperty("result");
+
+            Assert.Equal(12340, result.GetProperty("clientBuild").GetInt32());
+            Assert.Equal("coa", result.GetProperty("variant").GetString());
+            Assert.False(result.GetProperty("clientDataLoaded").GetBoolean());
+            Assert.Equal(new[] { "SPELLWORK_DB2_PATH", "SPELLWORK_GT_PATH" },
+                result.GetProperty("ignoredVariables").EnumerateArray().Select(v => v.GetString()).ToArray());
         }
 
         // The fixture's partial load leaves the statics partial until it

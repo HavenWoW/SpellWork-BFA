@@ -51,22 +51,22 @@ namespace SpellWork.Mcp.Tests
             Assert.True(text.RootElement.GetProperty("ok").GetBoolean());
         }
 
-        [SkippableFact(Skip = "coa: Task 8")]
-        public async Task SearchByAttributeWord13()
+        [SkippableFact]
+        public async Task SearchByAttributeWord6Hex()
         {
             _fixture.SkipIfNoClientData();
 
-            using var doc = JsonDocument.Parse(await _fixture.SpellTools.SearchSpells(attribute: "13:0x1"));
-            var expected = SpellWork.DBC.DBC.SpellInfoStore.Values.Count(s => (s.Attributes[13] & 1u) != 0);
+            using var doc = JsonDocument.Parse(await _fixture.SpellTools.SearchSpells(attribute: "6:0x1"));
+            var expected = SpellWork.DBC.DBC.SpellInfoStore.Values.Count(s => (s.Attributes[6] & 1u) != 0);
             Assert.Equal(expected, doc.RootElement.GetProperty("result").GetProperty("totalMatches").GetInt32());
         }
 
-        [SkippableFact(Skip = "coa: Task 8")]
+        [SkippableFact]
         public async Task SearchByAttribute_WordPrefixSelectsTheWord_AndNamesResolvePerWord()
         {
             _fixture.SkipIfNoClientData();
 
-            using var word7 = JsonDocument.Parse(await _fixture.SpellTools.SearchSpells(attribute: "7:SPELL_ATTR7_UNK0"));
+            using var word7 = JsonDocument.Parse(await _fixture.SpellTools.SearchSpells(attribute: "7:SPELL_ATTR7_ALLOW_SPELL_REFLECTION"));
             var expected = SpellWork.DBC.DBC.SpellInfoStore.Values.Count(s => (s.Attributes[7] & 1u) != 0);
             Assert.Equal(expected, word7.RootElement.GetProperty("result").GetProperty("totalMatches").GetInt32());
 
@@ -77,6 +77,8 @@ namespace SpellWork.Mcp.Tests
         }
 
         [SkippableTheory]
+        [InlineData("8:0x1")]
+        [InlineData("13:0x1")]
         [InlineData("14:0x1")]
         [InlineData("-1:0x1")]
         [InlineData("x:1")]
@@ -530,19 +532,18 @@ namespace SpellWork.Mcp.Tests
         // ---------------------------------------------------------------
 
         // The assertion the review asked for: two *different* spell ids that
-        // compare identical. 38695 "Vertex Color Red" and 38696 "Vertex Color
-        // Purple" are distinct ids with distinct names whose fourteen compared
-        // sections are byte-identical -- they are two of 561 spells sharing
-        // one body in this client data, so this is a representative case and
-        // not a curiosity. Pre-fix this returned identical=False with the two
-        // identity differences and nothing else, which is the whole bug in one
-        // call.
-        [SkippableFact(Skip = "coa: Task 8")]
+        // compare identical. On the CoA 3.3.5a data 34 "Teleport Duskwood"
+        // and 35 "Teleport Elwynn" are distinct ids with distinct names whose
+        // compared sections are identical (the destination lives in the world
+        // database, not Spell.dbc). Measured, not assumed. Pre-fix this
+        // returned identical=False with the two identity differences and
+        // nothing else, which is the whole bug in one call.
+        [SkippableFact]
         public async Task CompareSpells_DistinctSpellsWithTheSameDefinition_AreIdentical()
         {
             _fixture.SkipIfNoClientData();
 
-            var json = await _fixture.SpellTools.CompareSpells(38695, 38696);
+            var json = await _fixture.SpellTools.CompareSpells(34, 35);
             using var doc = JsonDocument.Parse(json);
             var result = doc.RootElement.GetProperty("result");
 
@@ -554,8 +555,8 @@ namespace SpellWork.Mcp.Tests
 
             // Nothing is lost by dropping the identity paths: which spell is
             // which is still reported, in the blocks that exist to say so.
-            Assert.Equal(38695, result.GetProperty("a").GetProperty("id").GetInt32());
-            Assert.Equal(38696, result.GetProperty("b").GetProperty("id").GetInt32());
+            Assert.Equal(34, result.GetProperty("a").GetProperty("id").GetInt32());
+            Assert.Equal(35, result.GetProperty("b").GetProperty("id").GetInt32());
             Assert.NotEqual(result.GetProperty("a").GetProperty("name").GetString(),
                 result.GetProperty("b").GetProperty("name").GetString());
         }
@@ -577,12 +578,12 @@ namespace SpellWork.Mcp.Tests
             });
         }
 
-        // Pins the drop at exactly two. 133 vs 116 produces 30 differences
-        // against the 5.4.8 (18414) reference data (35 against the 8.3.7 data
-        // this was first measured on) -- measured, not inferred. If a future change reintroduces a
-        // root field outside the section gates, this fails rather than
-        // quietly inflating every diff again.
-        [SkippableFact(Skip = "coa: Task 8")]
+        // Pins the drop at exactly two. 133 vs 116 produces 65 differences
+        // against the CoA 3.3.5a (12340) reference data -- measured, not
+        // inferred. If a future change reintroduces a root field outside the
+        // section gates, this fails rather than quietly inflating every diff
+        // again.
+        [SkippableFact]
         public async Task CompareSpells_TotalDifferences_ExcludesTheTwoIdentityPaths()
         {
             _fixture.SkipIfNoClientData();
@@ -591,11 +592,8 @@ namespace SpellWork.Mcp.Tests
             using var doc = JsonDocument.Parse(json);
             var result = doc.RootElement.GetProperty("result");
 
-            // 39 since Task 6: the 5.4.8 shape adds per-effect scaling/bonusMultiplier, a
-            // 14-word attributes array and scaling cast-time fields, which the two spells
-            // do not share (32 before).
-            Assert.Equal(39, result.GetProperty("totalDifferences").GetInt32());
-            Assert.Equal(39, result.GetProperty("differences").GetArrayLength());
+            Assert.Equal(65, result.GetProperty("totalDifferences").GetInt32());
+            Assert.Equal(65, result.GetProperty("differences").GetArrayLength());
         }
 
         [SkippableFact]
@@ -646,6 +644,234 @@ namespace SpellWork.Mcp.Tests
             }
 
             Assert.Equal(await EffectsAt(90), await EffectsAt(150));
+        }
+    
+        // ---------------------------------------------------------------
+        // difficulty (spec D4): optional on every tool that takes it. null
+        // keeps the id; 0-3 resolves through SpellDifficulty.dbc; anything
+        // else is unknown_difficulty naming 0-3.
+        // ---------------------------------------------------------------
+
+        private static (int Mode0, int Mode1) DifficultyPair()
+        {
+            var entry = SpellWork.DBC.DBC.SpellDifficulty.Values.First(e =>
+                e.DifficultySpellID[0] != 0 && e.DifficultySpellID[1] != 0 &&
+                e.DifficultySpellID[0] != e.DifficultySpellID[1] &&
+                SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(e.DifficultySpellID[0]) &&
+                SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(e.DifficultySpellID[1]));
+            return (entry.DifficultySpellID[0], entry.DifficultySpellID[1]);
+        }
+
+        [SkippableFact]
+        public async Task GetSpell_OmittedDifficulty_KeepsTheIdAndReportsVariants()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var (mode0, mode1) = DifficultyPair();
+            using var doc = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(mode1));
+            var result = doc.RootElement.GetProperty("result");
+            var difficulty = result.GetProperty("difficulty");
+
+            Assert.Equal(mode1, result.GetProperty("id").GetInt32());
+            Assert.Equal(JsonValueKind.Null, difficulty.GetProperty("requested").ValueKind);
+            Assert.Equal(mode1, difficulty.GetProperty("resolvedSpellId").GetInt32());
+            Assert.Contains(mode0, difficulty.GetProperty("variants").EnumerateArray().Select(v => v.GetInt32()));
+        }
+
+        [SkippableFact]
+        public async Task GetSpell_ExplicitDifficulty_RendersTheResolvedVariant()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var (mode0, mode1) = DifficultyPair();
+            foreach (var format in new[] { "json", "text" })
+            {
+                using var doc = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(mode0, format: format, difficulty: 1));
+                var result = doc.RootElement.GetProperty("result");
+                Assert.Equal(mode1, result.GetProperty("id").GetInt32());
+                if (format == "json")
+                {
+                    var difficulty = result.GetProperty("difficulty");
+                    Assert.Equal(1, difficulty.GetProperty("requested").GetInt32());
+                    Assert.Equal(mode1, difficulty.GetProperty("resolvedSpellId").GetInt32());
+                }
+                else
+                {
+                    Assert.Equal(mode0, result.GetProperty("requestedId").GetInt32());
+                    Assert.Contains("ID - " + mode1, result.GetProperty("text").GetString());
+                }
+            }
+
+            // Mode 0 maps the 25N id back to the 10N one.
+            using var back = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(mode1, difficulty: 0));
+            Assert.Equal(mode0, back.RootElement.GetProperty("result").GetProperty("id").GetInt32());
+        }
+
+        [SkippableFact]
+        public async Task GetSpell_HeroicModeWithoutAVariant_FallsBackLikeTheServer()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var entry = SpellWork.DBC.DBC.SpellDifficulty.Values.FirstOrDefault(e =>
+                e.DifficultySpellID[0] != 0 && e.DifficultySpellID[2] == 0 &&
+                SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(e.DifficultySpellID[0]));
+            Skip.If(entry == null, "No SpellDifficulty row without a 10H variant.");
+
+            using var doc = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(entry.DifficultySpellID[0], difficulty: 2));
+            var result = doc.RootElement.GetProperty("result");
+            Assert.Equal(entry.DifficultySpellID[0], result.GetProperty("id").GetInt32());
+            Assert.Equal(2, result.GetProperty("difficulty").GetProperty("requested").GetInt32());
+        }
+
+        [SkippableTheory]
+        [InlineData(4u)]
+        [InlineData(99u)]
+        public async Task GetSpell_DifficultyOutsideZeroToThree_NamesTheValidRange(uint difficulty)
+        {
+            _fixture.SkipIfNoClientData();
+
+            using var doc = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(133, difficulty: difficulty));
+            var error = doc.RootElement.GetProperty("error");
+            Assert.Equal("unknown_difficulty", error.GetProperty("code").GetString());
+            Assert.Contains("0-3", error.GetProperty("message").GetString());
+            Assert.Equal(new[] { 0, 1, 2, 3 },
+                error.GetProperty("details").GetProperty("valid").EnumerateArray().Select(v => v.GetInt32()).ToArray());
+        }
+
+        [SkippableFact]
+        public async Task GetSpellTriggers_Difficulty_IsOptionalAndResolves()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var (mode0, mode1) = DifficultyPair();
+            using (var plain = JsonDocument.Parse(await _fixture.SpellTools.GetSpellTriggers(mode0)))
+            {
+                var result = plain.RootElement.GetProperty("result");
+                Assert.Equal(mode0, result.GetProperty("id").GetInt32());
+                Assert.Equal(mode0, result.GetProperty("resolvedSpellId").GetInt32());
+            }
+
+            using (var resolved = JsonDocument.Parse(await _fixture.SpellTools.GetSpellTriggers(mode0, difficulty: 1)))
+            {
+                var result = resolved.RootElement.GetProperty("result");
+                Assert.Equal(mode0, result.GetProperty("id").GetInt32());
+                Assert.Equal(mode1, result.GetProperty("resolvedSpellId").GetInt32());
+            }
+
+            using var bad = JsonDocument.Parse(await _fixture.SpellTools.GetSpellTriggers(mode0, difficulty: 4));
+            Assert.Equal("unknown_difficulty", bad.RootElement.GetProperty("error").GetProperty("code").GetString());
+        }
+
+        [SkippableFact]
+        public async Task CompareSpells_Difficulty_ResolvesBothIds()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var (mode0, mode1) = DifficultyPair();
+            // The 10N id against itself at mode 1 is the 25N variant against itself.
+            using var doc = JsonDocument.Parse(await _fixture.SpellTools.CompareSpells(mode0, mode0, difficulty: 1));
+            var result = doc.RootElement.GetProperty("result");
+            Assert.Equal(mode1, result.GetProperty("a").GetProperty("id").GetInt32());
+            Assert.Equal(mode1, result.GetProperty("b").GetProperty("id").GetInt32());
+            Assert.Equal(mode0, result.GetProperty("a").GetProperty("requestedId").GetInt32());
+            Assert.True(result.GetProperty("identical").GetBoolean());
+
+            using var bad = JsonDocument.Parse(await _fixture.SpellTools.CompareSpells(mode0, mode1, difficulty: 7));
+            Assert.Equal("unknown_difficulty", bad.RootElement.GetProperty("error").GetProperty("code").GetString());
+        }
+
+        // ---------------------------------------------------------------
+        // items and reagent names come from the world database when it is
+        // configured; without it, items is [] plus itemsNote.
+        // ---------------------------------------------------------------
+
+        [SkippableFact]
+        public async Task GetSpell_WithoutWorldDatabase_ItemsIsEmptyWithANote()
+        {
+            _fixture.SkipIfNoClientData();
+            Skip.If(_fixture.LoadedService.Config.MySqlConfigured, "The loaded service has a world database.");
+
+            using var doc = JsonDocument.Parse(await _fixture.SpellTools.GetSpell(3561, sections: new[] { "items", "reagents" }));
+            var result = doc.RootElement.GetProperty("result");
+            Assert.Equal(0, result.GetProperty("items").GetArrayLength());
+            Assert.Equal(SpellWork.Spell.SpellInfoJsonSerializer.ItemsWithoutWorldDatabaseNote, result.GetProperty("itemsNote").GetString());
+            Assert.False(result.GetProperty("reagents")[0].TryGetProperty("name", out _));
+        }
+
+        private static McpServerConfig TestWorldDatabaseConfig()
+        {
+            var host = System.Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_HOST");
+            Skip.If(string.IsNullOrWhiteSpace(host), "SPELLWORK_TEST_MYSQL_HOST not set.");
+
+            return McpServerConfig.FromEnvironment(new System.Collections.Generic.Dictionary<string, string>
+            {
+                ["SPELLWORK_DBC_PATH"] = System.Environment.GetEnvironmentVariable("SPELLWORK_DBC_PATH"),
+                ["SPELLWORK_MYSQL_HOST"] = host,
+                ["SPELLWORK_MYSQL_PORT"] = System.Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_PORT") ?? "3306",
+                ["SPELLWORK_MYSQL_USER"] = System.Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_USER") ?? "",
+                ["SPELLWORK_MYSQL_PASS"] = System.Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_PASS") ?? "",
+                ["SPELLWORK_MYSQL_WORLD_DB"] = System.Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_WORLD_DB") ?? "world",
+            });
+        }
+
+        // A configured but unreachable world database does not fail
+        // get_spell: the client-data document is still returned, with the
+        // error next to it and an itemsNote that does not claim "not configured".
+        [SkippableFact]
+        public async Task GetSpell_UnreachableWorldDatabase_StillAnswersAndSaysWhy()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var config = McpServerConfig.FromEnvironment(new System.Collections.Generic.Dictionary<string, string>
+            {
+                ["SPELLWORK_DBC_PATH"] = System.Environment.GetEnvironmentVariable("SPELLWORK_DBC_PATH"),
+                ["SPELLWORK_MYSQL_HOST"] = "127.0.0.1",
+                ["SPELLWORK_MYSQL_PORT"] = "1",
+                ["SPELLWORK_MYSQL_USER"] = "nobody",
+                ["SPELLWORK_MYSQL_WORLD_DB"] = "nothing",
+            });
+            var tools = new SpellWork.Mcp.Tools.SpellTools(_fixture.LoadedService.WithConfig(config));
+
+            using var doc = JsonDocument.Parse(await tools.GetSpell(3561, sections: new[] { "items", "reagents" }));
+            var result = doc.RootElement.GetProperty("result");
+            Assert.True(doc.RootElement.GetProperty("ok").GetBoolean());
+            Assert.Equal(3561, result.GetProperty("id").GetInt32());
+            Assert.Equal(0, result.GetProperty("items").GetArrayLength());
+            Assert.False(string.IsNullOrEmpty(result.GetProperty("worldDatabaseError").GetString()));
+            Assert.NotEqual(SpellWork.Spell.SpellInfoJsonSerializer.ItemsWithoutWorldDatabaseNote,
+                result.GetProperty("itemsNote").GetString());
+        }
+
+        [SkippableFact]
+        public async Task GetSpell_WithWorldDatabase_ListsItemsAndReagentNames()
+        {
+            _fixture.SkipIfNoClientData();
+            var config = TestWorldDatabaseConfig();
+            // Same loaded client data, different config: a second load would
+            // race every other test over DBC.DBC's statics.
+            var tools = new SpellWork.Mcp.Tools.SpellTools(_fixture.LoadedService.WithConfig(config));
+
+            var database = new SpellWork.Database.WorldDatabase(config.ToSpellWorkConfig());
+            var used = database.SelectRows(
+                "SELECT `entry`, `spellid_1` FROM `item_template` WHERE `spellid_1` > 0 ORDER BY `entry`", 200);
+            var spellId = used.Rows.Select(r => System.Convert.ToInt32(r["spellid_1"]))
+                .First(id => SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(id));
+
+            using (var doc = JsonDocument.Parse(await tools.GetSpell(spellId, sections: new[] { "items" })))
+            {
+                var result = doc.RootElement.GetProperty("result");
+                Assert.False(result.TryGetProperty("itemsNote", out _));
+                var items = result.GetProperty("items").EnumerateArray().ToList();
+                Assert.NotEmpty(items);
+                Assert.All(items, item => Assert.False(string.IsNullOrEmpty(item.GetProperty("name").GetString())));
+            }
+
+            // 3561 Teleport: Stormwind takes a Rune of Teleportation.
+            using (var doc = JsonDocument.Parse(await tools.GetSpell(3561, sections: new[] { "reagents" })))
+            {
+                var first = doc.RootElement.GetProperty("result").GetProperty("reagents")[0];
+                Assert.False(string.IsNullOrEmpty(first.GetProperty("name").GetString()));
+            }
         }
     }
 }
