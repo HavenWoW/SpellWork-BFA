@@ -49,8 +49,9 @@ namespace SpellWork.Core.Tests
         [InlineData(0u, 1u)]
         [InlineData(1u, 1u)]
         [InlineData(90u, 90u)]
-        [InlineData(150u, 90u)]
-        public void Level_ClampsTo1Through90(uint given, uint expected) =>
+        [InlineData(100u, 100u)]
+        [InlineData(150u, 100u)]
+        public void Level_ClampsTo1Through100(uint given, uint expected) =>
             Assert.Equal(expected, new RenderContext(given, 0, 0).Level);
     }
 }

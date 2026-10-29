@@ -449,18 +449,6 @@ namespace SpellWork.Spell
                 rtb.AppendFormatLine("AttributesEx6: 0x{0:X8} ({1})", attributes[6], (SpellAtributeEx6)attributes[6]);
             if (attributes[7] != 0)
                 rtb.AppendFormatLine("AttributesEx7: 0x{0:X8} ({1})", attributes[7], (SpellAtributeEx7)attributes[7]);
-            if (attributes[8] != 0)
-                rtb.AppendFormatLine("AttributesEx8: 0x{0:X8} ({1})", attributes[8], (SpellAtributeEx8)attributes[8]);
-            if (attributes[9] != 0)
-                rtb.AppendFormatLine("AttributesEx9: 0x{0:X8} ({1})", attributes[9], (SpellAtributeEx9)attributes[9]);
-            if (attributes[10] != 0)
-                rtb.AppendFormatLine("AttributesEx10: 0x{0:X8} ({1})", attributes[10], (SpellAtributeEx10)attributes[10]);
-            if (attributes[11] != 0)
-                rtb.AppendFormatLine("AttributesEx11: 0x{0:X8} ({1})", attributes[11], (SpellAtributeEx11)attributes[11]);
-            if (attributes[12] != 0)
-                rtb.AppendFormatLine("AttributesEx12: 0x{0:X8} ({1})", attributes[12], (SpellAtributeEx12)attributes[12]);
-            if (attributes[13] != 0)
-                rtb.AppendFormatLine("AttributesEx13: 0x{0:X8} ({1})", attributes[13], (SpellAtributeEx13)attributes[13]);
 
             rtb.AppendLine(Separator);
             #endregion

@@ -19,12 +19,9 @@ namespace SpellWork.Spell
             new JsonSerializerOptions { WriteIndented = false };
 
         // Group index -> the enum that decodes that group's bits. There is no
-        // single "spell attributes" enum: SpellEnums.cs declares fourteen of
-        // them (SpellAtribute, SpellAtributeEx .. SpellAtributeEx13), so the
+        // single "spell attributes" enum: SpellEnums.cs declares eight of
+        // them (SpellAtribute, SpellAtributeEx .. SpellAtributeEx7), so the
         // group-to-enum mapping is a dispatch table, not a single cast.
-        // SpellAtributeEx11/12/13 are declared `internal`; that is fine here
-        // because this table never leaves this internal-to-Core dispatch and
-        // is never exposed through a public signature.
         private static readonly Type[] AttributeEnumTypes =
         {
             typeof(SpellAtribute),
@@ -35,12 +32,6 @@ namespace SpellWork.Spell
             typeof(SpellAtributeEx5),
             typeof(SpellAtributeEx6),
             typeof(SpellAtributeEx7),
-            typeof(SpellAtributeEx8),
-            typeof(SpellAtributeEx9),
-            typeof(SpellAtributeEx10),
-            typeof(SpellAtributeEx11),
-            typeof(SpellAtributeEx12),
-            typeof(SpellAtributeEx13),
         };
 
         // The nine section names the interface line documents, plus
@@ -330,7 +321,9 @@ namespace SpellWork.Spell
             var groups = spell.AttributesFor(difficulty);
 
             var result = new List<object>();
-            for (var group = 0; group < groups.Length; group++)
+            // CoA has 8 attribute words; the 5.4.8-shaped SpellInfo still hands over
+            // 14 (Task 4 changes that), so words past the last enum are not decoded.
+            for (var group = 0; group < Math.Min(groups.Length, AttributeEnumTypes.Length); group++)
             {
                 var flags = BuildFlagList(AttributeEnumTypes[group], groups[group], out var unmatched);
                 var word = new Dictionary<string, object>

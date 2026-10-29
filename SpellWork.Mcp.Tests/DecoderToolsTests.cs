@@ -185,6 +185,31 @@ namespace SpellWork.Mcp.Tests
                 Assert.Contains("HEAL", member.GetProperty("name").GetString().ToUpperInvariant());
         }
 
+        // CoA auras above 316 are named from the CoA headers, never an Unk placeholder.
+        [Theory]
+        [InlineData("ASCENSION_MOD_ABSORB_AMOUNT_PCT", 317)]
+        [InlineData("ASCENSION_LAST", 366)]
+        public async Task ListEnum_AuraAbove316_ReturnsCoaHeaderName(string filter, long id)
+        {
+            var json = await _tools.ListEnum("AuraType", filter);
+            using var doc = JsonDocument.Parse(json);
+            var rows = doc.RootElement.GetProperty("result").GetProperty("rows");
+
+            var row = Assert.Single(rows.EnumerateArray());
+            Assert.Equal(id, row.GetProperty("value").GetInt64());
+            Assert.StartsWith("SPELL_AURA_", row.GetProperty("name").GetString());
+            Assert.DoesNotContain("Unk", row.GetProperty("name").GetString(), System.StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task DecodeFlags_SpellAttr7_ReturnsCoaHeaderName()
+        {
+            var json = await _tools.DecodeFlags("SpellAtributeEx7", 0x80000000);
+            using var doc = JsonDocument.Parse(json);
+            var flag = Assert.Single(doc.RootElement.GetProperty("result").GetProperty("flags").EnumerateArray());
+            Assert.Equal("SPELL_ATTR7_ALWAYS_CAST_LOG", flag.GetProperty("name").GetString());
+        }
+
         // The largest enum in the catalogue, discovered rather than named: the
         // paging tests below need one big enough to page through, and
         // hard-coding "AuraType" (495 members today, five under the cap, and

@@ -20,7 +20,7 @@ namespace SpellWork.Core.Tests
                 .Where(t => t.IsEnum && (t.Name == "SpellAtribute" || t.Name.StartsWith("SpellAtributeEx", StringComparison.Ordinal)))
                 .ToList();
 
-            Assert.Equal(14, types.Count);
+            Assert.Equal(8, types.Count);
             foreach (var type in types)
                 Assert.True(Enum.GetNames(type).Length == 32, $"{type.Name} has {Enum.GetNames(type).Length} members");
         }

@@ -170,13 +170,11 @@ namespace SpellWork.Mcp.Tools
         {
             typeof(SpellAtribute), typeof(SpellAtributeEx), typeof(SpellAtributeEx2), typeof(SpellAtributeEx3),
             typeof(SpellAtributeEx4), typeof(SpellAtributeEx5), typeof(SpellAtributeEx6), typeof(SpellAtributeEx7),
-            typeof(SpellAtributeEx8), typeof(SpellAtributeEx9), typeof(SpellAtributeEx10), typeof(SpellAtributeEx11),
-            typeof(SpellAtributeEx12), typeof(SpellAtributeEx13),
         };
 
         /// <summary>
-        /// "SPELL_ATTR0_PASSIVE" or "64" test word 0, as before. "13:0x1" or
-        /// "7:SPELL_ATTR7_UNK0" test the named word (0-13); the value is a
+        /// "SPELL_ATTR0_PASSIVE" or "64" test word 0, as before. "7:0x1" or
+        /// "7:SPELL_ATTR7_UNK0" test the named word (0-7); the value is a
         /// decimal or 0x-hex mask, or a member of that word's enum.
         /// </summary>
         internal static bool TryResolveAttribute(string text, out int word, out long? mask, out string error)
