@@ -39,11 +39,11 @@ namespace SpellWork.Database
             return string.Empty;
         }
 
-        /// <summary>spell_proc_event.phase is a MySQL SET
-        /// ('PROC_PHASE_HIT','PROC_PHASE_CAST','PROC_PHASE_AFTER_CAST'), which
-        /// the driver returns as a comma-separated string; the bitmask is the
-        /// 1-based member position (HIT=1, CAST=2, AFTER_CAST=4). Numeric
-        /// values (e.g. from phase+0) pass through.</summary>
+        /// <summary>AzerothCore's spell_proc_event.procPhase is an unsigned int
+        /// and passes through. SET-typed forks return a comma-separated string
+        /// ('PROC_PHASE_HIT','PROC_PHASE_CAST','PROC_PHASE_AFTER_CAST'); the
+        /// bitmask is the 1-based member position (HIT=1, CAST=2,
+        /// AFTER_CAST=4).</summary>
         public static uint ReadPhase(object value)
         {
             if (value == null || value == DBNull.Value)
@@ -81,26 +81,29 @@ namespace SpellWork.Database
                 {
                     while (reader.Read())
                     {
-                        var spellId = reader.GetUInt32(0);
+                        // AzerothCore spell_proc_event column order: entry, SchoolMask,
+                        // SpellFamilyName, SpellFamilyMask0..2, procFlags, procEx,
+                        // procPhase, ppmRate, CustomChance, Cooldown.
+                        // entry is a signed int (negative = every rank of the spell); the uint keeps the bit pattern.
+                        var spellId = unchecked((uint)Convert.ToInt32(reader.GetValue(0)));
                         result.Add(new SpellProcEventEntry
                         {
                             Id                  = spellId,
                             SpellName           = GetSpellName(spellId),
-                            SchoolMask          = reader.GetByte(1),
-                            SpellFamilyName     = reader.GetUInt16(2),
+                            SchoolMask          = Convert.ToByte(reader.GetValue(1)),
+                            SpellFamilyName     = Convert.ToUInt16(reader.GetValue(2)),
                             SpellFamilyMask     = new[]
                             {
-                                reader.GetUInt32(3),
-                                reader.GetUInt32(4),
-                                reader.GetUInt32(5),
-                                reader.GetUInt32(6)
+                                Convert.ToUInt32(reader.GetValue(3)),
+                                Convert.ToUInt32(reader.GetValue(4)),
+                                Convert.ToUInt32(reader.GetValue(5))
                             },
-                            ProcFlags           = reader.GetUInt32(7),
-                            ProcEx              = reader.GetUInt32(8),
-                            Phase               = ReadPhase(reader.GetValue(9)),
-                            PpmRate             = reader.GetFloat(10),
-                            CustomChance        = reader.GetFloat(11),
-                            Cooldown            = reader.GetUInt32(12)
+                            ProcFlags           = Convert.ToUInt32(reader.GetValue(6)),
+                            ProcEx              = Convert.ToUInt32(reader.GetValue(7)),
+                            Phase               = ReadPhase(reader.GetValue(8)),
+                            PpmRate             = Convert.ToSingle(reader.GetValue(9)),
+                            CustomChance        = Convert.ToSingle(reader.GetValue(10)),
+                            Cooldown            = Convert.ToUInt32(reader.GetValue(11))
                         });
                     }
                 }

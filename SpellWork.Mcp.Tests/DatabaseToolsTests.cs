@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -121,20 +122,23 @@ namespace SpellWork.Mcp.Tests
         }
 
         [Fact]
-        public void OverrideTables_AreTheRepackSchemaList()
+        public void OverrideTables_AreTheAzerothCoreSchemaList()
         {
             Assert.Equal(new[]
             {
+                ("spell_proc", "SpellId"),
                 ("spell_proc_event", "entry"),
-                ("spell_proc", "spellId"),
                 ("spell_script_names", "spell_id"),
-                ("spell_custom_attribute", "spell"),
+                ("spell_custom_attr", "spell_id"),
                 ("spell_bonus_data", "entry"),
                 ("spell_threat", "entry"),
                 ("spell_ranks", "spell_id"),
                 ("spell_linked_spell", "spell_trigger"),
-                ("spell_dbc", "Id"),
-                ("spelleffect_dbc", "EffectSpellId"),
+                ("spell_dbc", "ID"),
+                ("spell_cooldown_overrides", "Id"),
+                ("spell_area", "spell"),
+                ("spell_group", "spell_id"),
+                ("spell_required", "spell_id"),
             }, DatabaseTools.OverrideTables);
         }
 
@@ -158,26 +162,6 @@ namespace SpellWork.Mcp.Tests
         }
 
         [SkippableFact]
-        public async Task RepackCustomSpellOverridesIncludeMiscByMiscId()
-        {
-            // spell_dbc row: Id 3617 -> SpellMiscId 200000
-            var json = JsonDocument.Parse(await ToolsWithMySql().GetSpellDbOverrides(3617)).RootElement.GetProperty("result");
-            var misc = json.GetProperty("tables").GetProperty("spellmisc_dbc");
-            Assert.Equal("spellMiscId", misc.GetProperty("matchedBy").GetString());
-            Assert.Contains(misc.GetProperty("rows").EnumerateArray(), r => r.GetProperty("Id").GetInt32() == 200000);
-        }
-
-        [Fact]
-        public void ComputeMiscIds_UnionsClientAndSpellDbc()
-        {
-            Assert.Equal(new[] { 7 }, DatabaseTools.ComputeMiscIds(7, new int[0]));
-            Assert.Equal(new[] { 200000 }, DatabaseTools.ComputeMiscIds(null, new[] { 200000 }));
-            Assert.Equal(new[] { 7, 200000 }, DatabaseTools.ComputeMiscIds(200000, new[] { 7, 200000 }));
-            Assert.Empty(DatabaseTools.ComputeMiscIds(null, new int[0]));
-            Assert.Empty(DatabaseTools.ComputeMiscIds(0, new[] { 0 }));
-        }
-
-        [SkippableFact]
         public void SelectProc_ReadsPhaseSetColumnWithoutThrowing()
         {
             var host = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_HOST");
@@ -192,7 +176,7 @@ namespace SpellWork.Mcp.Tests
                 ["SPELLWORK_MYSQL_WORLD_DB"] = Environment.GetEnvironmentVariable("SPELLWORK_TEST_MYSQL_WORLD_DB") ?? "world",
             });
             var db = new SpellWork.Database.WorldDatabase(config.ToSpellWorkConfig());
-            var rows = db.SelectProc("SELECT entry, SchoolMask, SpellFamilyName, SpellFamilyMask0, SpellFamilyMask1, SpellFamilyMask2, SpellFamilyMask3, procFlags, procEx, phase, ppmRate, CustomChance, Cooldown FROM spell_proc_event LIMIT 20");
+            var rows = db.SelectProc("SELECT entry, SchoolMask, SpellFamilyName, SpellFamilyMask0, SpellFamilyMask1, SpellFamilyMask2, procFlags, procEx, procPhase, ppmRate, CustomChance, Cooldown FROM spell_proc_event LIMIT 20");
             Assert.NotEmpty(rows);
         }
 
@@ -206,11 +190,21 @@ namespace SpellWork.Mcp.Tests
         }
 
         [SkippableFact]
-        public async Task EveryListedTableIsQueried()
+        public async Task EveryListedTableIsQueriedOrReportedAbsent()
         {
-            var tables = JsonDocument.Parse(await ToolsWithMySql().GetSpellDbOverrides(133)).RootElement.GetProperty("result").GetProperty("tables");
-            foreach (var t in new[] { "spell_proc_event", "spell_proc", "spell_script_names", "spell_custom_attribute", "spell_bonus_data", "spell_threat", "spell_ranks", "spell_linked_spell", "spell_dbc", "spelleffect_dbc", "spellmisc_dbc" })
-                Assert.True(tables.TryGetProperty(t, out _), t);
+            var result = JsonDocument.Parse(await ToolsWithMySql().GetSpellDbOverrides(133)).RootElement.GetProperty("result");
+            var tables = result.GetProperty("tables");
+            var missing = result.TryGetProperty("missingTables", out var m)
+                ? m.EnumerateArray().Select(e => e.GetString()).ToHashSet()
+                : new HashSet<string>();
+            var unavailable = result.TryGetProperty("unavailableTables", out var u)
+                ? u.EnumerateObject().Select(p => p.Name).ToHashSet()
+                : new HashSet<string>();
+
+            Assert.Empty(unavailable);
+            foreach (var (table, _) in DatabaseTools.OverrideTables)
+                Assert.True(tables.TryGetProperty(table, out _) || missing.Contains(table), table);
+            Assert.DoesNotContain("spellmisc_dbc", tables.EnumerateObject().Select(p => p.Name));
         }
 
         /// <summary>
