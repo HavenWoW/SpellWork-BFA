@@ -15,13 +15,13 @@ namespace SpellWork.Mcp.Tools
         public DecoderTools(SpellDataService data) => _data = data;
 
         [McpServerTool(Name = "calculate_spell_scaling")]
-        [Description("Per-effect computed values at a specific level, using the CoA 3.3.5 CalcValue rule (base points plus RealPointsPerLevel for each level above the spell level, level clamped to BaseLevel..MaxLevel, plus the DieSides roll range). Use this to see how a spell's numbers change with level rather than reading get_spell repeatedly. level clamps to 1-100. difficulty is a SpellDifficulty mode 0-3: the spell id is resolved through SpellDifficulty.dbc first and the variant spell's own row is used. itemLevel is echoed and never applied (itemLevelApplied is false). mapId is accepted for compatibility and ignored.")]
+        [Description("Per-effect computed values at a specific level, using the CoA 3.3.5 CalcValue rule (base points plus RealPointsPerLevel for each level above the spell level, level clamped to BaseLevel..MaxLevel, plus the DieSides roll range). Use this to see how a spell's numbers change with level rather than reading get_spell repeatedly. level clamps to 1-100. difficulty is optional: when omitted the id is used exactly as given (resolvedSpellId equals id); when given it is a SpellDifficulty mode 0-3 and the id is resolved through SpellDifficulty.dbc first, using the variant spell's own row (mode 0 maps a 25N variant id to its 10N id). itemLevel is echoed and never applied (itemLevelApplied is false). mapId is accepted for compatibility and ignored.")]
         public async Task<string> CalculateSpellScaling(
             int id,
             uint level,
             uint itemLevel,
             uint? mapId = null,
-            uint difficulty = 0)
+            uint? difficulty = null)
         {
             var data = await _data.GetAsync();
             if (!data.Loaded)
@@ -30,19 +30,21 @@ namespace SpellWork.Mcp.Tools
             if (!SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(id))
                 return SpellTools.NotFound(id);
 
-            var difficultyError = SpellTools.ValidateDifficulty(difficulty);
+            var difficultyError = difficulty.HasValue ? SpellTools.ValidateDifficulty(difficulty.Value) : null;
             if (difficultyError != null)
                 return difficultyError;
 
             // The difficulty picks a different Spell row, not a different
             // effect row: resolve the id first, then read that spell.
-            var resolvedId = SpellWork.DBC.DBC.DifficultyResolver.Resolve(id, (int)difficulty).ResolvedSpellId;
+            var resolvedId = difficulty.HasValue
+                ? SpellWork.DBC.DBC.DifficultyResolver.Resolve(id, (int)difficulty.Value).ResolvedSpellId
+                : id;
             if (!SpellWork.DBC.DBC.SpellInfoStore.TryGetValue(resolvedId, out var spell))
                 return SpellTools.NotFound(resolvedId);
 
             // Clamp to the client's level range.
             var clampedLevel = Math.Min(Math.Max(level, 1u), (uint)SpellWork.DBC.DBC.MaxLevel);
-            var context = new SpellWork.Spell.RenderContext(clampedLevel, itemLevel, (int)difficulty);
+            var context = new SpellWork.Spell.RenderContext(clampedLevel, itemLevel, (int)(difficulty ?? 0));
 
             var effects = new List<object>();
             foreach (var resolved in spell.Effects)
@@ -81,7 +83,7 @@ namespace SpellWork.Mcp.Tools
             };
 
             // The SpellDifficulty mode the spell id was resolved at.
-            payload["difficulty"] = (int)difficulty;
+            payload["difficulty"] = difficulty.HasValue ? (int)difficulty.Value : (int?)null;
 
             return ToolResponse.Ok(payload);
         }

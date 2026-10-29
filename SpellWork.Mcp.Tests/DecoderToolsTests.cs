@@ -126,6 +126,25 @@ namespace SpellWork.Mcp.Tests
         }
 
         [SkippableFact]
+        public async Task CalculateSpellScaling_OmittedDifficultyKeepsId_ExplicitZeroResolvesToMode0()
+        {
+            _fixture.SkipIfNoClientData();
+
+            var row = SpellWork.DBC.DBC.SpellDifficulty.Values.FirstOrDefault(r =>
+                r.DifficultySpellID[0] > 0 && r.DifficultySpellID[1] > 0 && r.DifficultySpellID[0] != r.DifficultySpellID[1]
+                && SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(r.DifficultySpellID[0])
+                && SpellWork.DBC.DBC.SpellInfoStore.ContainsKey(r.DifficultySpellID[1]));
+            Skip.If(row == null, "No SpellDifficulty row with two distinct existing spells.");
+            var id25 = row.DifficultySpellID[1];
+
+            using var omitted = JsonDocument.Parse(await _fixture.DecoderTools.CalculateSpellScaling(id25, level: 80, itemLevel: 0));
+            Assert.Equal(id25, omitted.RootElement.GetProperty("result").GetProperty("resolvedSpellId").GetInt32());
+
+            using var zero = JsonDocument.Parse(await _fixture.DecoderTools.CalculateSpellScaling(id25, level: 80, itemLevel: 0, difficulty: 0));
+            Assert.Equal(row.DifficultySpellID[0], zero.RootElement.GetProperty("result").GetProperty("resolvedSpellId").GetInt32());
+        }
+
+        [SkippableFact]
         public async Task CalculateSpellScaling_UnknownId_ReturnsNotFound()
         {
             _fixture.SkipIfNoClientData();
